@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luis Sampedro – Personal Lab</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">LS</div>
+    <nav class="nav">
+      <a href="#top">Home</a>
+      <a href="#tools">Tools</a>
+      <a href="about.html">About me</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- HERO / OVERALL RESUME -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Hi, I'm <span>Luis Sampedro</span></h1>
+        <p>
+          Naval Architect & Maritime Engineer from Galicia, working at the
+          intersection of high-performance sailing, data analysis and
+          engineering design.
+        </p>
+        <p>
+          In this project I try to create my personal space online, containing
+          my projects and, especially, my data analysis tools and image
+          processing software.
+        </p>
+        <div class="hero-buttons">
+          <a href="#tools" class="btn primary">Explore tools</a>
+          <a href="about.html" class="btn secondary">About me</a>
+        </div>
+
+        <div class="hero-media">
+          <!-- Cambia estas rutas por tus fotos reales -->
+          <img src="images/luis-on-boat.jpg" alt="Luis sailing" />
+          <img src="images/luis-portrait.jpg" alt="Luis portrait" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TOOLS OVERVIEW -->
+    <section id="tools" class="section section-alt">
+      <h2>Project tools</h2>
+      <p>
+        These are the four tools I want to develop inside this space. Some are
+        already prototyped, others are still work in progress.
+      </p>
+
+      <ul class="list" style="margin-top:0.8rem; margin-bottom:1.2rem;">
+        <li>LS Data Lab (LSDL)</li>
+        <li>LS Auto Leech (LSAL)</li>
+        <li>LS Current App (LSCA)</li>
+        <li>LS Design Tools (LSD)</li>
+      </ul>
+
+      <div class="cards tools-grid">
+        <!-- LSDL -->
+        <a href="data-lab.html" class="card card-link">
+          <h3>LS Data Lab (LSDL)</h3>
+          <p>
+            Online workspace for processing nautical data: GPS logs, sensor
+            streams and race tracks. Inspired by tools like Sailtrac, focused on
+            speed, VMG and manoeuvre analysis.
+          </p>
+          <p class="card-meta">
+            Status: prototype · Click to open
+          </p>
+        </a>
+
+        <!-- LS Auto Leech -->
+        <a href="ls-auto-leech.html" class="card card-link">
+          <h3>LS Auto Leech (LSAL)</h3>
+          <p>
+            Automated data collection engine. The idea is to “leech” structured
+            information from different sources (race trackers, weather APIs,
+            onboard systems) into a clean database for later analysis.
+          </p>
+          <p class="card-meta">
+            Status: concept · UI placeholder
+          </p>
+        </a>
+
+        <!-- LS Current App -->
+        <a href="ls-current-app.html" class="card card-link">
+          <h3>LS Current App (LSCA)</h3>
+          <p>
+            Tool to visualise currents, wind and boat performance together.
+            Designed to help understand how external conditions affect routing,
+            laylines and tactical decisions on the racecourse.
+          </p>
+          <p class="card-meta">
+            Status: concept · UI placeholder
+          </p>
+        </a>
+
+        <!-- LS Design Tools -->
+        <a href="ls-design-tools.html" class="card card-link">
+          <h3>LS Design Tools (LSD)</h3>
+          <p>
+            A collection of small utilities for yacht design: hull and foil
+            parameter explorers, basic VPP-style calculators and links with CFD
+            workflows.
+          </p>
+          <p class="card-meta">
+            Status: concept · UI placeholder
+          </p>
+        </a>
+      </div>
+    </section>
+
+    <!-- LINK A SOBRE MÍ -->
+    <section class="section">
+      <h2>About me</h2>
+      <p>
+        If you want a more classical overview of my background, education,
+        experience and sailing history, you can visit the full “About me”
+        section.
+      </p>
+      <a href="about.html" class="btn secondary" style="margin-top:0.8rem; display:inline-block;">
+        Go to About me
+      </a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© <span id="year"></span> Luis Sampedro. All rights reserved.</p>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
