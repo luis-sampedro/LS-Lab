@@ -1,0 +1,27 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- fondo marino -->
+  <rect width="512" height="512" rx="96" fill="#020617"></rect>
+  <!-- cuadrícula tipo carta marina -->
+  <g stroke="#1E293B" stroke-width="2">
+    <line x1="96" y1="128" x2="416" y2="128"></line>
+    <line x1="96" y1="208" x2="416" y2="208"></line>
+    <line x1="96" y1="288" x2="416" y2="288"></line>
+    <line x1="96" y1="368" x2="416" y2="368"></line>
+    <line x1="144" y1="96" x2="144" y2="416"></line>
+    <line x1="224" y1="96" x2="224" y2="416"></line>
+    <line x1="304" y1="96" x2="304" y2="416"></line>
+    <line x1="384" y1="96" x2="384" y2="416"></line>
+  </g>
+  <!-- círculo de referencia (posición barco) -->
+  <circle cx="256" cy="256" r="42" fill="none" stroke="#38BDF8" stroke-width="4" opacity="0.9"></circle>
+  <!-- vector de corriente -->
+  <line x1="256" y1="256" x2="360" y2="220" stroke="#38BDF8" stroke-width="8" stroke-linecap="round"></line>
+  <polygon points="360,220 344,214 348,228" fill="#38BDF8"></polygon>
+  <!-- pequeñas olas -->
+  <path d="M120 408 Q136 396 152 408 T184 408 T216 408" fill="none" stroke="#0EA5E9" stroke-width="3" opacity="0.7"></path>
+  <path d="M296 408 Q312 396 328 408 T360 408 T392 408" fill="none" stroke="#0EA5E9" stroke-width="3" opacity="0.5"></path>
+  <!-- texto LS -->
+  <text x="154" y="154" fill="#E5E7EB" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="64" font-weight="700">
+    LS
+  </text>
+</svg>
