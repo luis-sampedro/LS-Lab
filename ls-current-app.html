@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LS Auto Leech (LSAL) – Preview</title>
+  <title>LS Current App (LSCA)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -15,47 +15,151 @@
     </nav>
   </header>
 
-  <main class="app-shell">
-    <section class="app-layout">
-      <header class="app-header">
+  <main class="app-shell phone-shell">
+    <section class="phone-frame">
+      <!-- TOP: TÍTULO + LOCALIZACIÓN -->
+      <header class="phone-header">
         <div>
-          <h1>LS Auto Leech (LSAL)</h1>
-          <p>
-            Concept interface for an automated data collection engine that
-            aggregates race and sensor data into a clean database.
-          </p>
+          <h1>LS Current App</h1>
+          <p>Live currents · Wind · Boat track</p>
+        </div>
+        <div class="phone-location">
+          <span class="loc-name">Ría de Vigo</span>
+          <span class="loc-time">Today · 15:30 UTC</span>
         </div>
       </header>
 
-      <section class="app-grid">
-        <div class="app-column">
-          <div class="metric-card">
-            <h2>Source configuration</h2>
-            <p>Here you would connect trackers, APIs and onboard systems.</p>
+      <!-- CONTROLES DE TIEMPO -->
+      <div class="segment-control">
+        <button class="segment-btn active" data-horizon="now">Now</button>
+        <button class="segment-btn" data-horizon="1h">+1 h</button>
+        <button class="segment-btn" data-horizon="3h">+3 h</button>
+      </div>
+
+      <!-- BLOQUE DE DATOS PRINCIPALES -->
+      <section class="phone-grid">
+        <article class="metric-card">
+          <h2>Current at boat</h2>
+          <div class="metric-row">
+            <div>
+              <div class="metric-value">1.3 kn</div>
+              <div class="metric-label">Speed</div>
+            </div>
+            <div>
+              <div class="metric-value">228°</div>
+              <div class="metric-label">Direction (true)</div>
+            </div>
+            <div>
+              <div class="metric-value">0.4 kn</div>
+              <div class="metric-label">Set vs. boat</div>
+            </div>
           </div>
+          <p class="metric-note">
+            Values are placeholders: in a real app they come from GPS + tide model.
+          </p>
+        </article>
+
+        <article class="metric-card">
+          <h2>Wind vs current</h2>
+          <div class="vector-row">
+            <div class="vector-item">
+              <span class="vector-label">TWS</span>
+              <span class="vector-value">15 kn</span>
+              <span class="vector-sub">210°</span>
+            </div>
+            <div class="vector-item">
+              <span class="vector-label">Current</span>
+              <span class="vector-value">1.3 kn</span>
+              <span class="vector-sub">228°</span>
+            </div>
+            <div class="vector-item">
+              <span class="vector-label">Leeway est.</span>
+              <span class="vector-value">3.2°</span>
+              <span class="vector-sub">to leeward</span>
+            </div>
+          </div>
+          <p class="metric-note">
+            Quick view of how current is helping or hurting your course.
+          </p>
+        </article>
+      </section>
+
+      <!-- “MAPA” / HEATMAP DE CORRIENTE -->
+      <section class="metric-card map-card">
+        <h2>Current map</h2>
+        <p>
+          Tap on the mini-map to inspect current vectors around the boat track.
+        </p>
+
+        <div class="current-map">
+          <div class="map-boat">⛵</div>
+          <div class="map-arrow arrow1">➤</div>
+          <div class="map-arrow arrow2">➤</div>
+          <div class="map-arrow arrow3">➤</div>
         </div>
-        <div class="app-column">
-          <div class="metric-card">
-            <h2>Pipeline status</h2>
-            <p>Placeholder for ingestion and cleaning status.</p>
-          </div>
-        </div>
-        <div class="app-column">
-          <div class="metric-card">
-            <h2>Next steps</h2>
-            <p>Design how LSAL will push data into LSDL and other tools.</p>
-          </div>
+
+        <div class="map-legend">
+          <span class="legend-item"><span class="legend-dot strong"></span>Strong current</span>
+          <span class="legend-item"><span class="legend-dot medium"></span>Medium</span>
+          <span class="legend-item"><span class="legend-dot weak"></span>Weak</span>
         </div>
       </section>
+
+      <!-- HISTORIAL EN MÓVIL -->
+      <section class="metric-card">
+        <h2>Timeline vs current</h2>
+        <p>Boat speed and current strength over the last 30 minutes.</p>
+        <div class="mini-chart">
+          <div class="mini-chart-line boatspeed"></div>
+          <div class="mini-chart-line current"></div>
+        </div>
+        <div class="timeline-labels">
+          <span>-30 min</span>
+          <span>-15</span>
+          <span>Now</span>
+        </div>
+      </section>
+
+      <!-- BOTTOM NAV TIPO APP MÓVIL -->
+      <nav class="phone-bottom-nav">
+        <button class="bottom-btn active">
+          <span class="bottom-label">Current</span>
+        </button>
+        <button class="bottom-btn">
+          <span class="bottom-label">Wind</span>
+        </button>
+        <button class="bottom-btn">
+          <span class="bottom-label">Boat</span>
+        </button>
+      </nav>
     </section>
   </main>
 
   <footer class="footer">
-    <p>© <span id="year"></span> Luis Sampedro – Tools space</p>
+    <p>© <span id="year"></span> LS Current App · Prototype</p>
   </footer>
 
   <script>
+    // Año footer
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Toggle de horizonte temporal (solo cambia estado visual)
+    const segButtons = document.querySelectorAll(".segment-btn");
+    segButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        segButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    // Bottom nav (solo estado visual)
+    const bottomBtns = document.querySelectorAll(".bottom-btn");
+    bottomBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        bottomBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
   </script>
 </body>
 </html>
