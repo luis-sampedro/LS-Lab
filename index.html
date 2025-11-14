@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jaime Framis – Web personal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">JF</div>
+    <nav class="nav">
+      <a href="#about">Sobre mí</a>
+      <a href="#sport">Deporte</a>
+      <a href="#projects">Proyectos</a>
+      <a href="#contact">Contacto</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- SECCIÓN HERO -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Hola, soy <span>Jaime Framis</span></h1>
+        <p>
+          Estudiante de business, regatista internacional y muy metido
+          en proyectos relacionados con la vela y la innovación.
+        </p>
+        <div class="hero-buttons">
+          <a href="#projects" class="btn primary">Ver proyectos</a>
+          <a href="#contact" class="btn secondary">Contactar</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOBRE MÍ -->
+    <section id="about" class="section">
+      <h2>Sobre mí</h2>
+      <p>
+        Soy Jaime, tengo 22 años, estudio ADE y llevo toda la vida viajando
+        por el mundo compitiendo en vela. Me interesan mucho los proyectos
+        donde se mezclan deporte, sostenibilidad y negocio.
+      </p>
+      <p>
+        Actualmente compito en clases foiling y colaboro con equipos de alto
+        rendimiento, mientras sigo formándome en el ámbito empresarial.
+      </p>
+    </section>
+
+    <!-- DEPORTE -->
+    <section id="sport" class="section section-alt">
+      <h2>Vela y logros deportivos</h2>
+      <ul class="list">
+        <li>Campeón del mundo de Waszp (2022).</li>
+        <li>Semifinalista en la Youth America's Cup.</li>
+        <li>Experiencia en circuitos profesionales (52 Super Series, etc.).</li>
+      </ul>
+    </section>
+
+    <!-- PROYECTOS -->
+    <section id="projects" class="section">
+      <h2>Proyectos</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>Sailing & Business</h3>
+          <p>
+            Desarrollo de propuestas para marcas que quieran vincularse
+            con la vela desde una perspectiva de sostenibilidad, innovación
+            y visibilidad internacional.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Coaching para jóvenes</h3>
+          <p>
+            Acompaño a regatistas jóvenes a diseñar su propio camino,
+            compartiendo mi experiencia en competiciones internacionales
+            y en la gestión de estudios + deporte.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Proyectos académicos</h3>
+          <p>
+            Trabajo en proyectos de marketing, estrategia y liderazgo,
+            aplicando lo que vivo en el deporte al mundo del business.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- CONTACTO -->
+    <section id="contact" class="section section-alt">
+      <h2>Contacto</h2>
+      <p>
+        Si quieres hablar de proyectos, colaboraciones o simplemente conectar:
+      </p>
+      <ul class="list">
+        <li>Email: <a href="mailto:tuemail@example.com">tuemail@example.com</a></li>
+        <li>LinkedIn: <a href="https://www.linkedin.com" target="_blank">Mi perfil</a></li>
+        <li>Instagram: <a href="https://www.instagram.com" target="_blank">@tuusuario</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© <span id="year"></span> Jaime Framis. Todos los derechos reservados.</p>
+  </footer>
+
+  <script>
+    // Año automático en el footer
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
