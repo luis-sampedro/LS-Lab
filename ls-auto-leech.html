@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LS Auto Leech (LSAL) – Preview</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">LS</div>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="about.html">About me</a>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section class="app-layout">
+      <header class="app-header">
+        <div>
+          <h1>LS Auto Leech (LSAL)</h1>
+          <p>
+            Concept interface for an automated data collection engine that
+            aggregates race and sensor data into a clean database.
+          </p>
+        </div>
+      </header>
+
+      <section class="app-grid">
+        <div class="app-column">
+          <div class="metric-card">
+            <h2>Source configuration</h2>
+            <p>Here you would connect trackers, APIs and onboard systems.</p>
+          </div>
+        </div>
+        <div class="app-column">
+          <div class="metric-card">
+            <h2>Pipeline status</h2>
+            <p>Placeholder for ingestion and cleaning status.</p>
+          </div>
+        </div>
+        <div class="app-column">
+          <div class="metric-card">
+            <h2>Next steps</h2>
+            <p>Design how LSAL will push data into LSDL and other tools.</p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© <span id="year"></span> Luis Sampedro – Tools space</p>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
