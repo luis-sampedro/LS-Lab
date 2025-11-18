@@ -5,3 +5,8 @@ To Do List:
 - LS Auto Leech (LSAL)
 - LS Current App (LSCA)
 - LS Design Tools (LSD)
+
+-link to tfm
+-ls academy :
+  -splicing
+  -data webinar
