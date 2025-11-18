@@ -5,63 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LS Foiling Academy</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    body { background:#0f172a; color:white; font-family:system-ui; }
-    .container { max-width:900px; margin:40px auto; padding:20px; }
-    a { color:#38bdf8; text-decoration:none; }
-    .nav { display:flex; justify-content:space-between; margin-bottom:20px; }
-    .lang-switch img { width:28px; cursor:pointer; }
-    h1 { margin-bottom:10px; }
-    p { line-height:1.6; opacity:0.9; }
-    .card {
-      background:#1e293b; padding:20px; border-radius:12px; margin-top:25px;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
 
-    <!-- Navigation -->
-    <div class="nav">
-      <div>
-        <a href="index.html">← Inicio</a> · 
+<body>
+
+  <!-- TOP BAR identical to LSAL -->
+  <div class="topbar">
+
+    <!-- Logo (click → home) -->
+    <a href="index.html" class="logo" style="text-decoration:none; color:inherit;">
+      LS
+    </a>
+
+    <!-- Right-side nav & flags -->
+    <div style="display:flex; align-items:center; gap:1rem;">
+
+      <!-- Main links -->
+      <div class="nav">
+        <a href="index.html">Inicio</a>
         <a href="about.html">Sobre mí</a>
       </div>
-      <div class="lang-switch">
+
+      <!-- Language flags -->
+      <div style="display:flex; align-items:center; gap:0.35rem;">
         <a href="ls-foiling-academy.html">
-          <img src="https://flagcdn.com/w40/gb.png" alt="EN">
+          <img src="https://flagcdn.com/w20/gb.png"
+               alt="English"
+               style="width:20px; height:auto; border-radius:3px;">
+        </a>
+        <a href="ls-foiling-academy-es.html">
+          <img src="https://flagcdn.com/w20/es.png"
+               alt="Español"
+               style="width:20px; height:auto; border-radius:3px;">
         </a>
       </div>
+
     </div>
+  </div>
+
+
+  <!-- MAIN CONTENT -->
+  <div class="internal-page">
 
     <h1>LS Foiling Academy (LSFA)</h1>
     <p>
-      Esta sección está aún en desarrollo. La idea es construir una plataforma 
-      completa que combine cursos online al estilo de 
-      <strong>NavalApp.com</strong> con experiencias prácticas tipo 
-      <strong>Zarpar.eu</strong>.
+      Esta sección todavía está en desarrollo.  
+      LS Foiling Academy busca combinar contenido online estructurado con
+      sesiones prácticas en el agua. Demostraciones reales, guías paso a paso
+      y navegación en barcos foilers de alto rendimiento formarán el núcleo
+      de la experiencia.
     </p>
 
-    <div class="card">
-      <h2>Primer curso – Cómo navegar en Moth</h2>
+    <div class="internal-card">
+      <h2>#1 — Cómo navegar en Moth</h2>
+
       <p>
-        El primer curso de la academia se centrará en técnicas de navegación 
-        en barcos foilers usando un <strong>International Moth</strong>.  
-        Yo aporto el barco y doy charlas previas antes de la parte práctica.
+        El primer módulo se centra en navegación de alto rendimiento usando un
+        <strong>International Moth</strong>.
+        Yo pongo el barco y realizo las charlas previas antes de las sesiones
+        prácticas.
       </p>
-      <p>El objetivo es llevar a la gente desde cero hasta volar con seguridad, combinando:</p>
+
+      <p>El curso incluirá:</p>
+
       <ul>
-        <li>Conceptos básicos de dinámica de foils</li>
+        <li>Comprender el comportamiento del foil, el equilibrio y el trimado</li>
         <li>Demostraciones en tierra y briefing de seguridad</li>
-        <li>Entrenamiento práctico en el agua</li>
-        <li>Seguimiento de progreso</li>
+        <li>Sesiones progresivas en el agua adaptadas a cada alumno</li>
+        <li>Feedback técnico, seguimiento de progresión y consejos personalizados</li>
       </ul>
+
+      <p>
+        Pensado para navegantes que quieran pasar de los primeros vuelos a un
+        foiling estable y con confianza.
+      </p>
     </div>
 
-    <p style="margin-top:40px; opacity:0.6;">
-      Muy pronto habrá más cursos y experiencias.
+    <p class="section-note">
+      Muy pronto se añadirán más cursos y experiencias.
     </p>
 
   </div>
+
+
+  <!-- FOOTER identical to LSAL -->
+  <div class="footer">
+    © 2025 LS Tool · Todos los derechos reservados
+  </div>
+
 </body>
 </html>
