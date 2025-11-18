@@ -1043,3 +1043,95 @@ body {
   }
 }
 
+/* ---------- INTERNAL PAGE LAYOUT (Foiling Academy, About, etc.) ---------- */
+
+.internal-page {
+  max-width: 900px;
+  margin: 3rem auto;
+  padding: 0 6vw;
+}
+
+.internal-page h1 {
+  font-size: 2rem;
+  margin-bottom: 0.8rem;
+  color: #e9f1ff;
+}
+
+.internal-page p {
+  color: #cbd5f5;
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.internal-card {
+  background: #0c182e;
+  border-radius: 1.2rem;
+  padding: 1.5rem;
+  margin-top: 1.6rem;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0px 8px 20px rgba(15, 23, 42, 0.5);
+}
+
+.internal-card h2 {
+  color: #e9f1ff;
+  font-size: 1.3rem;
+  margin-bottom: 0.8rem;
+}
+
+.internal-card ul {
+  list-style: disc;
+  padding-left: 1.1rem;
+}
+
+.internal-card li {
+  margin-bottom: 0.4rem;
+  color: #d1d9e8;
+}
+/* ---------- LANGUAGE SWITCH ---------- */
+
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.lang-switch img {
+  width: 28px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.lang-switch img:hover {
+  transform: scale(1.05);
+  border-color: #38bdf8;
+}
+/* ---------- INTERNAL PAGE NAV ---------- */
+
+.internal-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.8rem;
+  align-items: center;
+}
+
+.internal-nav a {
+  color: #cbd5f5;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: 0.2s ease;
+}
+
+.internal-nav a:hover {
+  color: #38bdf8;
+}
+
+.section-note {
+  font-size: 0.9rem;
+  opacity: 0.75;
+  margin-top: 1rem;
+  color: #9ca3af;
+}
+
