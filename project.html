@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSc Project – Luis Sampedro</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="index.html" class="logo" style="text-decoration:none; color:inherit;">LS</a>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="about.html">About me</a>
+      <a href="#overview">Project</a>
+      <a href="#links">Links</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- VIDEO HEADER -->
+    <section class="hero" style="padding:0; height:auto;">
+      <div class="hero-overlay" style="background:rgba(0,0,0,0.45); padding:0;">
+        <div style="width:100%; max-width:900px; margin:auto; padding:0;">
+          <div style="position:relative; width:100%; padding-bottom:56.25%; overflow:hidden;">
+            <iframe 
+              src="https://www.youtube.com/embed/YOUR_SHORT_ID?rel=0&autoplay=0&mute=1&loop=1&playlist=YOUR_SHORT_ID"
+              style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+              allowfullscreen>
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEXT OVERVIEW -->
+    <section id="overview" class="section">
+      <h2>MSc Project – Overview</h2>
+      <p>
+        This section gathers all the resources, documents and tools related to my MSc project. 
+        It mirrors my previous Linktree-style page, but redesigned to fully match the clean layout 
+        of the Personal Lab environment.
+      </p>
+      <p>
+        Here you can find the report, simulation tools, datasets, dashboards, videos and 
+        repositories used during the project.
+      </p>
+    </section>
+
+    <!-- LINK CARDS (STYLE MATCHING PERSONAL LAB) -->
+    <section id="links" class="section section-alt">
+      <h2>Project Resources</h2>
+
+      <div class="cards">
+
+        <article class="card">
+          <h3>📘 MSc Report</h3>
+          <p>Full academic report including methodology, simulator development and Moth testing protocol.</p>
+          <a href="LINK_TO_REPORT" class="btn primary">Open Report</a>
+        </article>
+
+        <article class="card">
+          <h3>💻 GitHub Repository</h3>
+          <p>Source code for the DVPP real-time simulator, data processing and testing platform.</p>
+          <a href="https://github.com/luis-sampedro" class="btn primary">Go to GitHub</a>
+        </article>
+
+        <article class="card">
+          <h3>📊 Data Dashboard</h3>
+          <p>Interactive dashboard with experimental data, simulator outputs and test comparisons.</p>
+          <a href="LINK_TO_DASHBOARD" class="btn primary">Open Dashboard</a>
+        </article>
+
+        <article class="card">
+          <h3>🎥 Video Summary</h3>
+          <p>Short visual introduction to the simulator and testing process.</p>
+          <a href="https://youtube.com/shorts/YOUR_SHORT_ID" class="btn primary">Watch Video</a>
+        </article>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>© <span id="year"></span> Luis Sampedro. All rights reserved.</p>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>
