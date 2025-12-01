@@ -6,27 +6,29 @@
   <title>MSc Project – Luis Sampedro</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
+  <!-- TOPBAR -->
   <header class="topbar">
     <a href="index.html" class="logo" style="text-decoration:none; color:inherit;">LS</a>
     <nav class="nav">
       <a href="index.html">Home</a>
       <a href="about.html">About me</a>
       <a href="#overview">Project</a>
-      <a href="#links">Links</a>
+      <a href="#resources">Resources</a>
     </nav>
   </header>
 
   <main>
 
-    <!-- VIDEO HEADER -->
+    <!-- VIDEO HERO -->
     <section class="hero" style="padding:0; height:auto;">
-      <div class="hero-overlay" style="background:rgba(0,0,0,0.45); padding:0;">
-        <div style="width:100%; max-width:900px; margin:auto; padding:0;">
+      <div class="hero-overlay" style="padding:0; background:rgba(0,0,0,0.45);">
+        <div style="width:100%; max-width:900px; margin:auto;">
           <div style="position:relative; width:100%; padding-bottom:56.25%; overflow:hidden;">
             <iframe 
-              src="https://www.youtube.com/embed/YOUR_SHORT_ID?rel=0&autoplay=0&mute=1&loop=1&playlist=YOUR_SHORT_ID"
+              src="https://www.youtube.com/embed/nC5TnmgFQqQ?rel=0&mute=1&loop=1&playlist=nC5TnmgFQqQ"
               style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
               allowfullscreen>
             </iframe>
@@ -35,52 +37,92 @@
       </div>
     </section>
 
-    <!-- TEXT OVERVIEW -->
+    <!-- PROJECT OVERVIEW -->
     <section id="overview" class="section">
-      <h2>MSc Project – Overview</h2>
+      <h2>MSc Project — Overview</h2>
       <p>
-        This section gathers all the resources, documents and tools related to my MSc project. 
-        It mirrors my previous Linktree-style page, but redesigned to fully match the clean layout 
-        of the Personal Lab environment.
+        This section compiles all documents, visual material, datasets and 
+        supporting resources for my MSc project:
       </p>
       <p>
-        Here you can find the report, simulation tools, datasets, dashboards, videos and 
-        repositories used during the project.
+        <strong>“Developing an International Moth Testing Platform in a DVPP-Driven Real-Time Simulator.”</strong>
+      </p>
+      <p>
+        All content below mirrors my previous Linktree structure, but 
+        redesigned to fully match the layout of the Personal Lab.
       </p>
     </section>
 
-    <!-- LINK CARDS (STYLE MATCHING PERSONAL LAB) -->
-    <section id="links" class="section section-alt">
+    <!-- RESOURCES -->
+    <section id="resources" class="section section-alt">
       <h2>Project Resources</h2>
 
       <div class="cards">
 
+        <!-- ABSTRACT -->
         <article class="card">
-          <h3>📘 MSc Report</h3>
-          <p>Full academic report including methodology, simulator development and Moth testing protocol.</p>
-          <a href="LINK_TO_REPORT" class="btn primary">Open Report</a>
+          <h3>📑 Abstract</h3>
+          <p>Quick overview of the project, goals, methodology and contributions.</p>
+          <a href="MSc-Project-Linktree-main/Abstract.pdf" class="btn primary" target="_blank">Open Abstract</a>
         </article>
 
+        <!-- GLOSSARY -->
         <article class="card">
-          <h3>💻 GitHub Repository</h3>
-          <p>Source code for the DVPP real-time simulator, data processing and testing platform.</p>
-          <a href="https://github.com/luis-sampedro" class="btn primary">Go to GitHub</a>
+          <h3>📘 Glossary</h3>
+          <p>Definitions of symbols, concepts and technical terminology.</p>
+          <a href="MSc-Project-Linktree-main/Glossary.pdf" class="btn primary" target="_blank">Open Glossary</a>
         </article>
 
+        <!-- FULL REPORT (v1) -->
         <article class="card">
-          <h3>📊 Data Dashboard</h3>
-          <p>Interactive dashboard with experimental data, simulator outputs and test comparisons.</p>
-          <a href="LINK_TO_DASHBOARD" class="btn primary">Open Dashboard</a>
+          <h3>📕 Full Report (v1)</h3>
+          <p>Complete MSc Thesis: simulator development, DVPP equations, validation and Moth testing platform.</p>
+          <a href="MSc-Project-Linktree-main/Sampedro-MSc-v1.pdf" class="btn primary" target="_blank">Open Full Report</a>
         </article>
 
+        <!-- VIDEO 1 -->
         <article class="card">
-          <h3>🎥 Video Summary</h3>
-          <p>Short visual introduction to the simulator and testing process.</p>
-          <a href="https://youtube.com/shorts/YOUR_SHORT_ID" class="btn primary">Watch Video</a>
+          <h3>🎥 Video 1 — Downwind</h3>
+          <p>Downwind simulation behaviour and Moth performance modes.</p>
+          <a href="https://youtu.be/5V93fsWs-CM" class="btn primary" target="_blank">Watch Video</a>
+        </article>
+
+        <!-- VIDEO 2 -->
+        <article class="card">
+          <h3>🎥 Video 2 — Upwind (waves)</h3>
+          <p>Showing the impact of waves and stability on upwind sailing.</p>
+          <a href="https://youtu.be/Q7OluI0ex_s" class="btn primary" target="_blank">Watch Video</a>
+        </article>
+
+        <!-- VIDEO 3 -->
+        <article class="card">
+          <h3>🎥 Video 3 — Real Upwind Sailing</h3>
+          <p>Real-world footage to compare with simulator output.</p>
+          <a href="https://youtube.com/shorts/nC5TnmgFQqQ" class="btn primary" target="_blank">Watch Short</a>
+        </article>
+
+        <!-- ADDITIONAL PLOTS -->
+        <article class="card">
+          <h3>📊 Additional Plots</h3>
+          <p>Full page of visual outputs: wave responses, KP trends, gearing comparisons, etc.</p>
+          <a href="MSc-Project-Linktree-main/plots.html" class="btn primary" target="_blank">View Plots</a>
+        </article>
+
+        <!-- POSTER -->
+        <article class="card">
+          <h3>📄 Poster</h3>
+          <p>The academic poster presented for the MSc project.</p>
+          <a href="MSc-Project-Linktree-main/Posterv3.pdf" class="btn primary" target="_blank">Open Poster</a>
+        </article>
+
+        <!-- REFERENCES -->
+        <article class="card">
+          <h3>📚 References</h3>
+          <p>Bibliography, DVPP sources, research papers and supporting material.</p>
+          <a href="MSc-Project-Linktree-main/references.html" class="btn primary" target="_blank">View References</a>
         </article>
 
       </div>
-
     </section>
 
   </main>
