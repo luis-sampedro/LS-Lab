@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Sail Room - {{ boat.name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('dashboard') }}" style="color: #94a3b8; text-decoration: none;">&larr; Back to Fleet</a>
+        <div style="display: flex; align-items: baseline; gap: 1rem; margin-top: 0.5rem;">
+            <h1>{{ boat.name }} <span style="font-size: 1rem; color: #64748b; font-weight: normal;">({{ boat.type
+                    }})</span></h1>
+            <button class="btn secondary" style="padding: 4px 8px; font-size: 0.9rem;" onclick="openEditBoatModal()">✏️
+                Edit</button>
+        </div>
+    </div>
+
+    <!-- Sails Grid -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>Sail Inventory</h2>
+        <button class="btn primary" onclick="document.getElementById('addSailModal').style.display='flex'">+ Add
+            Sail</button>
+    </div>
+
+    <div class="cards tools-grid" id="sails-container">
+        <!-- JS will populate -->
+        <div class="card"
+            style="border-style: dashed; border-color: #334155; display: flex; align-items: center; justify-content: center; min-height: 200px;">
+            <p style="color: #64748b;">Loading sails...</p>
+        </div>
+    </div>
+</section>
+
+<!-- Add Sail Modal -->
+<div id="addSailModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+    <div
+        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
+        <h2 style="margin-bottom: 1.5rem;">Add New Sail</h2>
+        <input type="text" id="sailCode" placeholder="Code (e.g. J1, MN-A)"
+            style="width: 100%; padding: 10px; margin-bottom: 1rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <input type="text" id="sailDesc" placeholder="Description (e.g. Light Air Jib)"
+            style="width: 100%; padding: 10px; margin-bottom: 1.5rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn secondary"
+                onclick="document.getElementById('addSailModal').style.display='none'">Cancel</button>
+            <button class="btn primary" onclick="createSail()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Boat Modal -->
+<div id="editBoatModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+    <div
+        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
+        <h2 style="margin-bottom: 1.5rem;">Edit Boat</h2>
+        <input type="text" id="editBoatName" placeholder="Boat Name"
+            style="width: 100%; padding: 10px; margin-bottom: 1rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <input type="text" id="editBoatType" placeholder="Type"
+            style="width: 100%; padding: 10px; margin-bottom: 1.5rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn secondary"
+                onclick="document.getElementById('editBoatModal').style.display='none'">Cancel</button>
+            <button class="btn primary" onclick="updateBoat()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+    let currentUserToken = null;
+    const boatId = "{{ boat.id }}";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUserToken = await user.getIdToken();
+            loadBoatDetails();
+            loadSails();
+        } else {
+            window.location.href = "{{ url_for('login') }}";
+        }
+    });
+
+    async function loadBoatDetails() {
+        // Since we don't have a direct 'get boat by id' API that returns JSON for a single boat 
+        // without fetching all boats (based on current implementation), we can either:
+        // 1. Fetch all boats and find this one.
+        // 2. Add a GET /api/boats/<id> endpoint.
+        // Let's assume Option 1 for MVP speed, or Option 2 for correctness.
+        // Wait, verify_service has get_user_boats but not get_boat.
+        // Actually, let's just fetch all boats for now, it's safer than touching backend again immediately.
+
+        const res = await fetch('/api/boats', { headers: { 'Authorization': currentUserToken } });
+        const boats = await res.json();
+        const boat = boats.find(b => b.id === boatId);
+        if (boat) {
+            document.querySelector('h1').innerHTML = `${boat.name} <span style="font-size: 1rem; color: #64748b; font-weight: normal;">(${boat.type})</span>`;
+        }
+    }
+
+    window.createSail = async () => {
+        const code = document.getElementById('sailCode').value;
+        const desc = document.getElementById('sailDesc').value;
+        if (!code) return;
+
+        const res = await fetch(`/api/boats/${boatId}/sails`, {
+            method: 'POST',
+            headers: {
+                'Authorization': currentUserToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code, description: desc })
+        });
+
+        if (res.ok) {
+            document.getElementById('addSailModal').style.display = 'none';
+            loadSails();
+        }
+    };
+
+    async function loadSails() {
+        const res = await fetch(`/api/boats/${boatId}/sails`, {
+            headers: { 'Authorization': currentUserToken }
+        });
+        const sails = await res.json();
+
+        const container = document.getElementById('sails-container');
+        container.innerHTML = '';
+
+        if (sails.length === 0) {
+            container.innerHTML = '<p style="color: #64748b; width: 100%; text-align: center;">No sails yet. Add one to start analyzing.</p>';
+            return;
+        }
+
+        sails.forEach(sail => {
+            const card = document.createElement('div');
+            card.className = 'card card-link';
+            // Link to Sail Details (History)
+            card.onclick = (e) => {
+                if (e.target.closest('.delete-btn')) return;
+                window.location.href = `/boat/${boatId}/sail/${sail.id}`;
+            };
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div>
+                        <h3 style="color: #38bdf8; margin-bottom: 0.5rem;">${sail.code}</h3>
+                        <p>${sail.description || ''}</p>
+                    </div>
+                    <button class="btn secondary delete-btn" style="z-index:10; padding: 6px 10px; border-color: #ef4444; color: #ef4444;" onclick="deleteSail('${sail.id}')">🗑️</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    window.deleteSail = async (sid) => {
+        if (!confirm('Delete this sail and all history?')) return;
+        const res = await fetch(`/api/boats/${boatId}/sails/${sid}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': currentUserToken }
+        });
+        if (res.ok) loadSails();
+    };
+
+    window.openEditBoatModal = () => {
+        // Pre-fill with current values (simple scrape from DOM for now, or fetch logic)
+        // Ideally we keep state object. But scraping h1 is fast hack.
+        const h1 = document.querySelector('h1').innerText;
+        // "Luna Rossa (AC75)"
+        const name = h1.split('(')[0].trim();
+        const typeMatch = h1.match(/\(([^)]+)\)/);
+        const type = typeMatch ? typeMatch[1] : '';
+
+        document.getElementById('editBoatName').value = name;
+        document.getElementById('editBoatType').value = type;
+        document.getElementById('editBoatModal').style.display = 'flex';
+    };
+
+    window.updateBoat = async () => {
+        const name = document.getElementById('editBoatName').value;
+        const type = document.getElementById('editBoatType').value;
+
+        const res = await fetch(`/api/boats/${boatId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': currentUserToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, type })
+        });
+
+        if (res.ok) {
+            document.querySelector('h1').innerHTML = `${name} <span style="font-size: 1rem; color: #64748b; font-weight: normal;">(${type})</span>`;
+            document.getElementById('editBoatModal').style.display = 'none';
+        } else {
+            alert('Failed to update');
+        }
+    };
+</script>
+{% endblock %}

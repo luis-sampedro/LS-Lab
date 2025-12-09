@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LS Foiling Academy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+
+<body>
+
+    <!-- TOP BAR identical to LSAL -->
+    <div class="topbar">
+
+        <!-- Logo (click → home) -->
+        <a href="{{ url_for('index', lang='es') }}" class="logo" style="text-decoration:none; color:inherit;">
+            LS
+        </a>
+
+        <!-- Right-side nav & flags -->
+        <div style="display:flex; align-items:center; gap:1rem;">
+
+            <!-- Main links -->
+            <div class="nav">
+                <a href="{{ url_for('index', lang='es') }}">Inicio</a>
+                <a href="{{ url_for('about', lang='es') }}">Sobre mí</a>
+            </div>
+
+            <!-- Language flags -->
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+                <a href="{{ url_for('ls_foiling_academy') }}">
+                    <img src="https://flagcdn.com/w20/gb.png" alt="English"
+                        style="width:20px; height:auto; border-radius:3px;">
+                </a>
+                <a href="{{ url_for('ls_foiling_academy', lang='es') }}">
+                    <img src="https://flagcdn.com/w20/es.png" alt="Español"
+                        style="width:20px; height:auto; border-radius:3px;">
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- MAIN CONTENT -->
+    <div class="internal-page">
+
+        <h1>LS Foiling Academy (LSFA)</h1>
+        <p>
+            Esta sección todavía está en desarrollo.
+            LS Foiling Academy busca combinar contenido online estructurado con
+            sesiones prácticas en el agua. Demostraciones reales, guías paso a paso
+            y navegación en barcos foilers de alto rendimiento formarán el núcleo
+            de la experiencia.
+        </p>
+
+        <div class="internal-card">
+            <h2>#1 — Cómo navegar en Moth</h2>
+
+            <p>
+                El primer módulo se centra en navegación de alto rendimiento usando un
+                <strong>International Moth</strong>.
+                Yo pongo el barco y realizo las charlas previas antes de las sesiones
+                prácticas.
+            </p>
+
+            <p>El curso incluirá:</p>
+
+            <ul>
+                <li>Comprender el comportamiento del foil, el equilibrio y el trimado</li>
+                <li>Demostraciones en tierra y briefing de seguridad</li>
+                <li>Sesiones progresivas en el agua adaptadas a cada alumno</li>
+                <li>Feedback técnico, seguimiento de progresión y consejos personalizados</li>
+            </ul>
+
+            <p>
+                Pensado para navegantes que quieran pasar de los primeros vuelos a un
+                foiling estable y con confianza.
+            </p>
+        </div>
+
+        <p class="section-note">
+            Muy pronto se añadirán más cursos y experiencias.
+        </p>
+
+    </div>
+
+
+    <!-- FOOTER identical to LSAL -->
+    <div class="footer">
+        © <span id="year"></span> LS Tool · Todos los derechos reservados
+    </div>
+
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+
+</body>
+
+</html>

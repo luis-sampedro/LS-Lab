@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}My Fleet - LS Lab{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1>My Boats</h1>
+            <p style="color: #94a3b8;">Manage your fleet and sail inventory.</p>
+        </div>
+        <button class="btn primary" onclick="document.getElementById('addBoatModal').style.display='flex'">+ Add
+            Boat</button>
+    </div>
+
+    <!-- Boats Grid -->
+    <div class="cards tools-grid" id="boats-container">
+        <!-- Boats will be loaded here via JS -->
+        <div class="card"
+            style="border-style: dashed; border-color: #334155; display: flex; align-items: center; justify-content: center; min-height: 200px;">
+            <p style="color: #64748b;">Loading fleet...</p>
+        </div>
+    </div>
+</section>
+
+<!-- Add Boat Modal -->
+<div id="addBoatModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+    <div
+        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
+        <h2 style="margin-bottom: 1.5rem;">Add New Boat</h2>
+        <input type="text" id="boatName" placeholder="Boat Name (e.g. Luna Rossa)"
+            style="width: 100%; padding: 10px; margin-bottom: 1rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <input type="text" id="boatType" placeholder="Type (e.g. AC75, Moth)"
+            style="width: 100%; padding: 10px; margin-bottom: 1.5rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn secondary"
+                onclick="document.getElementById('addBoatModal').style.display='none'">Cancel</button>
+            <button class="btn primary" onclick="createBoat()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+    let currentUserToken = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUserToken = await user.getIdToken();
+            loadBoats();
+        } else {
+            window.location.href = "{{ url_for('login') }}";
+        }
+    });
+
+    window.createBoat = async () => {
+        const name = document.getElementById('boatName').value;
+        const type = document.getElementById('boatType').value;
+        if (!name) return;
+
+        const res = await fetch('/api/boats', {
+            method: 'POST',
+            headers: {
+                'Authorization': currentUserToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, type })
+        });
+
+        if (res.ok) {
+            document.getElementById('addBoatModal').style.display = 'none';
+            loadBoats();
+        }
+    };
+
+    async function loadBoats() {
+        const res = await fetch('/api/boats', {
+            headers: { 'Authorization': currentUserToken }
+        });
+        const boats = await res.json();
+
+        const container = document.getElementById('boats-container');
+        container.innerHTML = '';
+
+        if (boats.length === 0) {
+            container.innerHTML = '<p style="color: #64748b; width: 100%; text-align: center;">No boats found. Add one to get started!</p>';
+            return;
+        }
+
+        boats.forEach(boat => {
+            const card = document.createElement('div');
+            card.className = 'card card-link';
+            card.onclick = (e) => {
+                if (e.target.closest('.delete-btn')) return;
+                window.location.href = `/boat/${boat.id}`;
+            };
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div>
+                        <h3 style="margin-bottom: 0.5rem;">${boat.name}</h3>
+                        <p style="color: #94a3b8;">${boat.type}</p>
+                    </div>
+                    <button class="btn secondary delete-btn" style="z-index:10; padding: 6px 10px; border-color: #ef4444; color: #ef4444;" onclick="deleteBoat('${boat.id}')">🗑️</button>
+                </div>
+                <!-- ID Hidden for cleaner UI (was 'ugly') -->
+                <p class="card-meta" style="margin-top: 1rem; display: none;">ID: ${boat.id}</p>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    window.deleteBoat = async (id) => {
+        if (!confirm('Are you sure? This will delete the boat and all its sails.')) return;
+        const res = await fetch(`/api/boats/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': currentUserToken }
+        });
+        if (res.ok) loadBoats();
+    };
+</script>
+{% endblock %}

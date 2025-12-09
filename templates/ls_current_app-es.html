@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LS Current App (Descarga APK)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+
+<body>
+    <header class="topbar">
+        <!-- Logo (click → home) -->
+        <a href="{{ url_for('index', lang='es') }}" class="logo" style="text-decoration:none; color:inherit;">
+            LS
+        </a>
+        <nav class="nav">
+            <a href="{{ url_for('index', lang='es') }}">Inicio</a>
+            <a href="{{ url_for('about', lang='es') }}">Sobre mí</a>
+        </nav>
+    </header>
+
+    <main class="app-shell" style="max-width:900px;">
+        <!-- CABECERA: ICONO + TEXTO + BOTÓN -->
+        <section class="section" style="padding-bottom:1.5rem;">
+            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:center;">
+                <img src="{{ url_for('static', filename='images/ls-current-app-icon.svg') }}" alt="Icono LS Current App"
+                    class="app-icon" />
+
+                <div style="flex:1; min-width:240px;">
+                    <h1 style="font-size:1.6rem; margin-bottom:0.4rem;">LS Current App</h1>
+                    <p style="color:#9ca3af; margin-bottom:0.7rem;">
+                        Herramienta móvil para estimar la corriente de marea desde tu posición GPS.
+                        La app registra tu posición <strong>ahora</strong> y <strong>1 minuto después</strong>,
+                        calcula el <strong>vector de corriente</strong> (velocidad y dirección) y
+                        dibuja todas las mediciones en una carta náutica sencilla.
+                    </p>
+
+                    <a href="{{ url_for('static', filename='LSC-release-1.0.apk') }}" download class="btn primary"
+                        style="padding:0.9rem 2.1rem; font-size:0.95rem; border-radius:1rem; display:inline-block; margin-top:0.3rem;">
+                        Descargar APK para Android
+                    </a>
+
+                    <p style="margin-top:0.8rem; color:#9ca3af; font-size:0.85rem;">
+                        Solo Android · Instalación manual (activa "Orígenes desconocidos" en tu dispositivo).
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MOCKUP TIPO MÓVIL -->
+        <section class="section section-alt" style="margin-top:0;">
+            <h2>Vista previa</h2>
+            <div class="phone-preview">
+                <div class="phone-screen">
+                    <header class="phone-preview-header">
+                        <div>
+                            <div class="phone-app-name">LS Current App</div>
+                            <div class="phone-subtitle">Ría de Vigo · Corriente en vivo</div>
+                        </div>
+                    </header>
+
+                    <div class="phone-chart">
+                        <div class="phone-grid-horizontal"></div>
+                        <div class="phone-grid-vertical"></div>
+                        <div class="phone-boat">⛵</div>
+                        <div class="phone-arrow"></div>
+                    </div>
+
+                    <div class="phone-bottom">
+                        <div class="phone-metric">
+                            <span class="metric-label-small">Intensidad Corriente</span>
+                            <span class="metric-value-big">1.3 kn</span>
+                        </div>
+                        <div class="phone-metric">
+                            <span class="metric-label-small">Dirección (verdadera)</span>
+                            <span class="metric-value-big">228°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="margin-top:1rem; color:#9ca3af; font-size:0.85rem;">
+                Concepto: la app real calcula el vector a partir de tus posiciones GPS
+                y guarda cada medición para construir un mapa de corrientes con el tiempo.
+            </p>
+        </section>
+
+        <!-- SECCIÓN QR -->
+        <section class="section">
+            <h2>Descargar vía QR</h2>
+            <p style="color:#9ca3af; margin-bottom:0.8rem;">
+                También puedes abrir esta página en tu móvil escaneando el código QR de abajo.
+                Una vez cargada, pulsa en "Descargar APK".
+            </p>
+
+            <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+                <div class="qr-box">
+                    <img src="{{ url_for('static', filename='images/ls-current-app-qr.png') }}"
+                        alt="Código QR para descargar LS Current App" class="qr-image" />
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>© <span id="year"></span> LS Apps · Todos los derechos reservados</p>
+    </footer>
+
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}LS Data Lab (LSDL) – Preview{% endblock %}
+
+{% block content %}
+<main class="app-shell">
+    <section class="app-layout">
+        <header class="app-header">
+            <div>
+                <h1>LS Data Lab (LSDL)</h1>
+                <p>
+                    Concept interface for an automated data collection engine that
+                    aggregates race and sensor data into a clean database.
+                </p>
+            </div>
+        </header>
+
+        <section class="app-grid">
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Source configuration</h2>
+                    <p>Here you would connect trackers, APIs and onboard systems.</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Pipeline status</h2>
+                    <p>Placeholder for ingestion and cleaning status.</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Next steps</h2>
+                    <p>Design how LSAL will push data into LSDL and other tools.</p>
+                </div>
+            </div>
+        </section>
+    </section>
+</main>
+{% endblock %}

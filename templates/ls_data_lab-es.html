@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}LS Data Lab (LSDL) – Vista Previa{% endblock %}
+
+{% block content %}
+<main class="app-shell">
+    <section class="app-layout">
+        <header class="app-header">
+            <div>
+                <h1>LS Data Lab (LSDL)</h1>
+                <p>
+                    Concepto de interfaz para un motor de recolección de datos automatizado que
+                    agrega datos de regata y sensores en una base de datos limpia.
+                </p>
+            </div>
+        </header>
+
+        <section class="app-grid">
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Configuración de fuentes</h2>
+                    <p>Aquí conectarías trackers, APIs y sistemas de a bordo.</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Estado del pipeline</h2>
+                    <p>Espacio reservado para el estado de ingestión y limpieza.</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Siguientes pasos</h2>
+                    <p>Diseñar cómo LSAL enviará datos a LSDL y otras herramientas.</p>
+                </div>
+            </div>
+        </section>
+    </section>
+</main>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}LS Design Tools (LSDT) – Vista Previa{% endblock %}
+
+{% block content %}
+<main class="app-shell">
+    <section class="app-layout">
+        <header class="app-header">
+            <div>
+                <h1>LS Design Tools (LSDT)</h1>
+                <p>
+                    Concepto de interfaz para calculadoras específicas de diseño de yates y
+                    herramientas paramétricas.
+                </p>
+            </div>
+        </header>
+
+        <section class="app-grid">
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Selección de herramienta</h2>
+                    <p>Foils, Aparejo, Parámetros del casco...</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Motor de cálculo</h2>
+                    <p>Placeholder para backend en Python/Numpy.</p>
+                </div>
+            </div>
+            <div class="app-column">
+                <div class="metric-card">
+                    <h2>Resultados</h2>
+                    <p>Salida de gráficas y tablas.</p>
+                </div>
+            </div>
+        </section>
+    </section>
+</main>
+{% endblock %}

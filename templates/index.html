@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Luis Sampedro – Personal Lab{% endblock %}
+
+{% block content %}
+<!-- HERO / OVERALL RESUME -->
+<section class="hero">
+    <div class="hero-overlay">
+        <div class="hero-card">
+            <img src="{{ url_for('static', filename='images/luis-portrait.png') }}" alt="Luis Sampedro"
+                class="hero-avatar" />
+
+            <div class="hero-text">
+                <h1>Hi, I'm <span>Luis SAMPEDRO</span></h1>
+                <p>
+                    Naval Architect & Maritime Engineer from Galicia, working at the
+                    intersection of high-performance sailing, data analysis and
+                    engineering design.
+                </p>
+                <p>
+                    In this project I try to create my personal space online,
+                    containing my projects and, especially, my data analysis tools and
+                    image processing software.
+                </p>
+
+                <div class="hero-buttons">
+                    <a href="#tools" class="btn primary">Explore tools</a>
+                    <a href="{{ url_for('about') }}" class="btn secondary">About me</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TOOLS OVERVIEW -->
+<section id="tools" class="section section-alt">
+    <h2>Project tools</h2>
+    <p>
+        These are the four tools I want to develop inside this space. Some are
+        already prototyped, others are still work in progress.
+    </p>
+
+    <div class="cards tools-grid">
+        <!-- LS Sail Scan (NEW) -->
+        <a href="{{ url_for('sail_scan_overview') }}" class="card card-link" style="border-color: #38bdf8;">
+            <h3 style="color: #38bdf8;">LS Sail Scan (L3S)</h3>
+            <p>
+                <strong>[NEW]</strong> Upload a sail photo and automatically analyze draft position and depth using
+                computer vision.
+            </p>
+            <p class="card-meta">
+                Beta version: 3.0 · Click to open
+            </p>
+        </a>
+
+        <!-- LSDL -->
+        <a href="{{ url_for('ls_data_lab') }}" class="card card-link">
+            <h3>LS Data Lab (LSDL)</h3>
+            <p>
+                Online workspace for processing nautical data: GPS logs, sensor
+                streams and race tracks. Inspired by tools like Sailtrac, focused on
+                speed, VMG and manoeuvre analysis.
+            </p>
+            <p class="card-meta">
+                Status: concept · UI placeholder
+            </p>
+        </a>
+
+        <!-- International Moth Simulator -->
+        <a href="{{ url_for('project') }}" class="card card-link">
+            <h3>International Moth Simulator</h3>
+            <p>
+                My MSc Project: A 6-DOF dynamic simulator for the International Moth class.
+                Physics-based modelling of hydrofoils, aero-hydrodynamics and flight control systems.
+            </p>
+            <p class="card-meta">
+                Status: Thesis Project · Click to view
+            </p>
+        </a>
+
+        <!-- LS Current App -->
+        <a href="{{ url_for('lsc_app') }}" class="card card-link">
+            <h3>LS Current App (LSC App)</h3>
+            <p>
+                Tool to visualise currents, wind and boat performance together.
+                Designed to help understand how external conditions affect routing,
+                laylines and tactical decisions on the racecourse.
+            </p>
+            <p class="card-meta">
+                Status: v1.1.3 · Click to open
+            </p>
+        </a>
+
+        <!-- LS Design Tools -->
+        <a href="{{ url_for('ls_design_tools') }}" class="card card-link">
+            <h3>LS Design Tools (LSD)</h3>
+            <p>
+                A collection of small utilities for yacht design: hull and foil
+                parameter explorers, basic VPP-style calculators and links with CFD
+                workflows.
+            </p>
+            <p class="card-meta">
+                Status: concept · UI placeholder
+            </p>
+        </a>
+
+        <!-- LS Foiling Academy -->
+        <a href="{{ url_for('ls_foiling_academy') }}" class="card card-link">
+            <h3>LS Foiling Academy (LSFA)</h3>
+            <p>
+                Central hub for courses, talks and hands-on experiences about high-performance
+                sailing: learn how to sail foiling boats, understand Moth technique, improve
+                boat handling and gain real on-water knowledge.
+            </p>
+            <p class="card-meta">
+                Status: concept · content in progress
+            </p>
+        </a>
+
+    </div>
+
+    <!-- LINK A SOBRE MÍ -->
+    <section class="section">
+        <h2>About me</h2>
+        <p>
+            If you want a more classical overview of my background, education,
+            experience and sailing history, you can visit the full “About me”
+            section.
+        </p>
+        <a href="{{ url_for('about') }}" class="btn secondary" style="margin-top:0.8rem; display:inline-block;">
+            Go to About me
+        </a>
+    </section>
+    {% endblock %}

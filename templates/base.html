@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Luis Sampedro – Personal Lab{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  {% block header %}
+  <!-- Default Header (can be overridden) -->
+  <header class="topbar">
+    <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: white;">LS</a>
+    <nav class="nav">
+      <a href="{{ url_for('index', lang=request.args.get('lang')) }}">Home</a>
+      <a href="{{ url_for('index', lang=request.args.get('lang')) }}#tools">Tools</a>
+      <a href="{{ url_for('about', lang=request.args.get('lang')) }}">About me</a>
+      <div class="lang-switch" style="margin-left: 1rem; display: inline-flex; gap: 0.5rem; align-items: center;">
+        <a href="{{ url_for(request.endpoint, lang='en', **(request.view_args or {})) }}" title="English"
+          style="text-decoration: none; font-size: 1.2rem;">🇬🇧</a>
+        <a href="{{ url_for(request.endpoint, lang='es', **(request.view_args or {})) }}" title="Español"
+          style="text-decoration: none; font-size: 1.2rem;">🇪🇸</a>
+
+        <!-- Auth Icon -->
+        <div id="auth-status" style="margin-left: 10px; border-left: 1px solid #334155; padding-left: 10px;">
+          <a href="{{ url_for('login') }}" id="login-link"
+            style="font-size: 0.9em; border: 1px solid #38bdf8; padding: 4px 12px; border-radius: 20px; color: #38bdf8; text-decoration: none;">Sign
+            In</a>
+          <a href="{{ url_for('dashboard') }}" id="user-icon"
+            style="display: none; align-items: center; gap: 8px; text-decoration: none;">
+            <div
+              style="width: 32px; height: 32px; background: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0f172a; font-weight: bold;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <script type="module">
+      import { initGlobalAuthListener, auth } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+      // Initialize Header UI listener
+      initGlobalAuthListener('login-link', 'user-icon');
+    </script>
+  </header>
+  {% endblock %}
+
+  <main id="top">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="section" style="padding-bottom: 0;">
+      {% for message in messages %}
+      <div class="form-error" style="background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; color: #cbd5f5;">{{
+        message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  {% block footer %}
+  <footer class="footer">
+    <p>© <span id="year"></span> Luis Sampedro. All rights reserved.</p>
+  </footer>
+  {% endblock %}
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+
+</html>

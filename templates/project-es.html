@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proyecto MSc – Plataforma de Ensayo Moth en Simulador DVPP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+
+<body>
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <a href="{{ url_for('index', lang='es') }}" class="logo" style="text-decoration:none; color:inherit;">
+            LS
+        </a>
+        <nav class="nav">
+            <a href="{{ url_for('index', lang='es') }}">Inicio</a>
+            <a href="{{ url_for('index', lang='es') }}#tools">Herramientas</a>
+            <a href="{{ url_for('about', lang='es') }}">Sobre mí</a>
+            <a href="{{ url_for('project', lang='es') }}">Proyecto MSc</a>
+        </nav>
+    </header>
+
+    <main id="top">
+        <!-- HERO / RESUMEN DEL PROYECTO -->
+        <section class="hero">
+            <div class="hero-overlay">
+                <div class="hero-card project-hero-card">
+                    <div class="hero-text">
+                        <h1>Desarrollo de una plataforma de ensayo para el International Moth en un simulador en tiempo
+                            real basado en DVPP</h1>
+                        <p>
+                            MSc Maritime Engineering Science – Yacht &amp; High-Performance Craft<br />
+                            University of Southampton · 2024–2025
+                        </p>
+                        <p>
+                            Este proyecto construye un modelo digital completo de un dinghy International Moth
+                            dentro de <strong>Simulator in Motion (SiM)</strong>, un simulador de vela basado
+                            en un Dynamic Velocity Prediction Program (DVPP). La plataforma se utiliza para
+                            contrastar resultados con D3-VPP® y estudiar dos enfoques de control de vuelo:
+                            un sistema mecánico de varilla (<em>wand</em>) y un controlador PID de asiento
+                            (<em>heave PID</em>).
+                        </p>
+                        <p>
+                            A continuación puedes explorar la estructura de la memoria, ver gráficas
+                            seleccionadas, reproducir simulaciones y acceder al informe completo,
+                            póster y referencias.
+                        </p>
+
+                        <div class="hero-buttons" style="margin-top:1rem;">
+                            <a href="#abstract" class="btn primary">Leer abstract</a>
+                            <a href="{{ url_for('static', filename='Sampedro-MSc-v1.pdf') }}" class="btn secondary"
+                                target="_blank" rel="noopener">
+                                Descargar memoria completa (PDF)
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- VÍDEO PREVIEW -->
+                    <div class="hero-media" style="margin-top:1.5rem; width:100%; max-width:480px;">
+                        <div class="card" style="padding:0; overflow:hidden;">
+                            <div style="position:relative; padding-bottom:56.25%; height:0;">
+                                <iframe src="https://www.youtube.com/embed/5V93fsWs-CM" title="Moth SiM – Popa"
+                                    style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+                                    allowfullscreen loading="lazy">
+                                </iframe>
+                            </div>
+                            <div style="padding:0.75rem 1rem;">
+                                <strong>Vista previa:</strong> Moth navegando en popa dentro de SiM
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NAVEGACIÓN RÁPIDA -->
+        <section class="section section-alt">
+            <h2>Explorar el proyecto</h2>
+            <p>
+                Utiliza este índice para saltar directamente a cada parte del trabajo,
+                de forma similar a hojear capítulos en un libro digital.
+            </p>
+
+            <div class="cards">
+                <article class="card">
+                    <h3>1. Introducción</h3>
+                    <p>
+                        Motivación, alcance y objetivos específicos de utilizar un simulador
+                        basado en DVPP como banco de ensayos para el International Moth.
+                    </p>
+                    <a href="#intro" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+
+                <article class="card">
+                    <h3>2. Contexto y revisión bibliográfica</h3>
+                    <p>
+                        Historia de los hidroalas, mecánica básica de la navegación, reglas de
+                        clase del Moth y evolución desde los VPP clásicos a los simuladores modernos.
+                    </p>
+                    <a href="#background" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+
+                <article class="card">
+                    <h3>3. Metodología y simulador</h3>
+                    <p>
+                        Modelado de la geometría y la física del Moth, configuración de SiM y
+                        definición del flujo de trabajo entre D3-VPP y el modelo en tiempo real.
+                    </p>
+                    <a href="#methodology" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+
+                <article class="card">
+                    <h3>4. Comparación con D3-VPP</h3>
+                    <p>
+                        Validación del simulador mediante la comparación de resultados con el VPP
+                        en puntos de operación representativos a 14 nudos.
+                    </p>
+                    <a href="#benchmarking" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+
+                <article class="card">
+                    <h3>5. Estudios de control de vuelo</h3>
+                    <p>
+                        Estudios de sensibilidad para el engranaje de la varilla, su longitud y los
+                        parámetros K<sub>p</sub>, K<sub>i</sub>, K<sub>d</sub> del PID, incluyendo
+                        comparaciones entre control mecánico y electrónico.
+                    </p>
+                    <a href="#flight-control" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+
+                <article class="card">
+                    <h3>6. Conclusiones y futuro</h3>
+                    <p>
+                        Principales conclusiones, limitaciones de la plataforma actual y líneas de
+                        trabajo recomendadas.
+                    </p>
+                    <a href="#conclusions" class="btn secondary" style="margin-top:0.5rem;">Ir a la sección</a>
+                </article>
+            </div>
+        </section>
+
+        <!-- ABSTRACT (INTACT, ORIGINAL EN INGLÉS) -->
+        <section id="abstract" class="section">
+            <h2>Abstract (original)</h2>
+            <p>
+                The design of high-performance sailing craft has shifted from experience-driven iteration
+                to data-driven workflows based on 3D modelling, computational fluid dynamics (CFD)
+                and velocity prediction programmes (VPP). Hydro-foiling introduces inherently dynamic
+                behaviours that exceed the scope of steady VPPs, motivating dynamic-DVPPs and simulators
+                derived from them for design and training in America’s Cup (AC) and other high-performance
+                contexts.
+            </p>
+            <p>
+                This thesis implements an International Moth inside Simulator In Motion (SiM)—a
+                DVPP-based sailing simulator—aligning geometry, mass properties and aero/hydro models,
+                and establishing a workflow to compare predicted performance and controller behaviour
+                across configurations. Simulations were executed in this independent environment, while
+                D3-VPP® targets and the Exploder MD3 geometry supplied by D3 Applied Technologies, S.L. (D3)
+                defined the reference conditions and baseline configuration. The work first benchmarks SiM
+                against D3-VPP targets at two representative operating points (best-VMG upwind and downwind,
+                TWS = 14 kn), then exercises two flight-control approaches: (i) a mechanical wand (sensitivities
+                to gearing and wand length) and (ii) a heave PID (sensitivities to Kp, Ki and Kd), in flat
+                water and a simple regular sea state.
+            </p>
+            <p>
+                The simulator reproduces the VPP targets within ∼ 1% (speeds and VMGs), with attitudes close to
+                target and force balances coherent at both points, supporting its credibility for controller
+                studies in the tested envelope. For the wand, lower-response gearing attenuates wave-induced
+                oscillations without degrading mean ride height, and increased wand length primarily biases
+                the mean flight level while preserving a common steady wand angle. For the PID, a moderate
+                tuning (baseline near Kp ≈ 4, Ki ≈ 2–3, Kd ≈ 6) offers the best compromise between rise time
+                and damping; relative to the wand the PID shortens settling and improves disturbance rejection
+                in both flat and waves. Notably, electronic ride-height control is currently prohibited by the
+                International Moth Class Rules, restricting such benefits to non-official contexts.
+            </p>
+            <p>
+                Overall, the platform meets its objectives: it (i) matches VPP targets credibly at 14 kn
+                upwind/downwind, (ii) captures expected controller trends (gearing, wand length, PID gains),
+                and (iii) provides a practical, repeatable bench for flight-control development. Future work
+                should broaden the envelope (TWS/TWA and irregular seas), refine wand mechanism modelling,
+                and test crew dynamics and manoeuvres.
+            </p>
+        </section>
+
+        <!-- INTRODUCCIÓN -->
+        <section id="intro" class="section section-alt">
+            <h2>1. Introducción</h2>
+            <p>
+                Probar y desarrollar nuevos componentes para barcos foiling y de altas prestaciones
+                es caro y arriesgado. Las condiciones de viento y mar cambian constantemente, lo que
+                dificulta comparar de forma consistente distintas configuraciones. El International Moth,
+                uno de los dinghies foiling más exigentes, es un caso de estudio ideal para explorar
+                cómo un simulador basado en DVPP puede apoyar el diseño y el desarrollo de sistemas de control.
+            </p>
+            <p>
+                En la memoria se formulan tres objetivos específicos:
+            </p>
+            <ul class="list">
+                <li>
+                    <strong>O1 – Plataforma de ensayo:</strong> construir una plataforma
+                    de ensayo estable dentro de SiM que reproduzca el rendimiento previsto
+                    por D3-VPP en puntos de operación clave utilizando tres PID (escora,
+                    TWA y asiento).
+                </li>
+                <li>
+                    <strong>O2 – Modelo mecánico de varilla:</strong> implementar en el
+                    simulador el sistema de control de vuelo real basado en varilla y flap,
+                    y estudiar su sensibilidad al engranaje y a la longitud de la varilla,
+                    usando como respuestas la inmersión del foil, el ángulo de la varilla y la VMG.
+                </li>
+                <li>
+                    <strong>O3 – Comparación:</strong> comparar el sistema controlado por PID
+                    con el sistema controlado por varilla, identificando ventajas, inconvenientes
+                    y contextos de uso de cada uno.
+                </li>
+            </ul>
+        </section>
+
+        <!-- CONTEXTO / BACKGROUND -->
+        <section id="background" class="section">
+            <h2>2. Contexto y revisión bibliográfica</h2>
+            <p>
+                El capítulo de contexto resume la evolución de los hidroalas, desde las
+                primeras pruebas experimentales hasta las embarcaciones actuales de alta
+                velocidad. A partir de ahí introduce la mecánica básica de la navegación
+                a vela: triángulo de vientos, equilibrio de fuerzas en el plano horizontal
+                y vertical, y el papel de los foils, el aparejo y el casco.
+            </p>
+            <p>
+                Se dedica una sección específica a las <strong>reglas de clase del Moth</strong> y al
+                funcionamiento del <strong>sistema de control de vuelo</strong>: varilla de proa,
+                sistema de bieletas, engranajes, ajuste de altura de vuelo y mecanismo de
+                <em>rudder rake</em>. El capítulo termina analizando los <strong>VPP clásicos</strong>,
+                sus limitaciones en regímenes foiling fuertemente dinámicos y cómo los
+                simuladores basados en DVPP, como SiM, amplían estas herramientas al
+                dominio del tiempo.
+            </p>
+
+            <figure class="card" style="margin-top:1rem;">
+                <img src="{{ url_for('static', filename='images/fig5-1.png') }}"
+                    alt="Triángulo de velocidades y fuerzas aerodinámicas en un velero"
+                    style="width:100%; display:block;">
+                <figcaption style="padding:0.75rem 1rem;">
+                    Esquema conceptual del triángulo de velocidades y de las principales fuerzas
+                    aero/hidrodinámicas sobre un velero (inspirado en el material de la memoria).
+                </figcaption>
+            </figure>
+        </section>
+
+        <!-- METODOLOGÍA -->
+        <section id="methodology" class="section section-alt">
+            <h2>3. Metodología y configuración del simulador</h2>
+            <p>
+                La metodología describe cómo se traduce el International Moth al entorno digital.
+                El trabajo parte de la geometría y las propiedades de masa (basadas en la
+                configuración Exploder MD3) y aplica modelos de física específicos para foils,
+                casco, aparejo, timón y superficies expuestas al viento.
+            </p>
+            <p>
+                Dentro de <strong>Simulator in Motion (SiM)</strong> se configuran:
+            </p>
+            <ul class="list">
+                <li><strong>SiM_Data</strong> – estructura de carpetas, ficheros de entrada y datos.</li>
+                <li><strong>Yacht Manager</strong> – configuración general del modelo del Moth.</li>
+                <li><strong>Yacht Model</strong> – modelos de física detallados y dinámica 6-GDL.</li>
+                <li><strong>INPUTS/MOTH</strong> – archivos específicos para apéndices, aparejo y controladores.</li>
+            </ul>
+            <p>
+                Se define un flujo de trabajo que conecta los polares y objetivos de VMG de
+                D3-VPP con las simulaciones en SiM, asegurando que ambos utilizan geometría,
+                masas y condiciones de operación coherentes antes de iniciar los estudios de control.
+            </p>
+
+            <figure class="card" style="margin-top:1rem;">
+                <img src="{{ url_for('static', filename='images/dofs.png') }}"
+                    alt="International Moth funcionando dentro de la interfaz de SiM"
+                    style="width:100%; display:block;">
+                <figcaption style="padding:0.75rem 1rem;">
+                    Vista esquemática del International Moth dentro de la interfaz de SiM
+                    (figura basada en el póster del proyecto).
+                </figcaption>
+            </figure>
+        </section>
+
+        <!-- BENCHMARKING -->
+        <section id="benchmarking" class="section">
+            <h2>4. Comparación con D3-VPP</h2>
+            <p>
+                Antes de utilizar el simulador como banco de pruebas de control de vuelo,
+                se valida el modelo comparando los resultados con <strong>D3-VPP</strong> en dos
+                condiciones representativas: mejor VMG de ceñida y mejor VMG de popa
+                a TWS = 14 nudos.
+            </p>
+            <p>
+                Para cada punto de operación se comparan:
+            </p>
+            <ul class="list">
+                <li>Velocidad del barco y VMG.</li>
+                <li>Actitudes de escora y cabeceo.</li>
+                <li>Equilibrio de fuerzas y momentos.</li>
+            </ul>
+            <p>
+                Los resultados de SiM reproducen los objetivos de D3-VPP con un error en
+                velocidad y VMG del orden del 1%, y muestran actitudes y distribuciones
+                de carga coherentes. Esto aporta confianza en el simulador como entorno
+                de estudio dentro del rango de operación analizado.
+            </p>
+        </section>
+
+        <!-- CONTROL DE VUELO + VÍDEOS -->
+        <section id="flight-control" class="section section-alt">
+            <h2>5. Estudios de control de vuelo</h2>
+            <p>
+                Una vez validado el modelo base del Moth, la atención se centra en el
+                <strong>sistema de control de vuelo</strong>. Se analizan dos familias de controladores:
+            </p>
+            <ul class="list">
+                <li>
+                    <strong>Sistema mecánico de varilla:</strong> varilla de proa que mide la
+                    altura de vuelo y actúa sobre el flap del foil principal mediante un
+                    sistema de bieletas y palancas, con engranaje, longitud y altura de
+                    vuelo ajustables.
+                </li>
+                <li>
+                    <strong>Controlador PID de asiento:</strong> controlador proporcional–integral–
+                    derivativo que actúa sobre el ángulo de flap en función de la señal de heave.
+                </li>
+            </ul>
+
+            <h3 style="margin-top:1.5rem;">5.1 Estudios de sensibilidad</h3>
+            <p>
+                Se llevan a cabo varias campañas de simulación para estudiar cómo afectan
+                los parámetros de control al vuelo:
+            </p>
+            <ul class="list">
+                <li>
+                    <strong>Estudio de sensibilidad al engranaje:</strong> efecto de distintos
+                    engranajes de la varilla sobre la inmersión del foil, la estabilidad de
+                    la altura de vuelo y la VMG en ceñida, tanto en agua plana como con ola regular.
+                </li>
+                <li>
+                    <strong>Estudio de longitud de varilla:</strong> cómo la longitud de la varilla
+                    desplaza la altura de vuelo media e interacciona con el ajuste de offset.
+                </li>
+                <li>
+                    <strong>Estudio del PID de heave:</strong> ajuste de K<sub>p</sub>, K<sub>i</sub>
+                    y K<sub>d</sub> para equilibrar tiempo de establecimiento, sobreoscilación
+                    y rechazo a perturbaciones.
+                </li>
+                <li>
+                    <strong>Estudio comparativo:</strong> comparación directa entre configuraciones
+                    optimizadas de varilla y un PID ajustado en agua plana y con ola regular.
+                </li>
+            </ul>
+
+            <!-- GALERÍA DE VÍDEOS -->
+            <div class="cards" style="margin-top:1.5rem;">
+                <article class="card">
+                    <h3>Simulación – Popa</h3>
+                    <div style="position:relative; padding-bottom:56.25%; height:0;">
+                        <iframe src="https://www.youtube.com/embed/5V93fsWs-CM" title="Moth SiM – Popa"
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                    <p style="margin-top:0.75rem;">
+                        International Moth navegando en popa dentro de SiM, en el punto de
+                        mejor VMG.
+                    </p>
+                </article>
+
+                <article class="card">
+                    <h3>Simulación – Ceñida con ola</h3>
+                    <div style="position:relative; padding-bottom:56.25%; height:0;">
+                        <iframe src="https://www.youtube.com/embed/Q7OluI0ex_s" title="Moth SiM – Ceñida con ola"
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                    <p style="margin-top:0.75rem;">
+                        Navegación en ceñida con ola de proa, mostrando la interacción entre
+                        mar y parámetros de control de vuelo.
+                    </p>
+                </article>
+
+                <article class="card">
+                    <h3>Referencia real – Moth en el agua</h3>
+                    <div style="position:relative; padding-bottom:56.25%; height:0;">
+                        <iframe src="https://www.youtube.com/embed/nC5TnmgFQqQ" title="Moth – Referencia real"
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                    <p style="margin-top:0.75rem;">
+                        Clip corto de un International Moth foileando en el agua, utilizado
+                        como referencia cualitativa para el comportamiento del simulador.
+                    </p>
+                </article>
+            </div>
+
+            <h3 style="margin-top:1.5rem;">5.2 Principales conclusiones sobre el control</h3>
+            <ul class="list">
+                <li>
+                    El <strong>PID</strong> ofrece menores tiempos de establecimiento y mejor
+                    rechazo a perturbaciones, especialmente en ola, dando una altura de
+                    vuelo y trimado más estables en el rango analizado.
+                </li>
+                <li>
+                    El sistema de <strong>varilla</strong> es mecánicamente simple y robusto, y
+                    su comportamiento viene marcado por el engranaje (ganancia efectiva
+                    del lazo) y la longitud de la varilla (altura de vuelo media).
+                </li>
+                <li>
+                    El control electrónico de altura de vuelo está actualmente
+                    <strong>prohibido</strong> por las reglas de clase del International Moth,
+                    por lo que el enfoque PID es relevante sobre todo para entrenamiento,
+                    pruebas experimentales y posibles futuras evoluciones del reglamento.
+                </li>
+            </ul>
+        </section>
+
+        <!-- CONCLUSIONES -->
+        <section id="conclusions" class="section">
+            <h2>6. Conclusiones y trabajo futuro</h2>
+            <p>
+                El proyecto demuestra que un simulador basado en DVPP como SiM puede alojar
+                una plataforma de ensayo creíble para el International Moth. Dentro del
+                rango de operación estudiado, el modelo reproduce el rendimiento de D3-VPP,
+                recoge las tendencias esperadas de los sistemas de control y proporciona un
+                entorno repetible para el desarrollo del control de vuelo.
+            </p>
+            <p>
+                Las principales limitaciones se relacionan con el rango de operación analizado
+                (TWS, TWA y estados de mar), la simplificación de algunos modelos aerodinámicos
+                y la ausencia de dinámica de tripulación o maniobras. El trabajo futuro debería:
+            </p>
+            <ul class="list">
+                <li>Ampliar la matriz de TWS/TWA y de estados de mar (incluyendo mar irregular).</li>
+                <li>Refinar el modelo mecánico de la varilla (muelles, amortiguamiento, fricción, etc.).</li>
+                <li>Desarrollar estrategias de ajuste del PID más avanzadas, con anti-windup y
+                    herramientas seguras de ajuste en el agua.</li>
+                <li>Incorporar dinámica de tripulación, maniobras y validación sistemática con datos reales.</li>
+            </ul>
+            <p>
+                Con estas reservas, la plataforma SiM–Moth se justifica como herramienta de
+                desarrollo y abre la puerta a estudios más sistemáticos sobre control de vuelo
+                y rendimiento en dinghies foiling.
+            </p>
+        </section>
+
+        <!-- RECURSOS -->
+        <section id="resources" class="section section-alt">
+            <h2>Material adicional</h2>
+            <div class="cards">
+                <article class="card">
+                    <h3>Memoria completa</h3>
+                    <p>
+                        Informe completo del MSc en formato PDF, con todos los capítulos,
+                        figuras, tablas y anexos.
+                    </p>
+                    <a href="{{ url_for('static', filename='Sampedro-MSc-v1.pdf') }}" class="btn primary"
+                        target="_blank" rel="noopener">
+                        Abrir memoria (PDF)
+                    </a>
+                </article>
+
+                <article class="card">
+                    <h3>Póster</h3>
+                    <p>
+                        Póster de una página que resume motivación, objetivos, metodología,
+                        resultados clave y conclusiones.
+                    </p>
+                    <a href="https://luis-sampedro.github.io/MSc-Project-Linktree/Posterv3.pdf" class="btn secondary"
+                        target="_blank" rel="noopener">
+                        Ver póster del proyecto
+                    </a>
+                </article>
+
+                <article class="card">
+                    <h3>Gráficas seleccionadas</h3>
+                    <p>
+                        Enlace externo con algunas gráficas y comparativas utilizadas en la memoria.
+                    </p>
+                    <a href="https://luis-sampedro.github.io/MSc-Project-Linktree/plots.html" class="btn secondary"
+                        target="_blank" rel="noopener">
+                        Abrir página de gráficas
+                    </a>
+                </article>
+            </div>
+        </section>
+
+        <!-- REFERENCIAS (INTACTAS, ORIGINAL EN INGLÉS) -->
+        <section id="references" class="section">
+            <h2>References (original)</h2>
+            <ol class="list">
+                <li>
+                    I. Castañeda Sabadell, “Design of a physical and interactive real-time simulator
+                    based on a dynamic vpp as a support tool for sailing yacht design and operation,”
+                    Ph.D. dissertation, ETSI Navales, Universidad Politécnica de Madrid, 2018.
+                </li>
+                <li>
+                    J. Ozanne, Team principal at simulator in motion, simulator and a.i. team lead at
+                    alinghi red bull racing, https://www.linkedin.com/in/josephozanne/, Accessed:
+                    2025-09-02, 2025.
+                </li>
+                <li>
+                    International Moth Class Association, International moth class rules, Dec. 2024.
+                    [Online]. Available: https://www.sailing.org/classes/moth/#Documents.
+                </li>
+                <li>
+                    International Hydrofoil Society, Aeromarine origins — early work by thomas moy
+                    (1861), Online article, Accessed 7 Sep 2025, 2018. [Online]. Available:
+                    https://www.foils.org/wp-content/uploads/2018/01/AeromarineOrigins.pdf.
+                </li>
+                <li>
+                    International Hydrofoil Society, Ships that fly — forlanini’s hydrofoil on lake maggiore
+                    (1906), Online booklet, Accessed 7 Sep 2025, 2018. [Online]. Available:
+                    https://www.foils.org/wp-content/uploads/2018/01/ShipsThatFly.pdf.
+                </li>
+                <li>
+                    Alexander Graham Bell Foundation, Hydrofoil history: Bell and baldwin’s hd–4, Web
+                    page, Accessed 7 Sep 2025, 2024. [Online]. Available:
+                    https://agbfoundation.ca/hydrofoil/.
+                </li>
+                <li>
+                    The Canadian Encyclopedia, Hydrofoil (historical overview and hd–4 record), Web
+                    page, Accessed 7 Sep 2025, 2023. [Online]. Available:
+                    https://thecanadianencyclopedia.ca/en/article/hydrofoil.
+                </li>
+                <li>
+                    T. M. Buermann, “An appraisal of hydrofoil supported craft,” SNAME Transactions,
+                    vol. 61, 1953. [Online]. Available:
+                    https://www.foils.org/wp-content/uploads/2018/01/SNAMEtransactionsVol61-1953.pdf.
+                </li>
+                <li>
+                    E. D’Amato et al., “Hydrodynamic design of fixed hydrofoils for planing craft,”
+                    Journal of Marine Science and Engineering, vol. 11, no. 2, p. 246, 2023.
+                    doi: 10.3390/jmse11020246. [Online]. Available:
+                    https://www.mdpi.com/2077-1312/11/2/246.
+                </li>
+                <li>
+                    L. Larsson, R. E. Eliasson, and M. Orych, Principles of Yacht Design, 5th. London:
+                    Adlard Coles / Bloomsbury, 2022, isbn: 9781472981929.
+                </li>
+                <li>
+                    J. I. R. Blake, Lecture notes on sess3027 yacht &amp; high performance craft,
+                    Lecture notes, 2021.
+                </li>
+                <li>
+                    F. Fossati, Aero-hydrodynamics and the Performance of Sailing Yachts: The Science
+                    Behind Sailing Yachts and Their Design. London: A &amp; C Black Publishers Ltd,
+                    2009, p. 352, isbn: 9781408113387.
+                </li>
+                <li>
+                    B. Beaver and J. Zseleczky, “Full scale measurements on a hydrofoil international
+                    moth,” in SNAME Chesapeake Sailing Yacht Symposium, 2009, D021S002R006.
+                </li>
+                <li>
+                    Maguire Boats Ltd. “Main foil parts.” Product category page; photograph retrieved
+                    by author, Maguire Boats Ltd. (), [Online]. Available:
+                    https://maguireboats.com/main-foil-parts-23-c.asp (visited on 09/06/2025).
+                </li>
+                <li>
+                    F. Eggert, “Flight dynamics and stability of a hydrofoiling international moth with
+                    a dynamic velocity prediction program (dvpp),” M.S. thesis, Technische Universität
+                    Berlin, 2018.
+                </li>
+                <li>
+                    J. E. Kerwin, “A velocity prediction program for ocean racing yachts,” Rep 78-11
+                    MIT, Jul. 1978.
+                </li>
+                <li>
+                    A. R. Claughton, J. F. Wellicome, and R. A. Shenoi, Sailing Yacht Design: Theory.
+                    Harlow: Addison Wesley Longman, 1998.
+                </li>
+                <li>
+                    A. R. Claughton, “Developments in the ims vpp formulations,” in Proceedings of
+                    the 14th Chesapeake Sailing Yacht Symposium, SNAME, Annapolis, MD, 1999.
+                </li>
+                <li>
+                    Orc vpp documentation, Technical description of the ORC Velocity Prediction Program,
+                    Offshore Racing Congress, 2020. [Online]. Available: https://www.orc.org/rules/.
+                </li>
+                <li>
+                    P. Kerdraon, B. Horel, P. Bot, A. Letourneur, and D. Le Touzé, “Development
+                    of a 6-dof dynamic velocity prediction program for offshore racing yachts,”
+                    Ocean Engineering, vol. 212, p. 107668, 2020.
+                    doi: 10.1016/j.oceaneng.2020.107668.
+                </li>
+                <li>
+                    D. P. J. Hull, “Speed sailing design &amp; velocity prediction program,” BEng thesis,
+                    Australian Maritime College, University of Tasmania, 2014.
+                </li>
+                <li>
+                    N. Patterson and J. Binns, “Development of a six degree of freedom velocity prediction
+                    program for the foiling america’s cup vessels,” Journal of Sailing Technology,
+                    vol. 7, no. 1, pp. 120–151, 2022.
+                </li>
+                <li>
+                    A. Persson, “Predicting yacht performance in waves using a cfd velocity prediction
+                    program,” Ph.D. dissertation, Chalmers University of Technology, 2025.
+                </li>
+                <li>
+                    R. Tannenberg, S. R. Turnock, K. Hochkirch, and S. W. Boyd, “Vpp driven parametric
+                    design of ac75 hydrofoils,” Journal of Sailing Technology, vol. 8, no. 1,
+                    pp. 161–182, 2023.
+                </li>
+                <li>
+                    L. Sampedro Moix, “Preliminary design of a racing dinghy: F18 catamaran,” B.S.
+                    thesis, EPEF, Universidade da Coruña, 2023.
+                </li>
+                <li>
+                    S. Day, L. Letizia, and A. Stuart, “Vpp vs ppp: Challenges in the time-domain
+                    prediction of sailing yacht performance,” in Proceedings of the High Performance
+                    Yacht Design Conference (HPYD 1), Conference dates: 4–6 December 2002, Auckland,
+                    New Zealand: Royal Institution of Naval Architects (RINA), 2002.
+                    doi: 10.3940/rina.ya.2002.07.
+                </li>
+                <li>
+                    D. H. Harris, “Time domain simulation of a yacht sailing upwind in waves,” in
+                    Proceedings of the 17th Chesapeake Sailing Yacht Symposium, Annapolis, MD, USA:
+                    SNAME, Chesapeake Section, 2005, pp. 13–32.
+                </li>
+                <li>
+                    H. Hansen and et al., “Maneuver simulation and optimization for ac50 class,” in
+                    Journal of Sailing Technology, 2019. [Online]. Available:
+                    https://higherlogicdownload.s3.amazonaws.com/SNAME/1516f098-2760-4bff-86fa-9ca63a85f102/UploadedImages/2019%20-%2007%20__Hansen__et__al__Maneuver__Simulation__and__Optimisation__for__AC50_Class.pdf.
+                </li>
+                <li>
+                    M. F. Melis, “Velocity prediction program for a hydrofoiling lake racer,” Journal
+                    of Sailing Technology, 2022. [Online]. Available:
+                    https://www.foils.org/wp-content/uploads/2022/08/Melis-Submission-Hamburg-University-Honorable-Mention.pdf.
+                </li>
+                <li>
+                    K. Hochkirch, Fs-equilibrium user manual, Citado por Tannenberg (2023) como
+                    manual de referencia de FS-Equilibrium, DNV GL Maritime, 2018.
+                </li>
+                <li>
+                    M. Brito, “Use of gomboc to predict the performance of a hydro-foiled moth,”
+                    Yacht Research Unit, The University of Auckland, Tech. Rep., 2019.
+                </li>
+                <li>
+                    Simulator in Motion. “Demonstration video (homepage).” Frame captured by the
+                    author for academic illustration. (), [Online]. Available:
+                    https://www.simulatorinmotion.com/ (visited on 09/07/2025).
+                </li>
+            </ol>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>© <span id="year"></span> Luis Sampedro. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+</body>
+
+</html>

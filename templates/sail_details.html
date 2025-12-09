@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Sail History{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div style="margin-bottom: 2rem;">
+        <a href="/boat/{{ boat_id }}" style="color: #94a3b8; text-decoration: none;">&larr; Back to Boat</a>
+        <div style="display: flex; align-items: baseline; gap: 1rem; margin-top: 0.5rem;">
+            <h1 id="sail-title">Loading...</h1>
+            <button class="btn secondary" style="padding: 4px 8px; font-size: 0.9rem;" onclick="openEditSailModal()">✏️
+                Edit</button>
+        </div>
+        <p id="sail-desc" style="color: #94a3b8; margin-top: 0.2rem;"></p>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+        <a href="{{ url_for('analyzer_leech', boat_id=boat_id, sail_id=sail_id) }}" class="btn secondary"
+            style="border-color: #f59e0b; color: #f59e0b;">+ New Leech Image</a>
+        <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" class="btn primary">+ New Foot Image</a>
+    </div>
+
+    <!-- History List -->
+    <div id="history-container"
+        style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+        <!-- JS Loads here -->
+        <div style="border: 1px dashed #334155; padding: 2rem; border-radius: 12px; text-align: center;">
+            <p style="color: #64748b;">Loading history...</p>
+        </div>
+    </div>
+    </div>
+</section>
+
+<!-- Edit Sail Modal -->
+<div id="editSailModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+    <div
+        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
+        <h2 style="margin-bottom: 1.5rem;">Edit Sail</h2>
+        <input type="text" id="editSailCode" placeholder="Sail Code"
+            style="width: 100%; padding: 10px; margin-bottom: 1rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <input type="text" id="editSailDesc" placeholder="Description"
+            style="width: 100%; padding: 10px; margin-bottom: 1.5rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn secondary"
+                onclick="document.getElementById('editSailModal').style.display='none'">Cancel</button>
+            <button class="btn primary" onclick="updateSail()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+    let currentUserToken = null;
+    const boatId = "{{ boat_id }}";
+    const sailId = "{{ sail_id }}";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUserToken = await user.getIdToken();
+            loadSailDetails();
+            loadHistory();
+        } else {
+            window.location.href = "{{ url_for('login') }}";
+        }
+    });
+
+    async function loadHistory() {
+        const res = await fetch(`/api/boats/${boatId}/sails/${sailId}/analyses`, {
+            headers: { 'Authorization': currentUserToken }
+        });
+        const analyses = await res.json();
+        const container = document.getElementById('history-container');
+        container.innerHTML = '';
+
+        if (analyses.length === 0) {
+            container.innerHTML = '<p style="color: #64748b; width: 100%; text-align: center;">No analyses yet.</p>';
+            return;
+        }
+
+        analyses.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            // Format nice date & time
+            const dateObj = new Date(a.date || a.created_at); // Handle ISO or Timestamp
+            const dateStr = isNaN(dateObj) ? 'Unknown Date' : dateObj.toLocaleString();
+            const metrics = a.metrics || {};
+
+            // Differentiate Type
+            const isLeech = (metrics.type === 'leech');
+
+            // Colors & Labels
+            const accentColor = isLeech ? '#f59e0b' : '#38bdf8'; // Amber vs Sky
+            const typeLabel = isLeech ? 'Leech' : 'Foot';
+
+            let line1, line2;
+
+            if (isLeech) {
+                // Leech Metrics
+                const defMax = metrics.d_max !== undefined ? `${metrics.d_max}%` : 'N/A';
+                const def50 = metrics.d_50 !== undefined ? `${metrics.d_50}%` : 'N/A';
+                line1 = `Max Deflection: <strong style="color: ${accentColor};">${defMax}</strong>`;
+                line2 = `Twist @ 50%: <strong>${def50}</strong>`;
+            } else {
+                // Foot Metrics (Default)
+                const camber = metrics.camber !== undefined ? `${metrics.camber}%` : (metrics.max_camber ? `${metrics.max_camber.toFixed(1)}%` : 'N/A');
+                const draft = metrics.draft_pos !== undefined ? `${metrics.draft_pos}%` : (metrics.max_camber_position ? `${metrics.max_camber_position.toFixed(1)}%` : 'N/A');
+                line1 = `Camber: <strong style="color: ${accentColor};">${camber}</strong>`;
+                line2 = `Draft Pos: <strong>${draft}</strong>`;
+            }
+
+            // Thumbnail (if available) - Optional enhancement for future
+            // const thumb = a.snapshot ? `<img src="${a.snapshot}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">` : '';
+
+            card.style.borderColor = isLeech ? 'rgba(245, 158, 11, 0.3)' : 'rgba(56, 189, 248, 0.3)';
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div onclick="window.location.href='/boat/${boatId}/sail/${sailId}/analysis/${a.id}'" style="cursor: pointer; flex-grow: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h3 style="color: ${accentColor}; margin: 0; font-size: 1rem;">${dateStr}</h3>
+                            <span style="font-size: 0.7rem; border: 1px solid ${accentColor}; color: ${accentColor}; padding: 1px 4px; border-radius: 4px; margin-right: 1rem;">${typeLabel.toUpperCase()}</span>
+                        </div>
+                        <p style="color:#cbd5e1; margin-bottom: 4px;">${line1}</p>
+                        <p style="color:#cbd5e1;">${line2}</p>
+                        <p style="color: #64748b; font-size: 0.8rem; margin-top: 0.5rem;">Click to view Report</p>
+                    </div>
+                    <button class="btn secondary" style="padding: 4px 8px; font-size: 0.8em; border-color: #ef4444; color: #ef4444;" onclick="deleteAnalysis('${a.id}')">🗑️</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+
+
+    async function loadSailDetails() {
+        const res = await fetch(`/api/boats/${boatId}/sails/${sailId}`, { headers: { 'Authorization': currentUserToken } });
+        if (res.ok) {
+            const sail = await res.json();
+            document.getElementById('sail-title').innerText = sail.code;
+            document.getElementById('sail-desc').innerText = sail.description || '';
+        }
+    }
+
+    window.openEditSailModal = () => {
+        document.getElementById('editSailCode').value = document.getElementById('sail-title').innerText;
+        document.getElementById('editSailDesc').value = document.getElementById('sail-desc').innerText;
+        document.getElementById('editSailModal').style.display = 'flex';
+    };
+
+    window.updateSail = async () => {
+        const code = document.getElementById('editSailCode').value;
+        const desc = document.getElementById('editSailDesc').value;
+
+        const res = await fetch(`/api/boats/${boatId}/sails/${sailId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': currentUserToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, description: desc })
+        });
+
+        if (res.ok) {
+            loadSailDetails();
+            document.getElementById('editSailModal').style.display = 'none';
+        } else {
+            alert('Update failed');
+        }
+    };
+
+    window.deleteAnalysis = async (aid) => {
+        if (!confirm('Delete this analysis?')) return;
+        const res = await fetch(`/api/boats/${boatId}/sails/${sailId}/analyses/${aid}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': currentUserToken }
+        });
+        if (res.ok) loadHistory();
+        else alert('Delete failed');
+    };
+</script>
+{% endblock %}

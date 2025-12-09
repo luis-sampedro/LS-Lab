@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - LS Lab{% endblock %}
+
+{% block content %}
+<div class="auth-container"
+    style="max-width: 400px; margin: 4rem auto; padding: 2rem; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;">
+    <h2 style="text-align: center; margin-bottom: 2rem; color: #38bdf8;">Create Account</h2>
+
+    <form id="signupForm" class="auth-form">
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="email" style="display: block; color: #94a3b8; margin-bottom: 0.5rem;">Email</label>
+            <input type="email" id="email" required autocomplete="email"
+                style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label for="password" style="display: block; color: #94a3b8; margin-bottom: 0.5rem;">Password</label>
+            <input type="password" id="password" required autocomplete="new-password"
+                style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        </div>
+
+        <button type="submit" class="btn primary" style="width: 100%; justify-content: center;">Sign Up</button>
+    </form>
+
+    <div style="text-align: center; margin: 1.5rem 0; color: #64748b;">— OR —</div>
+
+    <button id="googleBtn" class="btn secondary"
+        style="width: 100%; justify-content: center; background: white; color: #0f172a; border: none;">
+        <span style="margin-right: 8px;">G</span> Sign up with Google
+    </button>
+
+    <p style="text-align: center; margin-top: 1.5rem; color: #64748b;">
+        Already have an account? <a href="{{ url_for('login') }}" style="color: #38bdf8;">Log in</a>
+    </p>
+    <div id="error-msg" style="color: #ef4444; text-align: center; margin-top: 1rem; display: none;"></div>
+</div>
+
+<script type="module">
+    import { auth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+
+    async function handlePostLogin(user) {
+        const idToken = await user.getIdToken();
+        // Send token to server
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: idToken })
+        });
+
+        if (response.ok) {
+            window.location.href = "{{ url_for('dashboard') }}";
+        } else {
+            throw new Error("Server authentication failed");
+        }
+    }
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMsg = document.getElementById('error-msg');
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await handlePostLogin(userCredential.user);
+        } catch (error) {
+            errorMsg.innerText = error.message;
+            errorMsg.style.display = 'block';
+        }
+    });
+
+    document.getElementById('googleBtn').addEventListener('click', async () => {
+        const provider = new GoogleAuthProvider();
+        const errorMsg = document.getElementById('error-msg');
+        try {
+            const result = await signInWithPopup(auth, provider);
+            await handlePostLogin(result.user);
+        } catch (error) {
+            errorMsg.innerText = error.message;
+            errorMsg.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Registro - LS Lab{% endblock %}
+
+{% block content %}
+<div class="auth-container"
+    style="max-width: 400px; margin: 4rem auto; padding: 2rem; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;">
+    <h2 style="text-align: center; margin-bottom: 2rem; color: #38bdf8;">Crear Cuenta</h2>
+
+    <form id="signupForm" class="auth-form">
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="email" style="display: block; color: #94a3b8; margin-bottom: 0.5rem;">Correo electrónico</label>
+            <input type="email" id="email" required autocomplete="username"
+                style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label for="password" style="display: block; color: #94a3b8; margin-bottom: 0.5rem;">Contraseña</label>
+            <input type="password" id="password" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"
+                style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        </div>
+
+        <button type="submit" class="btn primary" style="width: 100%; justify-content: center;">Registrarse</button>
+    </form>
+
+    <p style="text-align: center; margin-top: 1.5rem; color: #64748b;">
+        ¿Ya tienes cuenta? <a href="{{ url_for('login', lang='es') }}" style="color: #38bdf8;">Inicia sesión</a>
+    </p>
+    <div id="error-msg" style="color: #ef4444; text-align: center; margin-top: 1rem; display: none;"></div>
+</div>
+
+<script type="module">
+    import { auth, createUserWithEmailAndPassword } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMsg = document.getElementById('error-msg');
+
+        if (password.length < 6) {
+            errorMsg.innerText = "La contraseña debe tener al menos 6 caracteres.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // Successful signup
+            const user = userCredential.user;
+            const idToken = await user.getIdToken();
+
+            // Auto login session on backend
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: idToken })
+            });
+
+            if (response.ok) {
+                window.location.href = "{{ url_for('dashboard', lang='es') }}";
+            } else {
+                errorMsg.innerText = "Cuenta creada pero falló el inicio de sesión automático.";
+                errorMsg.style.display = 'block';
+            }
+
+        } catch (error) {
+            let msg = error.message;
+            if (msg.includes('email-already-in-use')) msg = 'El correo ya está registrado.';
+
+            errorMsg.innerText = msg;
+            errorMsg.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}
