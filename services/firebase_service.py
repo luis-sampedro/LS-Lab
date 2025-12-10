@@ -34,10 +34,12 @@ def initialize_firebase():
         else:
             # 3. Try Default Credentials (e.g. Google Cloud Run generic identity)
             try:
-                firebase_admin.initialize_app()
+                # Explicitly set Project ID so Auth verification knows what audience to expect
+                firebase_admin.initialize_app(options={'projectId': 'ls-personal-lab'})
                 db = firestore.client()
-                print("Firebase Initialized with Application Default Credentials.")
+                print("Firebase Initialized with Application Default Credentials for ls-personal-lab.")
             except Exception as e:
+                 print(f"WARNING: Init failed: {e}")
                  print("WARNING: No credentials found. Database features will fail.")
                  return False
     return True
