@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Luis Sampedro – Laboratorio Personal{% endblock %}
+{% block title %}Luis Sampedro – Personal Lab{% endblock %}
 
 {% block content %}
 <!-- HERO / OVERALL RESUME -->
@@ -15,16 +15,16 @@
                 <p>
                     Ingeniero Naval y Oceánico de Galicia, trabajando en la
                     intersección de la vela de alto rendimiento, el análisis de datos y
-                    el diseño de ingeniería.
+                    el diseño naval.
                 </p>
                 <p>
                     En este proyecto intento crear mi espacio personal online,
-                    conteniendo mis proyectos y, especialmente, mis herramientas de análisis de datos y
+                    lugar de mis proyectos y, especialmente, de mis herramientas de análisis de datos y
                     software de procesamiento de imágenes.
                 </p>
 
                 <div class="hero-buttons">
-                    <a href="#tools" class="btn primary">Explorar herramientas</a>
+                    <a href="#tools" class="btn primary">Explorar recursos</a>
                     <a href="{{ url_for('about') }}" class="btn secondary">Sobre mí</a>
                 </div>
             </div>
@@ -34,10 +34,10 @@
 
 <!-- TOOLS OVERVIEW -->
 <section id="tools" class="section section-alt">
-    <h2>Herramientas del proyecto</h2>
+    <h2>Recursos del proyecto</h2>
     <p>
-        Estas son las cuatro herramientas que quiero desarrollar dentro de este espacio. Algunas están
-        ya prototipadas, otras están todavía en progreso.
+        Estas son los 6 recursos que quiero desarrollar dentro de este espacio. Algunas herramientas están
+        ya funcionando para test, otras están todavía en progreso.
     </p>
 
     <div class="cards tools-grid">
@@ -45,8 +45,9 @@
         <a href="{{ url_for('sail_scan_overview', lang='es') }}" class="card card-link" style="border-color: #38bdf8;">
             <h3 style="color: #38bdf8;">LS Sail Scan (L3S)</h3>
             <p>
-                <strong>[NUEVO]</strong> Sube una foto de una vela y analiza automáticamente la posición del draft y la
-                profundidad usando visión artificial.
+                <strong>[NUEVO]</strong> Sube una foto de una vela y analiza automáticamente el twist y la posición y
+                magnitud de la bolsa (camber) y la
+                usando visión artificial, guarda todas tus velas y sus fotos en el mismo lugar!
             </p>
             <p class="card-meta">
                 Beta version: 3.0 · Click para abrir
@@ -58,36 +59,38 @@
             <h3>LS Data Lab (LSDL)</h3>
             <p>
                 Espacio de trabajo online para procesar datos náuticos: logs GPS, streams de sensores
-                y tracks de regatas. Inspirado en herramientas como Sailtrac, enfocado en
+                y tracks de regatas. Inspirado en herramientas de analisis de datos, enfocado en
                 velocidad, VMG y análisis de maniobras.
             </p>
             <p class="card-meta">
-                Estado: concepto · UI temporal
+                Estado: concepto · Plantilla temporal
             </p>
         </a>
 
         <!-- International Moth Simulator -->
-        <a href="{{ url_for('project', lang='es') }}" class="card card-link">
-            <h3>Simulador International Moth</h3>
+        <a href="{{ url_for('project', lang='es') }}" class="card card-link" style="border-color: #38bdf8;">
+            <h3 style="color: #38bdf8;">LS Sail Scan (L3S)</h3>
+            <h3>Simulador de un International Moth</h3>
             <p>
-                Mi Proyecto de Máster: Un simulador dinámico de 6-DOF para la clase International Moth.
-                Modelado físico de hidroalas, aero-hidrodinámica y sistemas de control de vuelo.
+                Mi Proyecto de Fin de Máster: Un simulador dinámico de 6-DOF para la clase International Moth.
+                Modelado físico de foils, aero-hidrodinámica y sistemas de control de vuelo.
             </p>
             <p class="card-meta">
-                Estado: Tesis de Máster · Click para ver
+                Estado: TFM, finalizado · Click para ver
             </p>
         </a>
 
         <!-- LS Current App -->
-        <a href="{{ url_for('lsc_app', lang='es') }}" class="card card-link">
+        <a href="{{ url_for('lsc_app', lang='es') }}" class="card card-link" style="border-color: #38bdf8;">
+            <h3 style="color: #38bdf8;">LS Sail Scan (L3S)</h3>
             <h3>LS Current App (LSC App)</h3>
             <p>
-                Herramienta para visualizar corrientes, viento y rendimiento del barco juntos.
-                Diseñado para ayudar a entender cómo las condiciones externas afectan el routing,
-                laylines y decisiones tácticas en el campo de regatas.
+                Herramienta para visualizar corrientes, viento y datos del campo de regatas del barco todo junto.
+                Diseñado para ayudar a entender cómo las condiciones externas afectan a cómo navegas,
+                qué ruta escoger y qué decisiones tácticas tomar en el campo de regatas.
             </p>
             <p class="card-meta">
-                Estado: v1.1.3 · Click para abrir
+                Estado: Release v2.0 · Click para abrir
             </p>
         </a>
 
@@ -95,11 +98,11 @@
         <a href="{{ url_for('ls_design_tools') }}" class="card card-link">
             <h3>LS Design Tools (LSD)</h3>
             <p>
-                Una colección de pequeñas utilidades para diseño de yates: exploradores de parámetros
-                de casco y foils, calculadoras estilo VPP y enlaces con flujos de trabajo CFD.
+                Una colección de pequeñas utilidades para diseño de yates: optimizadores paramétricos
+                de casco y foils, proyectos, calculadoras estilo VPP y enlaces con flujos de trabajo CFD.
             </p>
             <p class="card-meta">
-                Estado: concepto · UI temporal
+                Estado: concepto · Plantilla temporal
             </p>
         </a>
 
@@ -108,11 +111,11 @@
             <h3>LS Foiling Academy (LSFA)</h3>
             <p>
                 Hub central para cursos, charlas y experiencias prácticas sobre navegación
-                de alto rendimiento: aprende cómo navegar barcos con foils, entiende la técnica Moth, mejora
-                el manejo del barco y gana conocimiento real en el agua.
+                de alto rendimiento: aprende cómo navegar barcos con foils, entiende la técnica del Moth, mejora
+                el manejo del barco, el procesamiento de tus datos y gana conocimiento real en el agua.
             </p>
             <p class="card-meta">
-                Estado: concepto · contenido en progreso
+                Estado: Próximamente · contenido en progreso
             </p>
         </a>
 
@@ -123,7 +126,7 @@
         <h2>Sobre mí</h2>
         <p>
             Si quieres una visión más clásica de mi formación, educación,
-            experiencia e historia de navegación, puedes visitar la sección completa "Sobre mí".
+            experiencia y logros, puedes visitar la sección completa "Sobre mí".
         </p>
         <a href="{{ url_for('about') }}" class="btn secondary" style="margin-top:0.8rem; display:inline-block;">
             Ir a Sobre mí
