@@ -172,8 +172,11 @@ def sail_details(boat_id, sail_id):
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analyzer')
 def analyzer(boat_id, sail_id):
-    # Existing Foot Analyzer
-    return render_template('analyzer.html', boat_id=boat_id, sail_id=sail_id)
+    try:
+        # Existing Foot Analyzer
+        return render_template('analyzer.html', boat_id=boat_id, sail_id=sail_id)
+    except Exception as e:
+        return f"Analyzer Error: {str(e)}", 500
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analyzer/leech', methods=['GET', 'POST'])
 def analyzer_leech(boat_id, sail_id):
