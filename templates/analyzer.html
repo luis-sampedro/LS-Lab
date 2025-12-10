@@ -19,7 +19,8 @@
         <div class="login-box">
             <h1>Upload Sail Image</h1>
             <p class="login-subtitle">Supported formats: JPG, PNG</p>
-            <form action="{{ url_for('analyzer') }}" method="post" enctype="multipart/form-data">
+            <form action="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" method="post"
+                enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label" for="sail_image">Select Image</label>
                     <input type="file" name="sail_image" id="sail_image" class="input" required accept="image/*">
@@ -49,7 +50,7 @@
                     <button id="plotBtn" class="btn secondary" style="border-color: #38bdf8; color: #38bdf8;">View
                         Plot</button>
 
-                    <a href="{{ url_for('analyzer') }}" class="btn secondary"
+                    <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" class="btn secondary"
                         style="border-color: #ef4444; color: #ef4444; text-decoration: none; display: inline-block; text-align: center;">Reset
                         Image</a>
 
