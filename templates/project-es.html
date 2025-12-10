@@ -7,6 +7,12 @@
     <title>Proyecto MSc – Plataforma de Ensayo Moth en Simulador DVPP</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <script>
+        // Redirect legacy GitHub Pages traffic to new Firebase Hosting
+        if (window.location.hostname.includes('github.io')) {
+            window.location.href = 'https://ls-personal-lab.web.app/project?lang=es';
+        }
+    </script>
 </head>
 
 <body>
