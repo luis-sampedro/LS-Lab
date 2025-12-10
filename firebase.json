@@ -8,6 +8,11 @@
         ],
         "rewrites": [
             {
+                "source": "/github/project",
+                "destination": "/project",
+                "type": 301
+            },
+            {
                 "source": "**",
                 "run": {
                     "serviceId": "ls-lab",
