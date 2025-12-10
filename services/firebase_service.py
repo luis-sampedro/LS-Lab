@@ -64,7 +64,7 @@ def verify_token(id_token):
     try:
         # Verify the ID token. 
         # clock_skew_seconds=10 allows for slight time diffs.
-        decoded_token = auth.verify_id_token(id_token, check_revoked=False, clock_skew_seconds=10)
+        decoded_token = auth.verify_id_token(id_token, check_revoked=True)
         return decoded_token
     except Exception as e:
         print(f"!!! TOKEN VERIFICATION FAILED !!!")
