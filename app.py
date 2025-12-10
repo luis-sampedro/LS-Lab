@@ -1,6 +1,6 @@
 import os
 import flask
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
 import stripe
@@ -47,9 +47,16 @@ def api_login():
         data = request.json
         id_token = data.get('idToken')
         decoded_token = verify_token(id_token)
-        if decoded_token:
-            return {'success': True}
-        return {'success': False, 'message': 'Token verification returned None'}, 401
+
+        if not decoded_token or isinstance(decoded_token, str):
+            error_msg = decoded_token if isinstance(decoded_token, str) else "Invalid token"
+            print(f"Login failed: {error_msg}")
+            return jsonify({"error": f"Authentication failed: {error_msg}"}), 401
+        
+        uid = decoded_token['uid']
+        # The original code returned {'success': True} here.
+        # Assuming the user wants to keep the success response after extracting uid.
+        return {'success': True}
     except Exception as e:
         print(f"Login API Error: {e}")
         return {'success': False, 'message': str(e)}, 500
