@@ -69,7 +69,7 @@ def verify_token(id_token):
     except Exception as e:
         print(f"!!! TOKEN VERIFICATION FAILED !!!")
         print(f"Error details: {e}")
-        return None
+        return str(e)
 
 def get_user_boats(uid):
     """Fetches boats for a specific user."""
