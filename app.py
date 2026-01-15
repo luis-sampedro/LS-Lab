@@ -410,6 +410,11 @@ def lsc_app():
         return render_template('ls_current_app-es.html')
     return render_template('ls_current_app.html')
 
+@app.route('/download/lsc-latest')
+def download_lsc_latest():
+    # Permanent redirect to the latest APK version
+    return redirect(url_for('static', filename='LSC-release-2.1.apk'))
+
 @app.route('/foiling-academy')
 def ls_foiling_academy():
     lang = request.args.get('lang', 'en')
@@ -433,7 +438,7 @@ def ls_design_tools():
 
 @app.route('/analyzer-old', methods=['GET', 'POST'])
 def analyzer_old():
-    VERSION = "v.2.0.0" # Corridor Search (Rethink)
+    VERSION = "v.2.1.0" # Corridor Search (Rethink)
     
     if request.method == 'POST':
         if 'sail_image' not in request.files:
