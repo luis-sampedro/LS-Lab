@@ -455,6 +455,29 @@ def ls_data_lab():
         return render_template('ls_data_lab-es.html')
     return render_template('ls_data_lab.html')
 
+@app.route('/data-lab/upload', methods=['POST'])
+def data_lab_upload():
+    try:
+        if 'log_file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+            
+        file = request.files['log_file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        from services.datalab_service import parse_log_file
+        # Process in memory for MVP
+        # In production, save to /tmp or cloud bucket first
+        result = parse_log_file(file, file.filename)
+        
+        if 'error' in result:
+             return jsonify(result), 400
+             
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/design-tools')
 def ls_design_tools():
     lang = request.args.get('lang', 'en')
