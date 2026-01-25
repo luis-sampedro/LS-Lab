@@ -172,8 +172,10 @@ def sail_details(boat_id, sail_id):
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analyzer', methods=['GET', 'POST'])
 def analyzer(boat_id, sail_id):
+    print(f"DEBUG: Analyzer route hit! Method: {request.method}")
     VERSION = "v3.0.0" 
     if request.method == 'POST':
+        print(f"DEBUG: POST data keys: {request.files.keys()}")
         if 'sail_image' not in request.files:
             flash('No file part')
             return redirect(request.url)

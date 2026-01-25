@@ -1,0 +1,30 @@
+Firebase Initialized with serviceAccountKey.json.
+Endpoint             Methods           Rule                                                       
+-------------------  ----------------  -----------------------------------------------------------
+about                GET               /about                                                     
+analyzer             GET, POST         /boat/<boat_id>/sail/<sail_id>/analyzer                    
+analyzer_leech       GET, POST         /boat/<boat_id>/sail/<sail_id>/analyzer/leech              
+api_analyses         GET, POST         /api/boats/<boat_id>/sails/<sail_id>/analyses              
+api_boat_item        DELETE, GET, PUT  /api/boats/<boat_id>                                       
+api_boats            GET, POST         /api/boats                                                 
+api_login            POST              /api/login                                                 
+api_sail_item        DELETE, GET, PUT  /api/boats/<boat_id>/sails/<sail_id>                       
+api_sails            GET, POST         /api/boats/<boat_id>/sails                                 
+api_single_analysis  DELETE, GET       /api/boats/<boat_id>/sails/<sail_id>/analyses/<analysis_id>
+api_trace            POST              /api/trace                                                 
+api_trace_leech      POST              /api/trace_leech                                           
+boat_details         GET               /boat/<boat_id>                                            
+dashboard            GET               /dashboard                                                 
+download_lsc_latest  GET               /download/lsc-latest                                       
+index                GET               /                                                          
+login                GET               /login                                                     
+ls_data_lab          GET               /data-lab                                                  
+ls_design_tools      GET               /design-tools                                              
+ls_foiling_academy   GET               /foiling-academy                                           
+lsc_app              GET               /lsc-app                                                   
+project              GET               /project                                                   
+sail_details         GET               /boat/<boat_id>/sail/<sail_id>                             
+sail_scan_overview   GET               /sail-scan                                                 
+signup               GET               /signup                                                    
+static               GET               /static/<path:filename>                                    
+view_analysis        GET               /boat/<boat_id>/sail/<sail_id>/analysis/<analysis_id>      
