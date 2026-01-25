@@ -1,117 +1,203 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LS Current App (APK Download)</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-</head>
+{% block title %}LS Current - Web App{% endblock %}
 
-<body>
-    <header class="topbar">
-        <!-- Logo (click → home) -->
-        <a href="{{ url_for('index') }}" class="logo" style="text-decoration:none; color:inherit;">
-            LS
-        </a>
-        <nav class="nav">
-            <a href="{{ url_for('index') }}">Home</a>
-            <a href="{{ url_for('about') }}">About me</a>
-        </nav>
+{% block extra_head %}
+<style>
+    /* PWA/App Styles */
+    .current-app-container {
+        max-width: 600px;
+        /* Mobile focused */
+        margin: 0 auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .display-circle {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%);
+        border: 4px solid #334155;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .compass-ring {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 50%;
+        border: 1px dashed #64748b;
+        margin: 10px;
+    }
+
+    .current-arrow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 4px;
+        height: 100px;
+        background: #38bdf8;
+        transform-origin: bottom center;
+        transform: rotate(0deg) translateY(-50%);
+        transition: transform 0.5s ease-out;
+    }
+
+    .current-arrow::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -4px;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 12px solid #38bdf8;
+    }
+
+    .value-group {
+        text-align: center;
+        z-index: 2;
+    }
+
+    .val-big {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: white;
+        line-height: 1;
+    }
+
+    .val-unit {
+        font-size: 1rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .val-sub {
+        font-size: 1.5rem;
+        color: #38bdf8;
+        margin-top: 0.5rem;
+    }
+
+    .action-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .btn-large {
+        padding: 1.5rem;
+        font-size: 1.2rem;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn.danger {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+    }
+
+    .marks-panel {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid #334155;
+    }
+
+    .mark-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #334155;
+    }
+
+    .mark-item:last-child {
+        border-bottom: none;
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        color: #ef4444;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+    }
+
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+<script src="{{ url_for('static', filename='js/current-app.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<main class="current-app-container">
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div>
+            <h1 style="font-size: 1.5rem; margin:0;">LS Current</h1>
+            <p style="margin:0; color:#64748b; font-size:0.9rem;">Web Version</p>
+        </div>
+        <div id="timer" style="font-family: monospace; font-size: 1.5rem; color: #f59e0b;">00:00</div>
     </header>
 
-    <main class="app-shell" style="max-width:900px;">
-        <!-- CABECERA: ICONO + TEXTO + BOTÓN -->
-        <section class="section" style="padding-bottom:1.5rem;">
-            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:center;">
-                <img src="{{ url_for('static', filename='images/ls-current-app-icon.svg') }}" alt="LS Current App icon"
-                    class="app-icon" />
+    <!-- VISUALIZATION -->
+    <div class="display-circle">
+        <div class="compass-ring"></div>
+        <div class="current-arrow" id="currentArrow"></div>
 
-                <div style="flex:1; min-width:240px;">
-                    <h1 style="font-size:1.6rem; margin-bottom:0.4rem;">LS Current App</h1>
-                    <p style="color:#9ca3af; margin-bottom:0.7rem;">
-                        Mobile tool to estimate tidal current from your GPS position.
-                        The app records your position <strong>now</strong> and again
-                        <strong>1 minute later</strong>, computes the <strong>current vector</strong>
-                        (speed &amp; direction) and plots all measurements on a simple
-                        nautical-style chart.
-                    </p>
+        <div class="value-group">
+            <div id="val-drift-speed" class="val-big">0.0</div>
+            <div class="val-unit">KNOTS</div>
+            <div id="val-drift-dir" class="val-sub">000°</div>
+        </div>
+    </div>
 
-                    <a href="{{ url_for('static', filename='LSC-release-2.1.apk') }}" download class="btn primary"
-                        style="padding:0.9rem 2.1rem; font-size:0.95rem; border-radius:1rem; display:inline-block; margin-top:0.3rem;">
-                        Download APK for Android
-                    </a>
+    <!-- ACTIONS -->
+    <div class="action-bar">
+        <button id="driftBtn" class="btn primary btn-large">
+            <span>Start Drift</span>
+            <small style="font-size:0.7rem; opacity:0.8;">Measure Current</small>
+        </button>
+        <button id="addMarkBtn" class="btn secondary btn-large" style="border-color: #10b981; color: #10b981;">
+            <span>+ Mark</span>
+            <small style="font-size:0.7rem; opacity:0.8;">Save Position</small>
+        </button>
+    </div>
 
-                    <p style="margin-top:0.8rem; color:#9ca3af; font-size:0.85rem;">
-                        Android only · Side-load installation (enable “Unknown sources” on your device).
-                    </p>
-                </div>
-            </div>
-        </section>
+    <!-- MARKS LIST -->
+    <section class="marks-panel">
+        <h3 style="margin-top:0; font-size:1.1rem; color:#cbd5e1;">Waypoints</h3>
+        <div id="marksList">
+            <!-- Populated by JS -->
+            <p style="text-align:center; color:#64748b; font-style:italic;">No marks saved.</p>
+        </div>
+    </section>
 
-        <!-- MOCKUP TIPO MÓVIL -->
-        <section class="section section-alt" style="margin-top:0;">
-            <h2>Preview</h2>
-            <div class="phone-preview">
-                <div class="phone-screen">
-                    <header class="phone-preview-header">
-                        <div>
-                            <div class="phone-app-name">LS Current App</div>
-                            <div class="phone-subtitle">Ría de Vigo · Live current</div>
-                        </div>
-                    </header>
+    <!-- FOOTER LINK -->
+    <div style="text-align: center; margin-top: 1rem;">
+        <a href="{{ url_for('static', filename='LSC-release-2.1.apk') }}"
+            style="color: #64748b; font-size: 0.85rem;">Download Android APK</a>
+    </div>
 
-                    <div class="phone-chart">
-                        <div class="phone-grid-horizontal"></div>
-                        <div class="phone-grid-vertical"></div>
-                        <div class="phone-boat">⛵</div>
-                        <div class="phone-arrow"></div>
-                    </div>
-
-                    <div class="phone-bottom">
-                        <div class="phone-metric">
-                            <span class="metric-label-small">Current speed</span>
-                            <span class="metric-value-big">1.3 kn</span>
-                        </div>
-                        <div class="phone-metric">
-                            <span class="metric-label-small">Direction (true)</span>
-                            <span class="metric-value-big">228°</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <p style="margin-top:1rem; color:#9ca3af; font-size:0.85rem;">
-                Concept preview: the real app calculates the vector from your GPS positions
-                and stores each measurement to build a current map over time.
-            </p>
-        </section>
-
-        <!-- SECCIÓN QR -->
-        <section class="section">
-            <h2>Download via QR</h2>
-            <p style="color:#9ca3af; margin-bottom:0.8rem;">
-                Scan this QR code to download the latest version of the app directly to your phone.
-            </p>
-
-            <!-- Cuando tengas el QR, súbelo como images/ls-current-app-qr.png -->
-            <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
-                <div class="qr-box">
-                    <img src="{{ url_for('static', filename='images/ls-current-app-qr.png') }}"
-                        alt="QR code for LS Current App download" class="qr-image" />
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <p>© <span id="year"></span> LS Apps · All rights reserved</p>
-    </footer>
-
-    <script>
-        document.getElementById("year").textContent = new Date().getFullYear();
-    </script>
-</body>
-
-</html>
+</main>
+{% endblock %}
