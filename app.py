@@ -170,13 +170,37 @@ def sail_details(boat_id, sail_id):
         return render_template('sail_details-es.html', boat_id=boat_id, sail_id=sail_id)
     return render_template('sail_details.html', boat_id=boat_id, sail_id=sail_id)
 
-@app.route('/boat/<boat_id>/sail/<sail_id>/analyzer')
+@app.route('/boat/<boat_id>/sail/<sail_id>/analyzer', methods=['GET', 'POST'])
 def analyzer(boat_id, sail_id):
-    try:
-        # Existing Foot Analyzer
-        return render_template('analyzer.html', boat_id=boat_id, sail_id=sail_id)
-    except Exception as e:
-        return f"Analyzer Error: {str(e)}", 500
+    VERSION = "v3.0.0" 
+    if request.method == 'POST':
+        if 'sail_image' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['sail_image']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+            
+        try:
+            image_bytes = file.read()
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None: raise ValueError("Invalid image")
+            
+            _, buf = cv2.imencode('.jpg', img)
+            img_b64 = base64.b64encode(buf).decode('utf-8')
+            
+            return render_template('analyzer.html', 
+                                   interactive_image=img_b64,
+                                   version=VERSION,
+                                   boat_id=boat_id,
+                                   sail_id=sail_id)
+        except Exception as e:
+            flash(f'Error processing image: {str(e)}')
+            return redirect(request.url)
+
+    return render_template('analyzer.html', version=VERSION, boat_id=boat_id, sail_id=sail_id)
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analyzer/leech', methods=['GET', 'POST'])
 def analyzer_leech(boat_id, sail_id):
@@ -436,42 +460,7 @@ def ls_design_tools():
         return render_template('ls_design_tools-es.html')
     return render_template('ls_design_tools.html')
 
-@app.route('/analyzer-old', methods=['GET', 'POST'])
-def analyzer_old():
-    VERSION = "v.2.1.0" # Corridor Search (Rethink)
-    
-    if request.method == 'POST':
-        if 'sail_image' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['sail_image']
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-            
-        try:
-            # interactive mode: just return the image data to the frontend
-            image_bytes = file.read()
-            # Validate it's an image
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if img is None: raise ValueError("Invalid image")
-            
-            # Encode to base64 for frontend
-            _, buf = cv2.imencode('.jpg', img)
-            img_b64 = base64.b64encode(buf).decode('utf-8')
-            
-            # Pass to template with 'interactive_mode=True'
-            return render_template('analyzer.html', 
-                                   interactive_image=img_b64,
-                                   version=VERSION,
-                                   boat_id=request.args.get('boat_id'),
-                                   sail_id=request.args.get('sail_id'))
-        except Exception as e:
-            flash(f'Error processing image: {str(e)}')
-            return redirect(request.url)
-        
-    return render_template('analyzer.html', version=VERSION, boat_id=request.args.get('boat_id'), sail_id=request.args.get('sail_id'))
+# /analyzer-old was removed as it is now integrated into the main /analyzer route.
 
 
 

@@ -138,32 +138,43 @@
             const thead = document.querySelector('#metricsTable thead');
             const tbody = document.querySelector('#metricsTable tbody');
             const m = data.metrics || {};
+            const isLeech = (m.type === 'leech');
 
             // Determine Stripes
             let stripes = [];
             if (m.stripes && Array.isArray(m.stripes) && m.stripes.length > 0) {
                 stripes = m.stripes.sort((a, b) => a.id - b.id);
-            } else if (m.camber !== undefined) {
+            } else if (m.camber !== undefined || m.d_max !== undefined) {
                 // Legacy / Single Stripe fallback
                 stripes = [{ id: 1, metrics: m }];
             }
 
             if (stripes.length > 0) {
                 // Build Header
-                let headerHTML = '<tr style="border-bottom: 1px solid #334155; text-align: left;"><th style="padding: 8px; color: #94a3b8;">Metric</th>';
+                let headerHTML = `<tr style="border-bottom: 1px solid #334155; text-align: left;"><th style="padding: 8px; color: #94a3b8;">Metric</th>`;
                 stripes.forEach(s => {
-                    headerHTML += `<th style="padding: 8px; color: #38bdf8;">Stripe #${s.id}</th>`;
+                    headerHTML += `<th style="padding: 8px; color: ${isLeech ? '#f59e0b' : '#38bdf8'};">${isLeech ? 'Leech Trace' : 'Stripe #' + s.id}</th>`;
                 });
                 headerHTML += '</tr>';
                 thead.innerHTML = headerHTML;
 
-                // Build Rows (Twist excluded)
-                const rows = [
-                    { key: 'camber', label: 'Max Camber', unit: '%' },
-                    { key: 'draft_pos', label: 'Draft Position', unit: '%' },
-                    { key: 'entry', label: 'Entry Angle', unit: '°' },
-                    { key: 'exit', label: 'Exit Angle', unit: '°' }
-                ];
+                // Build Rows
+                let rows = [];
+                if (isLeech) {
+                    rows = [
+                        { key: 'd_max', label: 'Max Deflection', unit: '%' },
+                        { key: 'd_25', label: 'Deflection @ 25%', unit: '%' },
+                        { key: 'd_50', label: 'Deflection @ 50%', unit: '%' },
+                        { key: 'd_75', label: 'Deflection @ 75%', unit: '%' }
+                    ];
+                } else {
+                    rows = [
+                        { key: 'camber', label: 'Max Camber', unit: '%' },
+                        { key: 'draft_pos', label: 'Draft Position', unit: '%' },
+                        { key: 'entry', label: 'Entry Angle', unit: '°' },
+                        { key: 'exit', label: 'Exit Angle', unit: '°' }
+                    ];
+                }
 
                 tbody.innerHTML = '';
                 rows.forEach(r => {
@@ -171,7 +182,8 @@
                     stripes.forEach(s => {
                         const val = s.metrics[r.key];
                         const displayVal = (val !== undefined && val !== null) ? `${val}${r.unit}` : '-';
-                        const style = r.key === 'camber' ? 'color:#38bdf8;font-weight:bold;' : '';
+                        const isPrimary = (isLeech && r.key === 'd_max') || (!isLeech && r.key === 'camber');
+                        const style = isPrimary ? `color:${isLeech ? '#f59e0b' : '#38bdf8'};font-weight:bold;` : '';
                         rowHTML += `<td style="padding: 8px; ${style}">${displayVal}</td>`;
                     });
                     rowHTML += '</tr>';
@@ -195,19 +207,20 @@
         const ctx = document.getElementById('camberChart').getContext('2d');
         let datasets = [];
 
-        const colors = ['#00ff00', '#00ffff', '#ff00ff', '#f59e0b'];
+        const isLeech = (metrics.type === 'leech');
+        const colors = isLeech ? ['#f59e0b'] : ['#00ff00', '#00ffff', '#ff00ff', '#f59e0b'];
         const getCol = (id) => colors[(id - 1) % colors.length];
 
         // 0. Chord Line (Reference)
         datasets.push({
-            label: 'Chord Line',
+            label: isLeech ? 'Leech Reference' : 'Chord Line',
             data: [{ x: 0, y: 0 }, { x: 100, y: 0 }],
             borderColor: '#94a3b8', // slate-400
             borderDash: [5, 5],
             borderWidth: 2,
             showLine: true,
             pointRadius: 0,
-            order: 1 // Draw behind if possible, but Chart.js draws array order.
+            order: 1
         });
 
         // 1. Use stripes array if available (New format)
