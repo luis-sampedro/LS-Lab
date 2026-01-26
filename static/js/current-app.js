@@ -174,13 +174,39 @@ const app = {
             this.layers[mark.id] = marker;
 
             // If racecourse line
-            if (mark.racecourse) {
-                // Draw line
+            if (mark.racecourse && mark.racecourse.origin) {
+                // 1. Draw Axis (Origin -> Mark)
+                const origin = mark.racecourse.origin;
+
                 const line = L.polyline([
-                    [mark.lat, mark.lng],
-                    [mark.racecourse.dest.lat, mark.racecourse.dest.lng]
+                    [origin.lat, origin.lng],
+                    [mark.lat, mark.lng]
                 ], { color: '#facc15', dashArray: '5, 10' }).addTo(this.instance);
+
+                // Tooltip with Data
+                const dist = mark.racecourse.dist ? mark.racecourse.dist.toFixed(1) : "?";
+                const brg = mark.racecourse.bearing ? mark.racecourse.bearing.toFixed(0) : "?";
+                line.bindTooltip(`${dist} NM @ ${brg}°`, { permanent: true, direction: 'center', className: 'rc-label', opacity: 0.8 });
+
                 this.layers[mark.id + "_line"] = line;
+
+                // 2. Draw Start Line (at Origin, -270 deg)
+                if (mark.racecourse.lineLength) {
+                    // bearing - 270 degrees (which is +90 relative, or West relative to North if bearing is 0? No 0-270 = -270 = 90 = East)
+                    // "Another line at -270 degrees".
+                    // Assuming relative to Course Bearing.
+                    const lineBearing = (mark.racecourse.bearing - 270 + 360) % 360;
+                    const lenNM = mark.racecourse.lineLength / 1852; // Meters to NM
+
+                    const endPoint = app.utils.computeDestination(origin, lenNM, lineBearing);
+
+                    const startLine = L.polyline([
+                        [origin.lat, origin.lng],
+                        [endPoint.lat, endPoint.lng]
+                    ], { color: '#ef4444', weight: 4 }).addTo(this.instance);
+
+                    this.layers[mark.id + "_startline"] = startLine;
+                }
             }
         },
 
@@ -257,6 +283,10 @@ const app = {
             if (this.layers[id + "_line"]) {
                 this.instance.removeLayer(this.layers[id + "_line"]);
                 delete this.layers[id + "_line"];
+            }
+            if (this.layers[id + "_startline"]) {
+                this.instance.removeLayer(this.layers[id + "_startline"]);
+                delete this.layers[id + "_startline"];
             }
         },
 
@@ -359,28 +389,21 @@ const app = {
             // Racecourse data
             let rcData = null;
             const inputDiv = document.getElementById('racecourse-inputs');
-            if (inputDiv.style.display === 'block') {
-                const dist = parseFloat(document.getElementById('rc-dist').value);
-                const ang = parseFloat(document.getElementById('rc-bearing').value);
-                if (dist && !isNaN(ang)) {
-                    // Calculate destination
-                    // We need current pos first
-                }
-            }
 
             try {
                 const pos = await app.map.getCurrentLocation();
 
                 // If Racecourse
                 if (inputDiv.style.display === 'block') {
-                    // Logic updated to support "Start From" dropdown
                     const dist = parseFloat(document.getElementById('rc-dist').value); // NM
                     const ang = parseFloat(document.getElementById('rc-bearing').value);
+                    const lineLen = parseFloat(document.getElementById('rc-line-length').value); // Meters
                     const originVal = document.getElementById('rc-origin').value; // 'gps' or mark ID
 
                     if (dist && !isNaN(ang)) {
-                        let startPos = pos; // Default to GPS
-                        // If user selected a boat mark
+                        let startPos = { lat: pos.lat, lng: pos.lng }; // Default to GPS (copy object)
+
+                        // If user selected a boat/mark as origin
                         if (originVal && originVal !== 'gps') {
                             const originMark = app.data.store.marks.find(m => m.id == originVal);
                             if (originMark) {
@@ -388,39 +411,19 @@ const app = {
                             }
                         }
 
+                        // Calculate Destination (The location of the NEW mark)
                         const dest = app.utils.computeDestination(startPos, dist, ang);
-                        // Save origin too so we can draw lines correctly from the boat?
-                        // For now, simplify: we just store the vector or computed dest.
-                        // But wait, the line is drawn from 'mark.lat/lng'. 
-                        // If we are creating a NEW mark (the destination mark), then 'startPos' is purely reference.
-                        // BUT typically racecourse creation creates the TARGET mark.
-                        // So the line should be from Start -> Target.
-                        // If Start is GPS, 'mark' is the target.
-                        // If Start is a Boat, 'mark' is the target.
-                        // The 'mark' we are saving IS the target mark (e.g. "Windward Mark").
-                        // So 'racecourse' property needs to know where the line started.
+
                         rcData = {
-                            dist,
+                            dist: dist,
                             bearing: ang,
-                            dest: dest, // ACTUALLY dest is the LOCATION of this mark?
-                            // Logic Check: 'saveMark' uses 'mark' object with 'lat: pos.lat'.
-                            // If we are projecting, we should OVERRIDE the lat/lng of the new mark to be the DESTINATION.
+                            origin: startPos,
+                            lineLength: lineLen || 0
                         };
 
                         // OVERRIDE POS to be the Calculated Destination
                         pos.lat = dest.lat;
                         pos.lng = dest.lng;
-
-                        // And we also want to store the Origin so we can draw the line back to it?
-                        // The 'renderMark' draws a line to 'mark.racecourse.dest'. 
-                        // Wait, previous code: line from [mark.lat, mark.lng] to [mark.racecourse.dest.lat, ...]
-                        // Implicitly: Mark is the Origin, Racecourse.dest is the Target?
-                        // "Create Racecourse from here" -> We are at Start, we want to place a Mark at Dest.
-                        // So the Mark we are adding is the PIN/WINDWARD mark.
-                        // So 'pos' (Mark Position) should be 'dest'.
-                        // And the line should go from Origin (Boat/GPS) to Mark.
-                        // Let's adjust 'renderMark' loop logic if needed, but for now let's just make sure we capture the origin.
-                        rcData.origin = startPos;
                     }
                 }
 
@@ -437,7 +440,7 @@ const app = {
                 app.data.addMark(mark);
                 app.ui.closeModals();
 
-            } catch (e) { alert("GPS Error"); }
+            } catch (e) { alert("GPS Error: " + e.message); console.error(e); }
         }
     },
 

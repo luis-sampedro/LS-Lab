@@ -103,6 +103,8 @@
         z-index: 2000;
         position: relative;
         /* Ensure it stays on top */
+        margin-top: auto;
+        /* Push to bottom of flex container */
     }
 
     .nav-btn {
@@ -294,7 +296,7 @@
 <div class="app-viewport">
 
     <!-- MAP TAB (HOME) -->
-    <div id="tab-map" class="active" style="width:100%; height:100%; position:relative;">
+    <div id="tab-map" class="active" style="width:100%; flex:1; position:relative;">
         <div id="map"></div>
 
         <!-- Info Overlay -->
@@ -466,6 +468,10 @@
             <div class="form-group">
                 <label>Bearing (°)</label>
                 <input type="number" id="rc-bearing" class="form-control" step="1">
+            </div>
+            <div class="form-group">
+                <label>Line Length (m)</label>
+                <input type="number" id="rc-line-length" class="form-control" step="1" placeholder="e.g. 50">
             </div>
         </div>
 
