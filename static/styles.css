@@ -7,7 +7,8 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0a1224; /* fondo marino oscuro */
+  background: #0a1224;
+  /* fondo marino oscuro */
   color: #e5e7eb;
   line-height: 1.6;
 }
@@ -17,7 +18,7 @@ body {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 3000;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -56,13 +57,15 @@ body {
 /* ---------- HERO SECTION ---------- */
 
 .hero {
-  min-height: calc(100vh - 80px); /* ocupa la primera vista casi entera */
+  min-height: calc(100vh - 80px);
+  /* ocupa la primera vista casi entera */
   padding: 4rem 6vw 2rem;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-image: url("images/luis-on-boat.jpg"); /* imagen de fondo */
+  background-image: url("images/luis-on-boat.jpg");
+  /* imagen de fondo */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -75,7 +78,7 @@ body {
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.25), transparent 45%),
-              rgba(15, 23, 42, 0.85);
+    rgba(15, 23, 42, 0.85);
 }
 
 .hero-overlay {
@@ -610,6 +613,7 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
 /* ---------- LS CURRENT APP – MOBILE STYLE ---------- */
 
 .phone-shell {
@@ -710,8 +714,8 @@ body {
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.45);
   background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.25), transparent 55%),
-              radial-gradient(circle at 80% 80%, rgba(15, 118, 110, 0.3), transparent 55%),
-              #020617;
+    radial-gradient(circle at 80% 80%, rgba(15, 118, 110, 0.3), transparent 55%),
+    #020617;
   height: 150px;
   overflow: hidden;
 }
@@ -831,21 +835,17 @@ body {
 }
 
 .mini-chart-line.boatspeed {
-  background: linear-gradient(
-    90deg,
-    rgba(56, 189, 248, 0.05),
-    rgba(56, 189, 248, 0.6),
-    rgba(56, 189, 248, 0.1)
-  );
+  background: linear-gradient(90deg,
+      rgba(56, 189, 248, 0.05),
+      rgba(56, 189, 248, 0.6),
+      rgba(56, 189, 248, 0.1));
 }
 
 .mini-chart-line.current {
-  background: linear-gradient(
-    90deg,
-    rgba(248, 250, 252, 0.02),
-    rgba(248, 250, 252, 0.4),
-    rgba(248, 250, 252, 0.08)
-  );
+  background: linear-gradient(90deg,
+      rgba(248, 250, 252, 0.02),
+      rgba(248, 250, 252, 0.4),
+      rgba(248, 250, 252, 0.08));
 }
 
 /* Bottom nav tipo app */
@@ -887,6 +887,7 @@ body {
     padding-inline: 0.9rem;
   }
 }
+
 /* ---------- LS CURRENT APP – ICON & MOCKUP ---------- */
 
 .app-icon {
@@ -944,8 +945,8 @@ body {
   margin-bottom: 0.4rem;
   border-radius: 1.2rem;
   background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.25), transparent 55%),
-              radial-gradient(circle at 80% 80%, rgba(15, 118, 110, 0.4), transparent 55%),
-              #020617;
+    radial-gradient(circle at 80% 80%, rgba(15, 118, 110, 0.4), transparent 55%),
+    #020617;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
@@ -1087,6 +1088,7 @@ body {
   margin-bottom: 0.4rem;
   color: #d1d9e8;
 }
+
 /* ---------- LANGUAGE SWITCH ---------- */
 
 .lang-switch {
@@ -1108,6 +1110,7 @@ body {
   transform: scale(1.05);
   border-color: #38bdf8;
 }
+
 /* ---------- INTERNAL PAGE NAV ---------- */
 
 .internal-nav {
@@ -1134,4 +1137,3 @@ body {
   margin-top: 1rem;
   color: #9ca3af;
 }
-
