@@ -624,23 +624,58 @@ const app = {
         },
 
         renderMarks: function () {
-            const list = document.getElementById('marks-list');
-            list.innerHTML = '';
+            const marksList = document.getElementById('marks-list');
+            const rcList = document.getElementById('racecourse-list');
+
+            if (marksList) marksList.innerHTML = '';
+            if (rcList) rcList.innerHTML = '';
+
+            const isEs = document.documentElement.lang === 'es';
+            const emptyText = isEs ? 'No hay elementos.' : 'No items.';
+
+            let hasMarks = false;
+            let hasSem = false;
+
             app.data.store.marks.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
+
+                let iconClass = 'fa-location-dot';
+                let subText = item.type;
+                let targetList = marksList;
+
+                if (item.racecourse) {
+                    targetList = rcList;
+                    hasSem = true;
+                    iconClass = 'fa-flag-checkered';
+                    // Show Racecourse details if available
+                    if (item.racecourse.dist !== undefined) {
+                        subText = `${item.racecourse.dist.toFixed(1)} NM @ ${item.racecourse.bearing}°`;
+                    } else {
+                        subText = "Racecourse";
+                    }
+                } else {
+                    hasMarks = true;
+                    if (item.type === 'boat') iconClass = 'fa-sailboat';
+                    else if (item.type === 'pin') iconClass = 'fa-thumbtack';
+                }
+
                 div.innerHTML = `
                     <div class="item-main" onclick="app.map.flyTo(${item.lat}, ${item.lng})">
-                        <div class="item-icon"><i class="fa-solid fa-location-dot"></i></div>
+                        <div class="item-icon"><i class="fa-solid ${iconClass}"></i></div>
                         <div>
                             <div><b>${item.name}</b></div>
-                            <small class="text-muted">${item.type}</small>
+                            <small class="text-muted">${subText}</small>
                         </div>
                     </div>
                     <button onclick="app.data.removeMark(${item.id})" style="color:#ef4444; background:none; border:none;"><i class="fa-solid fa-trash"></i></button>
                 `;
-                list.appendChild(div);
+
+                if (targetList) targetList.appendChild(div);
             });
+
+            if (marksList && !hasMarks) marksList.innerHTML = `<p class="text-muted" style="font-size:0.9rem;">${emptyText}</p>`;
+            if (rcList && !hasSem) rcList.innerHTML = `<p class="text-muted" style="font-size:0.9rem;">${emptyText}</p>`;
         },
 
         openWindModal: function () {
