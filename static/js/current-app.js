@@ -6,12 +6,22 @@
 const app = {
     init: function () {
         console.log("LS Current Initializing...");
-        this.data.load();
+
+        // Wait for Firebase to be ready (if using global) or just init
+        if (window.firebaseApp) {
+            window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, (user) => {
+                console.log("Auth State:", user ? user.uid : "Anon");
+                app.data.user = user;
+                app.data.load(); // Reload data when auth changes
+            });
+        } else {
+            console.warn("Firebase not found, using local only");
+            this.data.load();
+        }
+
         this.map.init();
         this.ui.renderHistory();
-        this.ui.renderMarks();
-        this.ui.renderMarks();
-        this.ui.applySettings();
+        this.ui.renderMarks(); // Initial empty render
 
         // Restore Theme
         const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -27,25 +37,85 @@ const app = {
 
     // --- DATA ---
     data: {
+        user: null,
         store: {
             history: [],
             marks: [],
             settings: { lang: 'en', theme: 'dark', showLabels: true }
         },
 
-        load: function () {
-            const saved = localStorage.getItem('lsc_data');
-            if (saved) {
+        load: async function () {
+            // Clear current before load to avoid duplicates visually if not handled
+            this.store.history = [];
+            this.store.marks = [];
+
+            if (this.user) {
+                // Cloud Load
                 try {
-                    this.store = JSON.parse(saved);
-                    // Merge defaults/migrations if needed
-                    if (!this.store.settings) this.store.settings = { lang: 'en', theme: 'dark', showLabels: true };
-                } catch (e) { console.error("Load error", e); }
+                    const { db, doc, getDoc } = window.firebaseApp;
+                    const docRef = doc(db, "users", this.user.uid, "lsc_app_data", "main");
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data();
+                        this.store = cloudData;
+                        console.log("Loaded from Cloud");
+                    } else {
+                        console.log("No cloud data, starting fresh or maybe upload local?");
+                        // Optional: Upload local data if cloud is empty? 
+                        // For now, let's keep it clean: Cloud is separate.
+                        // Initialize defaults
+                        this.store = {
+                            history: [],
+                            marks: [],
+                            settings: { lang: 'en', theme: 'dark', showLabels: true }
+                        };
+                    }
+                } catch (e) { console.error("Cloud Load Error", e); }
+            } else {
+                // Local Load
+                const saved = localStorage.getItem('lsc_data');
+                if (saved) {
+                    try {
+                        this.store = JSON.parse(saved);
+                        // Merge defaults/migrations if needed
+                        if (!this.store.settings) this.store.settings = { lang: 'en', theme: 'dark', showLabels: true };
+                    } catch (e) { console.error("Local Load error", e); }
+                }
             }
+
+            // After load, refresh UI
+            // Check if map is initialized before rendering layers
+            if (app.map.instance) {
+                // Remove old layers
+                app.map.clearAllLayers();
+
+                // Render new
+                this.store.marks.forEach(m => app.map.renderMark(m));
+                this.store.history.forEach(h => {
+                    if (h.type === 'current') app.map.renderCurrentArrow(h);
+                    if (h.type === 'wind') app.map.renderWindIcon(h);
+                });
+            }
+
+            app.ui.renderHistory();
+            app.ui.renderMarks();
+            app.ui.applySettings();
         },
 
-        save: function () {
-            localStorage.setItem('lsc_data', JSON.stringify(this.store));
+        save: async function () {
+            if (this.user) {
+                // Cloud Save
+                try {
+                    const { db, doc, setDoc } = window.firebaseApp;
+                    const docRef = doc(db, "users", this.user.uid, "lsc_app_data", "main");
+                    await setDoc(docRef, this.store);
+                    console.log("Saved to Cloud");
+                } catch (e) { console.error("Cloud Save Error", e); }
+            } else {
+                // Local Save
+                localStorage.setItem('lsc_data', JSON.stringify(this.store));
+            }
         },
 
         addHistory: function (item) {
@@ -120,6 +190,28 @@ const app = {
                 if (h.type === 'current') this.renderCurrentArrow(h);
                 if (h.type === 'wind') this.renderWindIcon(h);
             });
+            // Context Menu (Long Press) for Picking Location
+            this.instance.on('contextmenu', (e) => {
+                if (app.logic.pickingLocation) {
+                    app.logic.tempMarkLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+                    app.logic.pickingLocation = false;
+
+                    // Reopen Modal
+                    app.ui.openMarkModal();
+
+                    // Pre-fill manual inputs
+                    // We need to wait for modal to be open or just set values
+                    setTimeout(() => {
+                        const latInput = document.getElementById('manual-lat');
+                        const lngInput = document.getElementById('manual-lng');
+                        if (latInput && lngInput) {
+                            latInput.value = e.latlng.lat.toFixed(5);
+                            lngInput.value = e.latlng.lng.toFixed(5);
+                        }
+                        app.ui.toggleManualCoords(); // Ensure manual inputs are shown
+                    }, 100);
+                }
+            });
         },
 
         getCurrentLocation: function () {
@@ -190,12 +282,11 @@ const app = {
 
                 this.layers[mark.id + "_line"] = line;
 
-                // 2. Draw Start Line (at Origin, -270 deg)
+                // 2. Draw Start Line (at Origin, 270 deg relative)
                 if (mark.racecourse.lineLength) {
-                    // bearing - 270 degrees (which is +90 relative, or West relative to North if bearing is 0? No 0-270 = -270 = 90 = East)
-                    // "Another line at -270 degrees".
-                    // Assuming relative to Course Bearing.
-                    const lineBearing = (mark.racecourse.bearing - 270 + 360) % 360;
+                    // bearing + 270 degrees (Left turn relative to course)
+                    // If bearing is 0 (N), +270 = 270 (W).
+                    const lineBearing = (mark.racecourse.bearing + 270) % 360;
                     const lenNM = mark.racecourse.lineLength / 1852; // Meters to NM
 
                     const endPoint = app.utils.computeDestination(origin, lenNM, lineBearing);
@@ -293,6 +384,16 @@ const app = {
         flyTo: function (lat, lng) {
             this.instance.flyTo([lat, lng], 16);
             app.ui.switchTab('tab-map');
+        },
+
+        clearAllLayers: function () {
+            // Remove all tracked layers from map
+            for (let id in this.layers) {
+                if (this.layers.hasOwnProperty(id)) {
+                    this.instance.removeLayer(this.layers[id]);
+                }
+            }
+            this.layers = {}; // Reset container
         }
     },
 
@@ -300,6 +401,8 @@ const app = {
     logic: {
         measuring: false,
         measureStart: null,
+        pickingLocation: false,
+        tempMarkLocation: null,
 
         toggleMeasure: async function () {
             const btn = document.getElementById('btn-measure');
@@ -388,22 +491,45 @@ const app = {
 
             // Racecourse data
             let rcData = null;
-            const inputDiv = document.getElementById('racecourse-inputs');
+            const rcInputDiv = document.getElementById('racecourse-inputs');
+            const manualInputDiv = document.getElementById('manual-inputs');
 
             try {
-                const pos = await app.map.getCurrentLocation();
+                let pos = { lat: 0, lng: 0 };
+
+                // 1. Manual Coordinates
+                if (manualInputDiv.style.display === 'block') {
+                    const mLat = parseFloat(document.getElementById('manual-lat').value);
+                    const mLng = parseFloat(document.getElementById('manual-lng').value);
+                    if (isNaN(mLat) || isNaN(mLng)) {
+                        alert("Invalid Coordinates");
+                        return;
+                    }
+                    pos.lat = mLat;
+                    pos.lng = mLng;
+                }
+                // 2. Map Picked Location (if set and not overridden by manual inputs or gps preference)
+                // Actually if manual inputs are hidden but tempMarkLocation exists, should we use it?
+                // The workflow: pick -> modal reopens with manual inputs SHOWING and populated.
+                // So case 1 covers picked location because we toggleManualCoords() on pick.
+                // But let's keep it robust.
+
+                // 3. GPS Default
+                else {
+                    pos = await app.map.getCurrentLocation();
+                }
 
                 // If Racecourse
-                if (inputDiv.style.display === 'block') {
+                if (rcInputDiv.style.display === 'block') {
                     const dist = parseFloat(document.getElementById('rc-dist').value); // NM
                     const ang = parseFloat(document.getElementById('rc-bearing').value);
                     const lineLen = parseFloat(document.getElementById('rc-line-length').value); // Meters
                     const originVal = document.getElementById('rc-origin').value; // 'gps' or mark ID
 
                     if (dist && !isNaN(ang)) {
-                        let startPos = { lat: pos.lat, lng: pos.lng }; // Default to GPS (copy object)
+                        let startPos = { lat: pos.lat, lng: pos.lng }; // Default to current pos (GPS or Manual)
 
-                        // If user selected a boat/mark as origin
+                        // If user selected a boat/mark as origin, use THAT instead of pos
                         if (originVal && originVal !== 'gps') {
                             const originMark = app.data.store.marks.find(m => m.id == originVal);
                             if (originMark) {
@@ -439,8 +565,9 @@ const app = {
 
                 app.data.addMark(mark);
                 app.ui.closeModals();
+                app.logic.tempMarkLocation = null; // Reset
 
-            } catch (e) { alert("GPS Error: " + e.message); console.error(e); }
+            } catch (e) { alert("Error: " + e.message); console.error(e); }
         }
     },
 
@@ -531,6 +658,11 @@ const app = {
             } else {
                 rcInput.style.display = 'none';
             }
+
+            // Ensure manual hidden & reset
+            document.getElementById('manual-inputs').style.display = 'none';
+            document.getElementById('manual-lat').value = '';
+            document.getElementById('manual-lng').value = '';
         },
         populateRacecourseOrigins: function () {
             const select = document.getElementById('rc-origin');
@@ -571,10 +703,25 @@ const app = {
         },
         closeModals: function () {
             document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('open'));
+            app.logic.pickingLocation = false;
         },
         toggleRacecourseInputs: function () {
             const el = document.getElementById('racecourse-inputs');
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('manual-inputs').style.display = 'none';
+        },
+        toggleManualCoords: function () {
+            const el = document.getElementById('manual-inputs');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('racecourse-inputs').style.display = 'none';
+        },
+        pickOnMap: function () {
+            app.ui.closeModals();
+            app.logic.pickingLocation = true;
+            const msg = app.data.store.settings.lang === 'es'
+                ? "Mantén pulsado en el mapa (1s) para elegir."
+                : "Long press on map (1s) to pick location.";
+            alert(msg);
         },
 
         applySettings: function () {

@@ -36,22 +36,43 @@
         background-color: var(--bg-dark);
         color: var(--text-main);
         overflow: hidden;
-        /* Prevent body scroll, handle in app-container */
-    }
-
-    /* Main Container - Full viewport minus header/footer if needed */
-    .app-viewport {
-        position: fixed;
-        top: 60px;
-        /* Assuming base.html header is ~60px */
-        left: 0;
-        right: 0;
-        bottom: 0;
+        /* Prevent body scroll */
+        /* Flex Layout to adapt to Header Height */
         display: flex;
         flex-direction: column;
+        height: 100vh;
     }
 
-    /* Map takes full remaining space */
+    /* Override Main to be a flex child */
+    main#top {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0 !important;
+        /* Force remove any default padding */
+        min-height: 0;
+        /* Flexbox trick for nested scroll */
+    }
+
+    /* Footer hidden in this app mode to maximize space */
+    footer.footer {
+        display: none !important;
+    }
+
+    /* Main Container - Adjusted for Flex */
+    .app-viewport {
+        position: relative;
+        /* No fixed positioning, let flex handle it */
+        width: 100%;
+        height: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Map View Container */
     #map-view {
         flex: 1;
         position: relative;
@@ -279,10 +300,7 @@
            But let's stick to user request "replicates functionality", 
            so having the site header is okay, but we might want to minimize it.
         */
-        .app-viewport {
-            top: 56px;
-            bottom: 0;
-        }
+        /* .app-viewport rule removed as we now use flexbox */
     }
 </style>
 <!-- Leaflet JS -->
@@ -449,10 +467,36 @@
 
         <!-- Racecourse Option (Simplified for now) -->
         <hr style="border-color:#334155; margin: 1rem 0;">
-        <button onclick="app.ui.toggleRacecourseInputs()"
-            style="background:none; border:none; color:var(--primary); cursor:pointer;">
-            + Create Racecourse from here?
-        </button>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button onclick="app.ui.toggleRacecourseInputs()"
+                style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.9rem;">
+                + Racecourse?
+            </button>
+            <button onclick="app.ui.toggleManualCoords()"
+                style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
+                + Manual / Map
+            </button>
+        </div>
+
+        <!-- Manual Coords / Map Pick -->
+        <div id="manual-inputs"
+            style="display:none; margin-top:1rem; border:1px dashed #475569; padding: 0.8rem; border-radius:8px;">
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem;">
+                <div style="flex:1;">
+                    <label style="font-size:0.8rem; color:var(--text-muted);">Lat</label>
+                    <input type="number" id="manual-lat" class="form-control" placeholder="0.0000" step="0.00001">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.8rem; color:var(--text-muted);">Lng</label>
+                    <input type="number" id="manual-lng" class="form-control" placeholder="0.0000" step="0.00001">
+                </div>
+            </div>
+            <button onclick="app.ui.pickOnMap()"
+                style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px;">
+                <i class="fa-solid fa-hand-pointer"></i> Pick on Map (Hold 1s)
+            </button>
+        </div>
 
         <div id="racecourse-inputs" style="display:none; margin-top:1rem;">
             <div class="form-group">

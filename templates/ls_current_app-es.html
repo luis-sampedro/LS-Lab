@@ -36,19 +36,40 @@
         background-color: var(--bg-dark);
         color: var(--text-main);
         overflow: hidden;
-        /* Prevent body scroll, handle in app-container */
-    }
-
-    /* Main Container - Full viewport minus header/footer if needed */
-    .app-viewport {
-        position: fixed;
-        top: 60px;
-        /* Assuming base.html header is ~60px */
-        left: 0;
-        right: 0;
-        bottom: 0;
+        /* Prevent body scroll */
+        /* Flex Layout to adapt to Header Height */
         display: flex;
         flex-direction: column;
+        height: 100vh;
+    }
+
+    /* Override Main to be a flex child */
+    main#top {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0 !important;
+        /* Force remove any default padding */
+        min-height: 0;
+        /* Flexbox trick for nested scroll */
+    }
+
+    /* Footer hidden in this app mode to maximize space */
+    footer.footer {
+        display: none !important;
+    }
+
+    /* Main Container - Adjusted for Flex */
+    .app-viewport {
+        position: relative;
+        /* No fixed positioning, let flex handle it */
+        width: 100%;
+        height: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     /* Map takes full remaining space */
@@ -102,6 +123,8 @@
         align-items: center;
         z-index: 2000;
         position: relative;
+        margin-top: auto;
+        /* Push to bottom of flex container */
     }
 
     .nav-btn {
@@ -270,16 +293,7 @@
        For now, we keep it but adjust 'top' of app-viewport. 
     */
     @media (max-width: 768px) {
-
-        /* On mobile, maybe hide the main site nav if we can? 
-           CSS hack to hide base header: header.topbar { display: none; } 
-           But let's stick to user request "replicates functionality", 
-           so having the site header is okay, but we might want to minimize it.
-        */
-        .app-viewport {
-            top: 56px;
-            bottom: 0;
-        }
+        /* .app-viewport rule removed as we now use flexbox */
     }
 </style>
 <!-- Leaflet JS -->
@@ -293,7 +307,7 @@
 <div class="app-viewport">
 
     <!-- MAP TAB (HOME) -->
-    <div id="tab-map" class="active" style="width:100%; height:100%; position:relative;">
+    <div id="tab-map" class="active" style="width:100%; flex:1; position:relative;">
         <div id="map"></div>
 
         <!-- Info Overlay -->
@@ -314,7 +328,7 @@
                 <i class="fa-solid fa-flag-checkered"></i>
             </button>
             <!-- Add Mark -->
-            <button class="fab fab-secondary" onclick="app.ui.openMarkModal()" title="Añadir Marca">
+            <button class="fab fab-secondary" onclick="app.ui.openMarkModal()" title="Añadir Baliza">
                 <i class="fa-solid fa-location-dot"></i>
             </button>
             <!-- Measure Current (Primary Action) -->
@@ -336,7 +350,7 @@
     <!-- MARKS TAB -->
     <div id="tab-marks" class="tab-page">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h2 style="margin:0;">Marcas</h2>
+            <h2 style="margin:0;">Balizas</h2>
             <button onclick="app.ui.openMarkModal()" class="btn-primary"
                 style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:8px;">+
                 Añadir</button>
@@ -393,7 +407,7 @@
         </button>
         <button class="nav-btn" data-tab="tab-marks" onclick="app.ui.switchTab('tab-marks')">
             <i class="fa-solid fa-location-crosshairs"></i>
-            <span>Marcas</span>
+            <span>Balizas</span>
         </button>
         <button class="nav-btn" data-tab="tab-settings" onclick="app.ui.switchTab('tab-settings')">
             <i class="fa-solid fa-gear"></i>
@@ -429,7 +443,7 @@
 <!-- Add Mark Modal -->
 <div id="modal-mark" class="modal-overlay">
     <div class="modal-card">
-        <h3>Añadir Marca</h3>
+        <h3>Añadir Baliza</h3>
         <div class="form-group">
             <label>Nombre</label>
             <input type="text" id="mark-name" class="form-control" placeholder="Marca 1">
@@ -446,10 +460,36 @@
 
         <!-- Racecourse Option (Simplified for now) -->
         <hr style="border-color:#334155; margin: 1rem 0;">
-        <button onclick="app.ui.toggleRacecourseInputs()"
-            style="background:none; border:none; color:var(--primary); cursor:pointer;">
-            + ¿Crear Campo de Regatas aquí?
-        </button>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button onclick="app.ui.toggleRacecourseInputs()"
+                style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.9rem;">
+                + ¿Campo de Regatas?
+            </button>
+            <button onclick="app.ui.toggleManualCoords()"
+                style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
+                + Manual / Mapa
+            </button>
+        </div>
+
+        <!-- Manual Coords / Map Pick -->
+        <div id="manual-inputs"
+            style="display:none; margin-top:1rem; border:1px dashed #475569; padding: 0.8rem; border-radius:8px;">
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem;">
+                <div style="flex:1;">
+                    <label style="font-size:0.8rem; color:var(--text-muted);">Lat</label>
+                    <input type="number" id="manual-lat" class="form-control" placeholder="0.0000" step="0.00001">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.8rem; color:var(--text-muted);">Lng</label>
+                    <input type="number" id="manual-lng" class="form-control" placeholder="0.0000" step="0.00001">
+                </div>
+            </div>
+            <button onclick="app.ui.pickOnMap()"
+                style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px;">
+                <i class="fa-solid fa-hand-pointer"></i> Elegir en Mapa (1 seg)
+            </button>
+        </div>
 
         <div id="racecourse-inputs" style="display:none; margin-top:1rem;">
             <div class="form-group">
@@ -465,6 +505,10 @@
             <div class="form-group">
                 <label>Rumbo (°)</label>
                 <input type="number" id="rc-bearing" class="form-control" step="1">
+            </div>
+            <div class="form-group">
+                <label>Longitud Línea (m)</label>
+                <input type="number" id="rc-line-length" class="form-control" step="1" placeholder="ej. 50">
             </div>
         </div>
 

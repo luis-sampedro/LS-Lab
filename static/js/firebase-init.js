@@ -1,9 +1,10 @@
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Re-export common Auth functions so consumers don't need to import from CDN
-export { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut };
+// Re-export common Auth/DB functions so consumers don't need to import from CDN
+export { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, doc, setDoc, getDoc };
 
 const firebaseConfig = {
     apiKey: "AIzaSyDLhNhGd97RAIT6ccMIaNQo7iIfhZDaF-I",
@@ -17,6 +18,7 @@ const firebaseConfig = {
 // Singleton Pattern: Initialize only if not already initialized
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 
 // Helper to get token (returns null if not logged in)
 export async function getAuthToken() {

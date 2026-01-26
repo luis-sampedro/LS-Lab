@@ -46,10 +46,20 @@
     </nav>
 
     <script type="module">
-      import { initGlobalAuthListener, auth } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+      import { initGlobalAuthListener, auth, db, doc, setDoc, getDoc, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
 
       // Initialize Header UI listener
       initGlobalAuthListener('login-link', 'user-icon');
+
+      // Expose to window for non-module scripts (like current-app.js)
+      window.firebaseApp = {
+        auth: auth,
+        db: db,
+        doc: doc,
+        setDoc: setDoc,
+        getDoc: getDoc,
+        onAuthStateChanged: onAuthStateChanged
+      };
     </script>
   </header>
   {% endblock %}
