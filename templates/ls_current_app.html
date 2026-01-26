@@ -23,6 +23,13 @@
         --success: #10b981;
     }
 
+    .light-mode {
+        --bg-dark: #f8fafc;
+        --bg-card: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+    }
+
     body {
         margin: 0;
         padding: 0;
@@ -93,7 +100,9 @@
         display: flex;
         justify-content: space-around;
         align-items: center;
-        z-index: 20;
+        z-index: 2000;
+        position: relative;
+        /* Ensure it stays on top */
     }
 
     .nav-btn {
@@ -355,6 +364,11 @@
             <button onclick="app.settings.toggleLabels()" id="btn-labels" style="padding:8px;">Show</button>
         </div>
 
+        <div class="list-item">
+            <span>Theme</span>
+            <button onclick="app.settings.toggleTheme()" style="padding:8px;">Toggle Light/Dark</button>
+        </div>
+
         <div class="list-item" style="border-color: var(--danger);">
             <span style="color:var(--danger);">Danger Zone</span>
             <button onclick="app.data.clearAll()"
@@ -439,6 +453,12 @@
         </button>
 
         <div id="racecourse-inputs" style="display:none; margin-top:1rem;">
+            <div class="form-group">
+                <label>Start From (Origin):</label>
+                <select id="rc-origin" class="form-control">
+                    <option value="gps">Current GPS</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label>Distance (NM)</label>
                 <input type="number" id="rc-dist" class="form-control" step="0.1">

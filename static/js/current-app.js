@@ -10,7 +10,14 @@ const app = {
         this.map.init();
         this.ui.renderHistory();
         this.ui.renderMarks();
+        this.ui.renderMarks();
         this.ui.applySettings();
+
+        // Restore Theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-mode');
+        }
 
         // Setup simple clock
         setInterval(() => {
@@ -366,11 +373,54 @@ const app = {
 
                 // If Racecourse
                 if (inputDiv.style.display === 'block') {
+                    // Logic updated to support "Start From" dropdown
                     const dist = parseFloat(document.getElementById('rc-dist').value); // NM
                     const ang = parseFloat(document.getElementById('rc-bearing').value);
+                    const originVal = document.getElementById('rc-origin').value; // 'gps' or mark ID
+
                     if (dist && !isNaN(ang)) {
-                        const dest = app.utils.computeDestination(pos, dist, ang);
-                        rcData = { dist, bearing: ang, dest };
+                        let startPos = pos; // Default to GPS
+                        // If user selected a boat mark
+                        if (originVal && originVal !== 'gps') {
+                            const originMark = app.data.store.marks.find(m => m.id == originVal);
+                            if (originMark) {
+                                startPos = { lat: originMark.lat, lng: originMark.lng };
+                            }
+                        }
+
+                        const dest = app.utils.computeDestination(startPos, dist, ang);
+                        // Save origin too so we can draw lines correctly from the boat?
+                        // For now, simplify: we just store the vector or computed dest.
+                        // But wait, the line is drawn from 'mark.lat/lng'. 
+                        // If we are creating a NEW mark (the destination mark), then 'startPos' is purely reference.
+                        // BUT typically racecourse creation creates the TARGET mark.
+                        // So the line should be from Start -> Target.
+                        // If Start is GPS, 'mark' is the target.
+                        // If Start is a Boat, 'mark' is the target.
+                        // The 'mark' we are saving IS the target mark (e.g. "Windward Mark").
+                        // So 'racecourse' property needs to know where the line started.
+                        rcData = {
+                            dist,
+                            bearing: ang,
+                            dest: dest, // ACTUALLY dest is the LOCATION of this mark?
+                            // Logic Check: 'saveMark' uses 'mark' object with 'lat: pos.lat'.
+                            // If we are projecting, we should OVERRIDE the lat/lng of the new mark to be the DESTINATION.
+                        };
+
+                        // OVERRIDE POS to be the Calculated Destination
+                        pos.lat = dest.lat;
+                        pos.lng = dest.lng;
+
+                        // And we also want to store the Origin so we can draw the line back to it?
+                        // The 'renderMark' draws a line to 'mark.racecourse.dest'. 
+                        // Wait, previous code: line from [mark.lat, mark.lng] to [mark.racecourse.dest.lat, ...]
+                        // Implicitly: Mark is the Origin, Racecourse.dest is the Target?
+                        // "Create Racecourse from here" -> We are at Start, we want to place a Mark at Dest.
+                        // So the Mark we are adding is the PIN/WINDWARD mark.
+                        // So 'pos' (Mark Position) should be 'dest'.
+                        // And the line should go from Origin (Boat/GPS) to Mark.
+                        // Let's adjust 'renderMark' loop logic if needed, but for now let's just make sure we capture the origin.
+                        rcData.origin = startPos;
                     }
                 }
 
@@ -469,11 +519,52 @@ const app = {
         openMarkModal: function (racecourseMode = false) {
             document.getElementById('modal-mark').classList.add('open');
             const rcInput = document.getElementById('racecourse-inputs');
+
+            // Populate Origins
+            app.ui.populateRacecourseOrigins();
+
             if (racecourseMode) {
                 rcInput.style.display = 'block';
             } else {
                 rcInput.style.display = 'none';
             }
+        },
+        populateRacecourseOrigins: function () {
+            const select = document.getElementById('rc-origin');
+            if (!select) return;
+
+            // Clear current options (keep first one "GPS")
+            // Rebuild content
+            const isEs = document.documentElement.lang === 'es';
+            const gpsText = isEs ? 'GPS Actual' : 'Current GPS';
+
+            let html = `<option value="gps">${gpsText}</option>`;
+
+            // Split marks by type
+            const boats = app.data.store.marks.filter(m => m.type === 'boat');
+            const others = app.data.store.marks.filter(m => m.type !== 'boat');
+
+            // 1. Boats First
+            if (boats.length > 0) {
+                const label = isEs ? 'Barcos' : 'Boats';
+                html += `<optgroup label="${label}">`;
+                boats.forEach(b => {
+                    html += `<option value="${b.id}">${b.name}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            // 2. Others
+            if (others.length > 0) {
+                const label = isEs ? 'Otras Marcas' : 'Other Marks';
+                html += `<optgroup label="${label}">`;
+                others.forEach(m => {
+                    html += `<option value="${m.id}">${m.name} (${m.type})</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            select.innerHTML = html;
         },
         closeModals: function () {
             document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('open'));
@@ -509,8 +600,17 @@ const app = {
         toggleLabels: function () {
             app.data.store.settings.showLabels = !app.data.store.settings.showLabels;
             app.data.save();
-            // Simple reload to re-render map labels
             location.reload();
+        },
+        toggleTheme: function () {
+            const body = document.body;
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            }
         }
     },
 

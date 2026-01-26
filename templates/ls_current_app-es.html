@@ -1,116 +1,480 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LS Current App (Descarga APK)</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-</head>
+{% block title %}LS Current - Utilidad Náutica{% endblock %}
 
-<body>
-    <header class="topbar">
-        <!-- Logo (click → home) -->
-        <a href="{{ url_for('index', lang='es') }}" class="logo" style="text-decoration:none; color:inherit;">
-            LS
-        </a>
-        <nav class="nav">
-            <a href="{{ url_for('index', lang='es') }}">Inicio</a>
-            <a href="{{ url_for('about', lang='es') }}">Sobre mí</a>
-        </nav>
-    </header>
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<!-- FontAwesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <main class="app-shell" style="max-width:900px;">
-        <!-- CABECERA: ICONO + TEXTO + BOTÓN -->
-        <section class="section" style="padding-bottom:1.5rem;">
-            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:center;">
-                <img src="{{ url_for('static', filename='images/ls-current-app-icon.svg') }}" alt="Icono LS Current App"
-                    class="app-icon" />
+<style>
+    /* PWA & Map Styles */
+    :root {
+        --nav-height: 60px;
+        --primary: #0ea5e9;
+        /* Sky 500 */
+        --bg-dark: #0f172a;
+        --bg-card: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --danger: #ef4444;
+        --success: #10b981;
+    }
 
-                <div style="flex:1; min-width:240px;">
-                    <h1 style="font-size:1.6rem; margin-bottom:0.4rem;">LS Current App</h1>
-                    <p style="color:#9ca3af; margin-bottom:0.7rem;">
-                        Herramienta móvil para estimar la corriente de marea desde tu posición GPS.
-                        La app registra tu posición <strong>ahora</strong> y <strong>1 minuto después</strong>,
-                        calcula el <strong>vector de corriente</strong> (velocidad y dirección) y
-                        dibuja todas las mediciones en una carta náutica sencilla.
-                    </p>
+    .light-mode {
+        --bg-dark: #f8fafc;
+        --bg-card: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+    }
 
-                    <a href="{{ url_for('static', filename='LSC-release-2.1.apk') }}" download class="btn primary"
-                        style="padding:0.9rem 2.1rem; font-size:0.95rem; border-radius:1rem; display:inline-block; margin-top:0.3rem;">
-                        Descargar APK para Android
-                    </a>
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        overflow: hidden;
+        /* Prevent body scroll, handle in app-container */
+    }
 
-                    <p style="margin-top:0.8rem; color:#9ca3af; font-size:0.85rem;">
-                        Solo para Android · Instalación manual (activa "Permitir orígenes desconocidos" en tu
-                        dispositivo).
-                    </p>
-                </div>
+    /* Main Container - Full viewport minus header/footer if needed */
+    .app-viewport {
+        position: fixed;
+        top: 60px;
+        /* Assuming base.html header is ~60px */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Map takes full remaining space */
+    #map-view {
+        flex: 1;
+        position: relative;
+        z-index: 1;
+    }
+
+    #map {
+        width: 100%;
+        height: 100%;
+        background: #1e293b;
+    }
+
+    /* Map Tab Visibility */
+    #tab-map {
+        display: none;
+    }
+
+    #tab-map.active {
+        display: block;
+    }
+
+    /* Tab Content Pages (History, Marks, Settings) */
+    .tab-page {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: var(--nav-height);
+        background: var(--bg-dark);
+        overflow-y: auto;
+        padding: 1rem;
+        display: none;
+        /* Hidden by default */
+        z-index: 1001;
+    }
+
+    .tab-page.active {
+        display: block;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+        height: var(--nav-height);
+        background: var(--bg-card);
+        border-top: 1px solid #334155;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 2000;
+        position: relative;
+    }
+
+    .nav-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        width: 100%;
+        padding: 8px 0;
+    }
+
+    .nav-btn.active {
+        color: var(--primary);
+    }
+
+    .nav-btn i {
+        font-size: 1.2rem;
+    }
+
+    /* Floating Action Buttons (Map Overlay) */
+    .map-controls {
+        position: absolute;
+        bottom: calc(var(--nav-height) + 20px);
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 400;
+        /* Above Leaflet controls */
+    }
+
+    .fab {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+
+    .fab:active {
+        transform: scale(0.95);
+    }
+
+    .fab-primary {
+        background-color: var(--primary);
+    }
+
+    .fab-danger {
+        background-color: var(--danger);
+    }
+
+    .fab-secondary {
+        background-color: var(--bg-card);
+        border: 1px solid #475569;
+    }
+
+    /* Info Overlay (Moved to bottom right) */
+    .map-info {
+        position: absolute;
+        bottom: 90px;
+        right: 80px;
+        top: auto;
+        left: auto;
+        transform: none;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #334155;
+        display: flex;
+        gap: 12px;
+        z-index: 400;
+        font-family: monospace;
+        font-size: 1.1rem;
+    }
+
+    /* Modals */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-overlay.open {
+        display: flex;
+    }
+
+    .modal-card {
+        background: var(--bg-card);
+        padding: 1.5rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        border: 1px solid #475569;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.8rem;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+    }
+
+    /* History & Lists */
+    .list-item {
+        background: var(--bg-card);
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .item-main {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #334155;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    /* Hide base.html header on small screens if we want full app feel? 
+       For now, we keep it but adjust 'top' of app-viewport. 
+    */
+    @media (max-width: 768px) {
+
+        /* On mobile, maybe hide the main site nav if we can? 
+           CSS hack to hide base header: header.topbar { display: none; } 
+           But let's stick to user request "replicates functionality", 
+           so having the site header is okay, but we might want to minimize it.
+        */
+        .app-viewport {
+            top: 56px;
+            bottom: 0;
+        }
+    }
+</style>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Main App Logic -->
+<script src="{{ url_for('static', filename='js/current-app.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="app-viewport">
+
+    <!-- MAP TAB (HOME) -->
+    <div id="tab-map" class="active" style="width:100%; height:100%; position:relative;">
+        <div id="map"></div>
+
+        <!-- Info Overlay -->
+        <div class="map-info">
+            <span id="live-speed">0.0 kn</span>
+            <span style="color:#64748b;">|</span>
+            <span id="live-bearing">---°</span>
+        </div>
+
+        <!-- FABs -->
+        <div class="map-controls">
+            <!-- Wind Input -->
+            <button class="fab fab-secondary" onclick="app.ui.openWindModal()" title="Añadir Viento">
+                <i class="fa-solid fa-wind"></i>
+            </button>
+            <!-- Add Racecourse (New) -->
+            <button class="fab fab-secondary" onclick="app.ui.openMarkModal(true)" title="Añadir Campo de Regatas">
+                <i class="fa-solid fa-flag-checkered"></i>
+            </button>
+            <!-- Add Mark -->
+            <button class="fab fab-secondary" onclick="app.ui.openMarkModal()" title="Añadir Marca">
+                <i class="fa-solid fa-location-dot"></i>
+            </button>
+            <!-- Measure Current (Primary Action) -->
+            <button id="btn-measure" class="fab fab-primary" onclick="app.logic.toggleMeasure()">
+                <i class="fa-solid fa-play"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" class="tab-page">
+        <h2>Historial</h2>
+        <div id="history-list">
+            <!-- Populated by JS -->
+            <p class="text-muted">No hay mediciones aún.</p>
+        </div>
+    </div>
+
+    <!-- MARKS TAB -->
+    <div id="tab-marks" class="tab-page">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 style="margin:0;">Marcas</h2>
+            <button onclick="app.ui.openMarkModal()" class="btn-primary"
+                style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:8px;">+
+                Añadir</button>
+        </div>
+        <div id="marks-list">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-page">
+        <h2>Ajustes</h2>
+
+        <div class="list-item">
+            <span>Idioma</span>
+            <select class="form-control" style="width:auto;" onchange="app.settings.setLang(this.value)">
+                <option value="en">English</option>
+                <option value="es" selected>Español</option>
+            </select>
+        </div>
+
+        <div class="list-item">
+            <span>Etiquetas Mapa</span>
+            <button onclick="app.settings.toggleLabels()" id="btn-labels" style="padding:8px;">Mostrar</button>
+        </div>
+
+        <div class="list-item">
+            <span>Tema</span>
+            <button onclick="app.settings.toggleTheme()" style="padding:8px;">Claro/Oscuro</button>
+        </div>
+
+        <div class="list-item" style="border-color: var(--danger);">
+            <span style="color:var(--danger);">Zona Peligro</span>
+            <button onclick="app.data.clearAll()"
+                style="background:var(--danger); color:white; border:none; padding:8px 16px; border-radius:6px;">Borrar
+                Todo</button>
+        </div>
+
+        <div style="margin-top:2rem; text-align:center;">
+            <a href="{{ url_for('static', filename='LSC-release-2.1.apk') }}" style="color:var(--primary);">Descargar
+                App Android</a>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab="tab-map" onclick="app.ui.switchTab('tab-map')">
+            <i class="fa-solid fa-map"></i>
+            <span>Mapa</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-history" onclick="app.ui.switchTab('tab-history')">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Historial</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-marks" onclick="app.ui.switchTab('tab-marks')">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <span>Marcas</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-settings" onclick="app.ui.switchTab('tab-settings')">
+            <i class="fa-solid fa-gear"></i>
+            <span>Ajustes</span>
+        </button>
+    </nav>
+
+</div>
+
+<!-- MODALS -->
+
+<!-- Wind Modal -->
+<div id="modal-wind" class="modal-overlay">
+    <div class="modal-card">
+        <h3>Registrar Viento</h3>
+        <div class="form-group">
+            <label>Velocidad (Nudos)</label>
+            <input type="number" id="wind-speed" class="form-control" placeholder="12.5" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Dirección (Grados 0-360)</label>
+            <input type="number" id="wind-dir" class="form-control" placeholder="045" step="1">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:1rem;">
+            <button onclick="app.ui.closeModals()"
+                style="background:transparent; border:none; color:white;">Cancelar</button>
+            <button onclick="app.logic.saveWind()"
+                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Mark Modal -->
+<div id="modal-mark" class="modal-overlay">
+    <div class="modal-card">
+        <h3>Añadir Marca</h3>
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="mark-name" class="form-control" placeholder="Marca 1">
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select id="mark-type" class="form-control">
+                <option value="mark">Marca (Estándar)</option>
+                <option value="pin">Pin (Salida/Llegada)</option>
+                <option value="boat">Barco</option>
+                <option value="waypoint">Waypoint</option>
+            </select>
+        </div>
+
+        <!-- Racecourse Option (Simplified for now) -->
+        <hr style="border-color:#334155; margin: 1rem 0;">
+        <button onclick="app.ui.toggleRacecourseInputs()"
+            style="background:none; border:none; color:var(--primary); cursor:pointer;">
+            + ¿Crear Campo de Regatas aquí?
+        </button>
+
+        <div id="racecourse-inputs" style="display:none; margin-top:1rem;">
+            <div class="form-group">
+                <label>Comenzar desde:</label>
+                <select id="rc-origin" class="form-control">
+                    <option value="gps">GPS Actual</option>
+                </select>
             </div>
-        </section>
-
-        <!-- MOCKUP TIPO MÓVIL -->
-        <section class="section section-alt" style="margin-top:0;">
-            <h2>Vista previa</h2>
-            <div class="phone-preview">
-                <div class="phone-screen">
-                    <header class="phone-preview-header">
-                        <div>
-                            <div class="phone-app-name">LS Current App</div>
-                            <div class="phone-subtitle">Ría de Vigo · Corriente en vivo</div>
-                        </div>
-                    </header>
-
-                    <div class="phone-chart">
-                        <div class="phone-grid-horizontal"></div>
-                        <div class="phone-grid-vertical"></div>
-                        <div class="phone-boat">⛵</div>
-                        <div class="phone-arrow"></div>
-                    </div>
-
-                    <div class="phone-bottom">
-                        <div class="phone-metric">
-                            <span class="metric-label-small">Intensidad Corriente</span>
-                            <span class="metric-value-big">1.3 kn</span>
-                        </div>
-                        <div class="phone-metric">
-                            <span class="metric-label-small">Dirección (verdadera)</span>
-                            <span class="metric-value-big">228°</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label>Distancia (NM)</label>
+                <input type="number" id="rc-dist" class="form-control" step="0.1">
             </div>
-
-            <p style="margin-top:1rem; color:#9ca3af; font-size:0.85rem;">
-                Concepto: la app real calcula el vector a partir de tus posiciones GPS
-                y guarda cada medición para construir un mapa de corrientes con el tiempo.
-            </p>
-        </section>
-
-        <!-- SECCIÓN QR -->
-        <section class="section">
-            <h2>Descargar vía QR</h2>
-            <p style="color:#9ca3af; margin-bottom:0.8rem;">
-                Escanea este código QR para descargar la última versión de la aplicación directamente en tu móvil.
-            </p>
-
-            <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
-                <div class="qr-box">
-                    <img src="{{ url_for('static', filename='images/ls-current-app-qr.png') }}"
-                        alt="Código QR para descargar LS Current App" class="qr-image" />
-                </div>
+            <div class="form-group">
+                <label>Rumbo (°)</label>
+                <input type="number" id="rc-bearing" class="form-control" step="1">
             </div>
-        </section>
-    </main>
+        </div>
 
-    <footer class="footer">
-        <p>© <span id="year"></span> LS Apps · Todos los derechos reservados</p>
-    </footer>
+        <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1rem;">
+            <button onclick="app.ui.closeModals()"
+                style="background:transparent; border:none; color:white;">Cancelar</button>
+            <button onclick="app.logic.saveMark()"
+                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Guardar</button>
+        </div>
+    </div>
+</div>
 
-    <script>
-        document.getElementById("year").textContent = new Date().getFullYear();
-    </script>
-</body>
-
-</html>
+{% endblock %}
