@@ -652,7 +652,7 @@ const app = {
                     if (item.racecourse.dist !== undefined) {
                         subText = `${item.racecourse.dist.toFixed(1)} NM @ ${item.racecourse.bearing}°`;
                     } else {
-                        subText = "Racecourse";
+                        subText = isEs ? "Campo de Regatas" : "Racecourse";
                     }
                 } else {
                     hasMarks = true;
@@ -685,13 +685,31 @@ const app = {
             document.getElementById('modal-mark').classList.add('open');
             const rcInput = document.getElementById('racecourse-inputs');
 
+            // New elements for controlling view
+            const title = document.getElementById('modal-mark-title');
+            const typeGroup = document.getElementById('group-mark-type');
+            const toggles = document.getElementById('mark-toggles');
+            const isEs = document.documentElement.lang === 'es';
+
             // Populate Origins
             app.ui.populateRacecourseOrigins();
 
             if (racecourseMode) {
+                // Streamlined Racecourse View
                 rcInput.style.display = 'block';
+                if (typeGroup) typeGroup.style.display = 'none';
+                if (toggles) toggles.style.display = 'none';
+                if (title) title.innerText = isEs ? "Añadir Campo de Regatas" : "Add Racecourse";
+
+                // Force type to implicit 'mark' or 'waypoint' if hidden, 
+                // but since we just read value in saveMark, we might want to ensure it has a valid value 
+                // or just leave the default connected to the hidden select (which defaults to first option usually).
             } else {
+                // Standard Mark View
                 rcInput.style.display = 'none';
+                if (typeGroup) typeGroup.style.display = 'block';
+                if (toggles) toggles.style.display = 'flex';
+                if (title) title.innerText = isEs ? "Añadir Baliza" : "Add Mark";
             }
 
             // Ensure manual hidden & reset

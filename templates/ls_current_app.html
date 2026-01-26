@@ -211,6 +211,7 @@
         z-index: 400;
         font-family: monospace;
         font-size: 1.1rem;
+        color: white;
     }
 
     /* Modals */
@@ -456,12 +457,12 @@
 <!-- Add Mark Modal -->
 <div id="modal-mark" class="modal-overlay">
     <div class="modal-card">
-        <h3>Add Mark</h3>
+        <h3 id="modal-mark-title">Add Mark</h3>
         <div class="form-group">
             <label>Name</label>
             <input type="text" id="mark-name" class="form-control" placeholder="Mark 1">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="group-mark-type">
             <label>Type</label>
             <select id="mark-type" class="form-control">
                 <option value="mark">Mark (Standard)</option>
@@ -474,7 +475,7 @@
         <!-- Racecourse Option (Simplified for now) -->
         <hr style="border-color:#334155; margin: 1rem 0;">
 
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center;" id="mark-toggles">
             <button onclick="app.ui.toggleRacecourseInputs()"
                 style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.9rem;">
                 + Racecourse?
