@@ -1,0 +1,16 @@
+<svg width="100" height="200" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Solid White Hull with Hole -->
+  <path d="M50 10 
+           C 80 40, 95 100, 90 170 
+           C 85 185, 65 190, 50 190 
+           C 35 190, 15 185, 10 170 
+           C 5 100, 20 40, 50 10 
+           Z 
+           M 50 40 
+           C 35 60, 25 100, 30 150 
+           C 32 165, 45 170, 50 170 
+           C 55 170, 68 165, 70 150 
+           C 75 100, 65 60, 50 40 
+           Z" 
+        fill="white" fill-rule="evenodd" />
+</svg>

@@ -126,17 +126,35 @@ const app = {
         },
 
         renderMark: function (mark) {
-            // Icons based on type
-            let iconHtml = '<i class="fa-solid fa-location-dot" style="color:white; font-size:24px;"></i>';
-            if (mark.type === 'boat') iconHtml = '<i class="fa-solid fa-sailboat" style="color:#facc15; font-size:20px;"></i>';
-            if (mark.type === 'pin') iconHtml = '<i class="fa-solid fa-flag" style="color:#ef4444; font-size:20px;"></i>';
+            // Vector SVG Icons
+            let iconUrl = 'static/images/map_icon_mark.svg';
+            let iconSize = [32, 32];
+            let iconAnchor = [16, 16];
 
-            const icon = L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">${iconHtml}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 30]
+            if (mark.type === 'boat') {
+                iconUrl = 'static/images/map_icon_boat.svg';
+                iconSize = [30, 60];
+                iconAnchor = [15, 30];
+            } else if (mark.type === 'pin') {
+                iconUrl = 'static/images/map_icon_pin.svg';
+                iconSize = [32, 32];
+                iconAnchor = [16, 16];
+            } else if (mark.type === 'waypoint') {
+                iconUrl = 'static/images/map_icon_mark.svg';
+            }
+
+            const icon = L.icon({
+                iconUrl: iconUrl,
+                iconSize: iconSize,
+                iconAnchor: iconAnchor,
+                popupAnchor: [0, -10],
+                className: mark.type === 'boat' ? 'boat-icon' : '' // Add class for rotation if needed later
             });
+
+            // Handle Boat Rotation if it has headings? 
+            // Currently marks don't store heading, but boats might.
+            // If we add heading to marks later, we can use L.divIcon with an img inside and rotate it.
+            // asking for "logos meaning icons" suggests static icons for now.
 
             const marker = L.marker([mark.lat, mark.lng], { icon: icon });
 
@@ -163,11 +181,18 @@ const app = {
             const color = app.utils.getJetColor(h.speed, 0, 3); // 0-3 kts range
             const size = 40 + (h.speed * 5); // Scale size slightly
 
-            // Arrow HTML
-            // Transform rotate is handled by CSS or inline
+            // SVG for Current: Solid Navigation Arrow (Broad)
+            // Points UP (0 deg) by default
+            const svgXml = `
+            <svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 50 5 L 90 90 L 50 70 L 10 90 Z" 
+                      fill="rgb(${color.r},${color.g},${color.b})" 
+                      stroke="black" stroke-width="2" />
+            </svg>`;
+
             const html = `
                 <div style="transform: rotate(${h.bearing}deg); width:${size}px; height:${size}px; display:flex; justify-content:center; align-items:center;">
-                    <i class="fa-solid fa-arrow-up" style="color: rgb(${color.r},${color.g},${color.b}); font-size:${size}px; text-shadow:0 2px 5px black;"></i>
+                    ${svgXml}
                 </div>
              `;
 
@@ -186,12 +211,30 @@ const app = {
         },
 
         renderWindIcon: function (h) {
+            const color = app.utils.getJetColor(h.speed, 0, 30); // 0-30 kts range for wind
+
+            // SVG for Wind: Sleek/Thin Arrow
+            // Points UP (0 deg) by default
+            const svgXml = `
+            <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Shaft -->
+                <line x1="50" y1="95" x2="50" y2="20" stroke="rgb(${color.r},${color.g},${color.b})" stroke-width="8" stroke-linecap="round" />
+                <!-- Arrowhead -->
+                <path d="M 20 50 L 50 10 L 80 50" fill="none" stroke="rgb(${color.r},${color.g},${color.b})" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`;
+
             const html = `
-               <div style="transform: rotate(${h.direction + 180}deg); display:flex; justify-content:center;">
-                   <i class="fa-solid fa-wind" style="color: #a8a29e; font-size:24px;"></i>
+               <div style="transform: rotate(${h.direction}deg); display:flex; justify-content:center; align-items:center; width:40px; height:40px;">
+                   ${svgXml}
                </div>
             `;
-            const icon = L.divIcon({ html: html, iconSize: [30, 30], iconAnchor: [15, 15] });
+            const icon = L.divIcon({
+                className: 'wind-icon-marker',
+                html: html,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+
             const marker = L.marker([h.lat, h.lng], { icon: icon })
                 .bindPopup(`Wind: <b>${h.speed} kn</b> @ ${h.direction}°`);
             marker.addTo(this.instance);
@@ -352,14 +395,17 @@ const app = {
     ui: {
         switchTab: function (tabId) {
             document.querySelectorAll('.tab-page').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('#map-view').forEach(el => el.style.display = (tabId === 'tab-map' ? 'block' : 'none')); // Handle map visibility manually?
-            // Actually, Map is special. 
-            // My CSS structure: #tab-map is .active by default. Other tabs overlay it or replace it.
+            // Toggle map visibility via class
+            const mapTab = document.getElementById('tab-map');
+            if (mapTab) {
+                if (tabId === 'tab-map') mapTab.classList.add('active');
+                else mapTab.classList.remove('active');
+            }
 
-            // Let's just use the classes
-            document.getElementById(tabId).classList.add('active');
+            const target = document.getElementById(tabId);
+            if (target) target.classList.add('active');
 
-            // Map visibility
+            // Map visibility check
             if (tabId === 'tab-map') {
                 setTimeout(() => app.map.instance.invalidateSize(), 100);
             }
@@ -420,8 +466,14 @@ const app = {
         openWindModal: function () {
             document.getElementById('modal-wind').classList.add('open');
         },
-        openMarkModal: function () {
+        openMarkModal: function (racecourseMode = false) {
             document.getElementById('modal-mark').classList.add('open');
+            const rcInput = document.getElementById('racecourse-inputs');
+            if (racecourseMode) {
+                rcInput.style.display = 'block';
+            } else {
+                rcInput.style.display = 'none';
+            }
         },
         closeModals: function () {
             document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('open'));
