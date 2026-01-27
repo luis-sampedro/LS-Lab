@@ -1,100 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LS Foiling Academy</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-</head>
+{% block title %}LS Foiling Academy{% endblock %}
 
-<body>
-
-    <!-- TOP BAR identical to LSAL -->
-    <div class="topbar">
-
-        <!-- Logo (click → home) -->
-        <a href="{{ url_for('index') }}" class="logo" style="text-decoration:none; color:inherit;">
-            LS
-        </a>
-
-        <!-- Right-side nav & flags -->
-        <div style="display:flex; align-items:center; gap:1rem;">
-
-            <!-- Main links -->
-            <div class="nav">
-                <a href="{{ url_for('index') }}">Home</a>
-                <a href="{{ url_for('about') }}">About me</a>
+{% block content %}
+<div class="hero academy-hero"
+    style="background-image: url('{{ url_for('static', filename='images/foiling-hero.jpg') }}');">
+    <div class="hero-overlay">
+        <div class="hero-text">
+            <h1>LS Foiling <span>Academy</span></h1>
+            <p>Master the art of foiling with world-class instruction. From first flights to race-winning strategy.</p>
+            <div class="hero-buttons">
+                <a href="#" id="start-now-btn" class="btn primary">Start Now!</a>
+                <a href="#pricing" class="btn secondary">View Pricing</a>
             </div>
-
-            <!-- Language flags -->
-            <div style="display:flex; align-items:center; gap:0.35rem;">
-                <a href="{{ url_for('ls_foiling_academy') }}">
-                    <img src="https://flagcdn.com/w20/gb.png" alt="English"
-                        style="width:20px; height:auto; border-radius:3px;">
-                </a>
-                <a href="{{ url_for('ls_foiling_academy', lang='es') }}">
-                    <img src="https://flagcdn.com/w20/es.png" alt="Español"
-                        style="width:20px; height:auto; border-radius:3px;">
-                </a>
-            </div>
-
         </div>
     </div>
+</div>
 
-
-    <!-- MAIN CONTENT -->
-    <div class="internal-page">
-
-        <h1>LS Foiling Academy (LSFA)</h1>
-        <p>
-            This area is still in development.
-            LS Foiling Academy will combine structured online lessons with hands-on
-            practical sessions on the water. Real demonstrations, training tools and
-            high-performance foiling boats will form the core of the experience.
-        </p>
-
-        <div class="internal-card">
-            <h2>#1 — How to Sail a Moth</h2>
-
-            <p>
-                The first module focuses on high-performance foiling using an
-                <strong>International Moth</strong>.
-                I provide the boat and deliver on-shore briefings before on-water sessions.
-            </p>
-
-            <p>The course will include:</p>
-
-            <ul>
-                <li>Understanding foil behaviour, balance and trim</li>
-                <li>Dockside demonstrations and safety briefing</li>
-                <li>Progressive on-water sessions tailored to each sailor</li>
-                <li>Technique feedback, improvement tracking and personalised tips</li>
+<div class="section">
+    <h2>Two Ways to Learn</h2>
+    <div class="cards">
+        <div class="card">
+            <h3>🌊 On Water Training</h3>
+            <p>Hands-on personal training in the International Moth. I provide the boat, the safety, and the coaching.
+                You bring the focus.</p>
+            <ul class="list">
+                <li>1-on-1 Coaching</li>
+                <li>Equipment Provided</li>
+                <li>Video Analysis</li>
             </ul>
+        </div>
+        <div class="card">
+            <h3>💻 Online Courses</h3>
+            <p>Comprehensive digital courses covering theory, boat work, and strategy. Learn at your own pace from
+                anywhere.</p>
+            <ul class="list">
+                <li>Foiling Basics to Advanced</li>
+                <li>Sailing Performance</li>
+                <li>Maintenance & Rigging</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-            <p>
-                Designed for sailors who want to progress from first flights to stable,
-                confident hydrofoiling.
-            </p>
+<!-- Pricing Section -->
+<div class="section" id="pricing">
+    <h2>Pricing Options</h2>
+    <div class="pricing-grid">
+
+        <!-- Free Tier -->
+        <div class="pricing-card">
+            <h3 class="pricing-title">Free Preview</h3>
+            <div class="pricing-price">€0</div>
+            <div class="pricing-period">Forever</div>
+            <ul class="pricing-features">
+                <li>1 Free Lesson per Course</li>
+                <li>Course Catalog Access</li>
+            </ul>
+            <a href="#" class="btn secondary small-btn auth-trigger">Sign Up Free</a>
         </div>
 
-        <p class="section-note">
-            More courses and experiences will be added soon.
-        </p>
+        <!-- Trial Tier -->
+        <div class="pricing-card">
+            <h3 class="pricing-title">Pro Trial</h3>
+            <div class="pricing-price">Free</div>
+            <div class="pricing-period">7 Days</div>
+            <ul class="pricing-features">
+                <li>Full Access to Beginner Courses</li>
+                <li>7-Day Duration</li>
+                <li>One-time offer</li>
+            </ul>
+            <a href="#" class="btn secondary small-btn auth-trigger">Start Trial</a>
+        </div>
+
+        <!-- Individual Tier -->
+        <div class="pricing-card">
+            <h3 class="pricing-title">A la Carte</h3>
+            <div class="pricing-price">€10-50</div>
+            <div class="pricing-period">Per Course</div>
+            <ul class="pricing-features">
+                <li>Lifetime Access to Course</li>
+                <li>Beginner: €10</li>
+                <li>Intermediate: €25</li>
+                <li>Advanced: €50</li>
+            </ul>
+            <a href="{{ url_for('ls_foiling_academy_catalog') }}" class="btn secondary small-btn">Browse Courses</a>
+        </div>
+
+        <!-- Pro Tier -->
+        <div class="pricing-card highlight">
+            <div class="course-badge"
+                style="background: #38bdf8; color: #000; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);">
+                BEST VALUE</div>
+            <h3 class="pricing-title">LS PRO</h3>
+            <div class="pricing-price">TBD</div>
+            <div class="pricing-period">Monthly / Annual</div>
+            <ul class="pricing-features">
+                <li>All Online Courses Included</li>
+                <li>Full LS Lab Suite Access</li>
+                <li>Priority Support</li>
+            </ul>
+            <a href="#" class="btn primary small-btn">View LS PRO</a>
+        </div>
 
     </div>
+</div>
 
+<script>
+    function handleAuthAction(e) {
+        e.preventDefault();
 
-    <!-- FOOTER identical to LSAL -->
-    <div class="footer">
-        © <span id="year"></span> LS Tool · All rights reserved
-    </div>
+        // Check if user is logged in (using existing DOM state from base.html)
+        const userIcon = document.getElementById('user-icon');
+        // If user-icon is visible (display != none), user is logged in
+        const isLoggedIn = userIcon && getComputedStyle(userIcon).display !== 'none';
 
-    <script>
-        document.getElementById("year").textContent = new Date().getFullYear();
-    </script>
+        const catalogUrl = "{{ url_for('ls_foiling_academy_catalog', lang=request.args.get('lang')) }}";
+        const loginUrl = "{{ url_for('login') }}?next=" + encodeURIComponent(catalogUrl);
 
-</body>
+        if (isLoggedIn) {
+            window.location.href = catalogUrl;
+        } else {
+            window.location.href = loginUrl;
+        }
+    }
 
-</html>
+    document.getElementById('start-now-btn').addEventListener('click', handleAuthAction);
+
+    // Attach to all auth-trigger buttons
+    document.querySelectorAll('.auth-trigger').forEach(btn => {
+        btn.addEventListener('click', handleAuthAction);
+    });
+</script>
+
+{% endblock %}

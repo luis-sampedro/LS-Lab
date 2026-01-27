@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}LS Foiling Academy - Catalog{% endblock %}
+
+{% block content %}
+<div class="section">
+    <h1>Course Catalog</h1>
+    <p>Explore our technical and sailing courses. Filter by difficulty level.</p>
+
+    <!-- Filter Buttons -->
+    <div class="filters-row">
+        <button class="filter-btn active" data-filter="all">All Courses</button>
+        <button class="filter-btn filter-beg" data-filter="beginner">Beginner (Green)</button>
+        <button class="filter-btn filter-int" data-filter="intermediate">Intermediate (Yellow)</button>
+        <button class="filter-btn filter-adv" data-filter="advanced">Advanced (Red)</button>
+    </div>
+
+    <!-- Course Grid -->
+    <div class="cards" id="course-grid">
+
+        <!-- ROW 1: FOILING -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Foiling</span>
+            <h3>Foiling Basics</h3>
+            <p>First flights, stability, and safety. The foundation of flight.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-beg') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Foiling</span>
+            <h3>Equilibrium & Sustained Flight</h3>
+            <p>Mastering ride height, maneuvers, and extended flight times.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-int') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Foiling</span>
+            <h3>Next Level Foiling</h3>
+            <p>Racing techniques, high speed handling, and aggressive maneuvers.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-adv') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <!-- ROW 2: SAILING PERFORMANCE -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Performance</span>
+            <h3>Sailing Performance Basics</h3>
+            <p>Understanding VMG, polars, and the basics of boat speed.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-beg') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Performance</span>
+            <h3>Strategy & Tactics</h3>
+            <p>Race course management, wind shifts, and fleet tactics.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-int') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Performance</span>
+            <h3>Data Analysis & Optimization</h3>
+            <p>Using sensors and data to refine performance and win races.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-adv') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <!-- ROW 3: MAINTENANCE -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Maintenance</span>
+            <h3>Splicing & Repairs</h3>
+            <p>Essential ropework, knots, and basic fiberglass repairs.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-beg') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Maintenance</span>
+            <h3>Rig Tuning</h3>
+            <p>Setting up your mast and shrouds for optimal power and control.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-int') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Maintenance</span>
+            <h3>Sail Tuning & Composites</h3>
+            <p>Advanced sail shape analysis and carbon fiber composite work.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-adv') }}" class="btn secondary small-btn"
+                style="margin-top: 1rem;">View Course</a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const buttons = document.querySelectorAll('.filter-btn');
+        const cards = document.querySelectorAll('.course-card');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Active state
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.getAttribute('data-filter');
+
+                cards.forEach(card => {
+                    const level = card.getAttribute('data-level');
+                    if (filter === 'all' || level === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

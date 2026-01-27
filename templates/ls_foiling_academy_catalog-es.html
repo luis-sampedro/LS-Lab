@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}LS Foiling Academy - Catálogo{% endblock %}
+
+{% block content %}
+<div class="section">
+    <h1>Catálogo de Cursos</h1>
+    <p>Explora nuestros cursos técnicos y de navegación. Filtra por nivel de dificultad.</p>
+
+    <!-- Filter Buttons -->
+    <div class="filters-row">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn filter-beg" data-filter="beginner">Principiante (Verde)</button>
+        <button class="filter-btn filter-int" data-filter="intermediate">Intermedio (Amarillo)</button>
+        <button class="filter-btn filter-adv" data-filter="advanced">Avanzado (Rojo)</button>
+    </div>
+
+    <!-- Course Grid -->
+    <div class="cards" id="course-grid">
+
+        <!-- ROW 1: FOILING -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Foiling</span>
+            <h3>Conceptos Básicos de Foiling</h3>
+            <p>Primeros vuelos, estabilidad y seguridad. La base del vuelo.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-beg', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Foiling</span>
+            <h3>Equilibrio y Vuelo Sostenido</h3>
+            <p>Dominando la altura de vuelo, maniobras y tiempos de vuelo extendidos.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-int', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Foiling</span>
+            <h3>Foiling de Siguiente Nivel</h3>
+            <p>Técnicas de regata, manejo a alta velocidad y maniobras agresivas.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-adv', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <!-- ROW 2: SAILING PERFORMANCE -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Performance</span>
+            <h3>Conceptos Básicos de Rendimiento</h3>
+            <p>Entendiendo VMG, polares y los fundamentos de la velocidad del barco.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-beg', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Performance</span>
+            <h3>Estrategia y Táctica</h3>
+            <p>Gestión del campo de regata, roles de viento y tácticas de flota.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-int', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Performance</span>
+            <h3>Análisis de Datos y Optimización</h3>
+            <p>Usando sensores y datos para refinar el rendimiento y ganar regatas.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-adv', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <!-- ROW 3: MAINTENANCE -->
+        <div class="card course-card level-beginner" data-level="beginner">
+            <span class="course-badge">Mantenimiento</span>
+            <h3>Cabullería y Reparaciones</h3>
+            <p>Trabajos esenciales con cabos, nudos y reparaciones básicas de fibra.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-beg', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-intermediate" data-level="intermediate">
+            <span class="course-badge">Mantenimiento</span>
+            <h3>Puesta a Punto del Aparejo</h3>
+            <p>Ajustando el mástil y los obenques para potencia y control óptimos.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-int', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+        <div class="card course-card level-advanced" data-level="advanced">
+            <span class="course-badge">Mantenimiento</span>
+            <h3>Ajuste de Velas y Composites</h3>
+            <p>Análisis avanzado de forma de vela y trabajo con fibra de carbono.</p>
+            <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-adv', lang='es') }}"
+                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const buttons = document.querySelectorAll('.filter-btn');
+        const cards = document.querySelectorAll('.course-card');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Active state
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.getAttribute('data-filter');
+
+                cards.forEach(card => {
+                    const level = card.getAttribute('data-level');
+                    if (filter === 'all' || level === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

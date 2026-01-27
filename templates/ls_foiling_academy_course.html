@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}LS Foiling Academy - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <a href="{{ url_for('ls_foiling_academy_catalog') }}" class="btn secondary small-btn" style="margin-bottom: 1rem;">←
+        Back to Catalog</a>
+
+    <div style="border-left: 5px solid 
+        {% if course.level == 'beginner' %}#22c55e
+        {% elif course.level == 'intermediate' %}#eab308
+        {% else %}#ef4444{% endif %}; padding-left: 1rem;">
+        <h1>{{ course.title }}</h1>
+        <p style="font-size: 1.1rem; color: #cbd5f5;">{{ course.desc }}</p>
+    </div>
+
+    <div class="section-alt" style="padding: 2rem; margin-top: 2rem;">
+        <h2>Course Content</h2>
+
+        <div class="lessons-list" style="margin-top: 1.5rem;">
+            {% if course.lessons %}
+            {% for lesson in course.lessons %}
+            <div class="lesson-item"
+                style="margin-bottom: 1rem; padding: 1.2rem; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.8rem; background: {% if lesson.status == 'active' %}rgba(56, 189, 248, 0.05){% else %}rgba(15, 23, 42, 0.5){% endif %}; opacity: {% if lesson.status == 'active' %}1{% else %}0.6{% endif %}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    {% if lesson.status == 'active' %}
+                    <div
+                        style="width: 32px; height: 32px; background: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000;">
+                        ▶</div>
+                    {% else %}
+                    <div
+                        style="width: 32px; height: 32px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #64748b;">
+                        🔒</div>
+                    {% endif %}
+
+                    <div>
+                        <h3 style="font-size: 1rem; margin: 0; color: #e5e7eb;">{{ lesson.title }}</h3>
+                    </div>
+                </div>
+
+                <div>
+                    {% if lesson.status == 'active' %}
+                    <button class="btn secondary small-btn" style="border-color: #38bdf8; color: #38bdf8;">Start
+                        Lesson</button>
+                    {% else %}
+                    <span style="font-size: 0.85rem; color: #64748b; font-style: italic;">Coming Soon</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p>No lessons available yet.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

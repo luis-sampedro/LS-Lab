@@ -448,6 +448,114 @@ def ls_foiling_academy():
         return render_template('ls_foiling_academy-es.html')
     return render_template('ls_foiling_academy.html')
 
+@app.route('/foiling-academy/catalog')
+def ls_foiling_academy_catalog():
+    lang = request.args.get('lang', 'en')
+    # If using separate templates for languages
+    if lang == 'es':
+        return render_template('ls_foiling_academy_catalog-es.html')
+    return render_template('ls_foiling_academy_catalog.html')
+
+@app.route('/foiling-academy/course/<course_id>')
+def ls_foiling_academy_course(course_id):
+    lang = request.args.get('lang', 'en')
+    # Draft course data (pseudo-database)
+    # In a real app, this would come from Firebase or a JSON file
+    courses = {
+        'foil-beg': {
+            'title': 'Foiling Basics', 
+            'level': 'beginner', 
+            'desc': 'First flights, stability, and safety. The foundation of flight.',
+            'lessons': [
+                {'title': 'Lesson 1: Understanding Hydrofoils', 'status': 'active'},
+                {'title': 'Lesson 2: Boat Setup & Safety', 'status': 'active'},
+                {'title': 'Lesson 3: First Flights', 'status': 'coming_soon'}
+            ]
+        },
+        'foil-int': {
+            'title': 'Equilibrium & Sustained Flight', 
+            'level': 'intermediate', 
+            'desc': 'Mastering ride height, maneuvers, and extended flight times.',
+            'lessons': [
+                {'title': 'Lesson 1: Ride Height Control', 'status': 'active'},
+                {'title': 'Lesson 2: Foiling Tacks', 'status': 'coming_soon'},
+                {'title': 'Lesson 3: Foiling Gybes', 'status': 'coming_soon'}
+            ]
+        },
+        'foil-adv': {
+            'title': 'Next Level Foiling', 
+            'level': 'advanced', 
+            'desc': 'Racing techniques, high speed handling, and aggressive maneuvers.',
+            'lessons': [
+                {'title': 'Lesson 1: High Speed Bear-aways', 'status': 'coming_soon'},
+                {'title': 'Lesson 2: Starting Strategies', 'status': 'coming_soon'}
+            ]
+        },
+        
+        'sail-beg': {
+            'title': 'Sailing Performance Basics', 
+            'level': 'beginner', 
+            'desc': 'Understanding VMG, polars, and the basics of boat speed.',
+            'lessons': [
+                {'title': 'Lesson 1: VMG Explained', 'status': 'active'},
+                {'title': 'Lesson 2: Reading Polars', 'status': 'active'}
+            ]
+        },
+        'sail-int': {
+            'title': 'Strategy & Tactics', 
+            'level': 'intermediate', 
+            'desc': 'Race course management, wind shifts, and fleet tactics.',
+            'lessons': [
+                {'title': 'Lesson 1: Starting Line Geometry', 'status': 'active'},
+                {'title': 'Lesson 2: Wind Shifts & Ladders', 'status': 'coming_soon'}
+            ]
+        },
+        'sail-adv': {
+            'title': 'Data Analysis & Optimization', 
+            'level': 'advanced', 
+            'desc': 'Using sensors and data to refine performance and win races.',
+            'lessons': [
+                {'title': 'Lesson 1: Sensor Calibration', 'status': 'active'},
+                {'title': 'Lesson 2: Log Analysis', 'status': 'coming_soon'}
+            ]
+        },
+        
+        'maint-beg': {
+            'title': 'Splicing & Repairs', 
+            'level': 'beginner', 
+            'desc': 'Essential ropework, knots, and basic fiberglass repairs.',
+            'lessons': [
+                {'title': 'Lesson 1: Eye Splice (Dyneema)', 'status': 'active'},
+                {'title': 'Lesson 2: Basic Gelcoat Repair', 'status': 'active'}
+            ]
+        },
+        'maint-int': {
+            'title': 'Rig Tuning', 
+            'level': 'intermediate', 
+            'desc': 'Setting up your mast and shrouds for optimal power and control.',
+            'lessons': [
+                {'title': 'Lesson 1: Mast Rake & Tension', 'status': 'active'},
+                {'title': 'Lesson 2: Sail Depth Control', 'status': 'coming_soon'}
+            ]
+        },
+        'maint-adv': {
+            'title': 'Sail Tuning & Composites', 
+            'level': 'advanced', 
+            'desc': 'Advanced sail shape analysis and carbon fiber composite work.',
+            'lessons': [
+                {'title': 'Lesson 1: Carbon Repair Techniques', 'status': 'coming_soon'},
+                {'title': 'Lesson 2: Flying Shape Analysis', 'status': 'coming_soon'}
+            ]
+        },
+    }
+    
+    course = courses.get(course_id, {'title': 'Unknown Course', 'level': 'beginner', 'desc': ''})
+    
+    if lang == 'es':
+        return render_template('ls_foiling_academy_course-es.html', course=course, course_id=course_id)
+    return render_template('ls_foiling_academy_course.html', course=course, course_id=course_id)
+
+
 @app.route('/data-lab')
 def ls_data_lab():
     lang = request.args.get('lang', 'en')
