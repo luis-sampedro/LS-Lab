@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}LS Enrenamientos en el agua{% endblock %}
+
+{% block content %}
+<div class="hero academy-hero"
+    style="background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), url('{{ url_for('static', filename='images/foiling-hero.jpg') }}'); background-size: cover; background-position: center; min-height: 60vh;">
+    <div class="hero-overlay">
+        <div class="hero-text" style="max-width: 800px; text-align: center; margin: 0 auto;">
+            <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">Domina el <span style="color: #38bdf8;">Agua</span></h1>
+            <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto; color: #cbd5f5;">
+                Desde tu primer vuelo hasta ganar campeonatos. Coaching premium para foiling y vela de alto rendimiento.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="section" style="margin-top: -4rem; position: relative; z-index: 10;">
+    <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+
+        <!-- Waszp & Moth Course -->
+        <div class="card"
+            style="background: rgba(12, 24, 46, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🦋</div>
+            <h3 style="color: #38bdf8; font-size: 1.5rem;">Curso Waszp & Moth</h3>
+            <p style="margin-bottom: 1.5rem;">El camino definitivo hacia el foiling de alto rendimiento.</p>
+            <ul class="list" style="color: #cbd5f5; margin-bottom: 1.5rem;">
+                <li><strong>Iniciación:</strong> Primeros vuelos, estabilidad y seguridad.</li>
+                <li><strong>Intermedio:</strong> Vuelo sostenido, trasluchadas y viradas.</li>
+                <li><strong>Avanzado:</strong> Manejo en regata y control a alta velocidad.</li>
+            </ul>
+        </div>
+
+        <!-- Professional Coaching -->
+        <div class="card"
+            style="background: rgba(12, 24, 46, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
+            <h3 style="color: #38bdf8; font-size: 1.5rem;">Coaching Profesional</h3>
+            <p style="margin-bottom: 1.5rem;">Apoyo a medida para regatistas y equipos ambiciosos.</p>
+            <ul class="list" style="color: #cbd5f5; margin-bottom: 1.5rem;">
+                <li>Soporte en regata y logística.</li>
+                <li>Estrategia de regata y preparación meteorológica.</li>
+                <li>Perfeccionamiento técnico para clases específicas.</li>
+            </ul>
+        </div>
+
+        <!-- Data Analysis -->
+        <div class="card"
+            style="background: rgba(12, 24, 46, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+            <h3 style="color: #38bdf8; font-size: 1.5rem;">Análisis de Datos</h3>
+            <p style="margin-bottom: 1.5rem;">Desbloquea velocidad a través de números y sensores.</p>
+            <ul class="list" style="color: #cbd5f5; margin-bottom: 1.5rem;">
+                <li>Configuración y calibración de sensores.</li>
+                <li>Análisis de polares y optimización de VMG.</li>
+                <li>Debriefing detallado de logs post-navegación.</li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<div class="section section-alt" style="max-width: 800px; margin: 4rem auto; padding: 3rem; text-align: center;">
+    <h2 style="margin-bottom: 1rem;">¿Listo para mejorar?</h2>
+    <p style="margin-bottom: 2rem;">Las plazas son limitadas. Registra tu interés y me pondré en contacto contigo con
+        disponibilidad y un plan a medida.</p>
+
+    <div id="interest-form" style="max-width: 500px; margin: 0 auto; text-align: left;">
+        <div class="form-group">
+            <label class="form-label">Dirección de Email</label>
+            <input type="email" id="email-input" class="input" placeholder="tu@ejemplo.com" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Estoy interesado en...</label>
+            <div class="pill-row" id="interest-options">
+                <button class="tag-pill" onclick="selectInterest(this, 'waszp_moth')"
+                    style="cursor: pointer; background: transparent;">Waszp/Moth</button>
+                <button class="tag-pill" onclick="selectInterest(this, 'pro_coaching')"
+                    style="cursor: pointer; background: transparent;">Pro Coaching</button>
+                <button class="tag-pill" onclick="selectInterest(this, 'data_analysis')"
+                    style="cursor: pointer; background: transparent;">Análisis de Datos</button>
+                <button class="tag-pill" onclick="selectInterest(this, 'other')"
+                    style="cursor: pointer; background:transparent;">Otro</button>
+            </div>
+            <input type="hidden" id="selected-interest" value="waszp_moth">
+        </div>
+
+        <button id="submit-btn" class="btn primary btn-full" style="margin-top: 1.5rem;">Enviar Solicitud</button>
+        <div id="form-message" style="margin-top: 1rem; text-align: center; font-size: 0.9rem;"></div>
+    </div>
+</div>
+
+<script>
+    function selectInterest(btn, value) {
+        // Reset all buttons
+        document.querySelectorAll('#interest-options .tag-pill').forEach(b => {
+            b.style.background = 'transparent';
+            b.style.borderColor = 'rgba(56, 189, 248, 0.6)';
+            b.style.color = '#e5e7eb';
+        });
+
+        // Activate selected
+        btn.style.background = 'rgba(56, 189, 248, 0.2)';
+        btn.style.borderColor = '#38bdf8';
+        btn.style.color = '#38bdf8';
+
+        document.getElementById('selected-interest').value = value;
+    }
+
+    // Select first by default
+    document.querySelector('#interest-options .tag-pill').click();
+
+    document.getElementById('submit-btn').addEventListener('click', async () => {
+        const email = document.getElementById('email-input').value;
+        const interest = document.getElementById('selected-interest').value;
+        const msgDiv = document.getElementById('form-message');
+        const btn = document.getElementById('submit-btn');
+
+        if (!email || !email.includes('@')) {
+            msgDiv.textContent = 'Por favor introduce un email válido.';
+            msgDiv.style.color = '#f87171';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+        msgDiv.textContent = '';
+
+        try {
+            const response = await fetch('/api/foiling-academy/interest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, interest_type: interest })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                document.getElementById('interest-form').innerHTML = `
+                    <div style="text-align: center; padding: 2rem;">
+                        <h3 style="color: #38bdf8; margin-bottom: 1rem;">¡Solicitud Enviada! 🚀</h3>
+                        <p style="color: #cbd5f5;">Gracias por tu interés. Revisaré tu solicitud y me pondré en contacto contigo pronto.</p>
+                        <a href="{{ url_for('ls_foiling_academy', lang='es') }}" class="btn secondary small-btn" style="margin-top: 1.5rem;">Volver a la Academia</a>
+                    </div>
+                `;
+            } else {
+                throw new Error(result.error || 'Error desconocido');
+            }
+        } catch (e) {
+            console.error(e);
+            msgDiv.textContent = 'Error al enviar solicitud. Por favor inténtalo de nuevo.';
+            msgDiv.style.color = '#f87171';
+            btn.disabled = false;
+            btn.textContent = 'Enviar Solicitud';
+        }
+    });
+</script>
+
+{% endblock %}

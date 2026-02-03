@@ -245,3 +245,18 @@ def delete_analysis(uid, boat_id, sail_id, analysis_id):
     except Exception as e:
         print(f"Error deleting analysis: {e}")
         return False
+
+def create_lead(email, interest_type):
+    """Creates a new lead in the leads collection."""
+    if not db: return None
+    try:
+        # Leads collection: leads/{lead_id}
+        _, doc_ref = db.collection('leads').add({
+            'email': email,
+            'interest_type': interest_type,
+            'created_at': firestore.SERVER_TIMESTAMP
+        })
+        return doc_ref.id
+    except Exception as e:
+        print(f"Error creating lead: {e}")
+        return None

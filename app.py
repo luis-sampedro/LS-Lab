@@ -456,6 +456,35 @@ def ls_foiling_academy_catalog():
         return render_template('ls_foiling_academy_catalog-es.html')
     return render_template('ls_foiling_academy_catalog.html')
 
+@app.route('/foiling-academy/on-water')
+def ls_foiling_academy_on_water():
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('ls_foiling_academy_on_water-es.html')
+    return render_template('ls_foiling_academy_on_water.html')
+
+@app.route('/api/foiling-academy/interest', methods=['POST'])
+def api_foiling_interest():
+    try:
+        data = request.json
+        email = data.get('email')
+        interest_type = data.get('interest_type', 'general') # One of: waszp_moth, pro_coaching, data_analysis, other
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+            
+        from services.firebase_service import create_lead
+        lead_id = create_lead(email, interest_type)
+        
+        if lead_id:
+            return jsonify({'success': True, 'id': lead_id})
+        else:
+            return jsonify({'error': 'Database error'}), 500
+            
+    except Exception as e:
+        print(f"Interest Capture Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/foiling-academy/course/<course_id>')
 def ls_foiling_academy_course(course_id):
     lang = request.args.get('lang', 'en')
