@@ -620,32 +620,7 @@ def ls_data_lab():
         return render_template('ls_data_lab-es.html')
     return render_template('ls_data_lab.html')
 
-@app.route('/api/boats', methods=['GET'])
-def api_get_boats():
-    # Verify auth token from header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        return jsonify([]), 401
-    
-    token = auth_header.replace('Bearer ', '')
-    decoded = verify_token(token)
-    if not decoded or isinstance(decoded, str):
-        return jsonify([]), 401
-        
-    uid = decoded['uid']
-    
-    # Fetch boats from Firestore
-    try:
-        from services.firebase_service import db
-        docs = db.collection('users').document(uid).collection('boats').stream()
-        boats = []
-        for doc in docs:
-            d = doc.to_dict()
-            boats.append({'id': doc.id, 'name': d.get('name', 'Unnamed Boat')})
-        return jsonify(boats)
-    except Exception as e:
-        print(f"Error fetching boats: {e}")
-        return jsonify([]), 500
+
 
 @app.route('/data-lab/upload', methods=['POST'])
 def data_lab_upload():
@@ -681,12 +656,7 @@ def ls_design_tools():
 
 
 
-@app.route('/about')
-def about():
-    lang = request.args.get('lang', 'en')
-    if lang == 'es':
-        return render_template('about-es.html')
-    return render_template('about.html')
+
 
 if __name__ == '__main__':
     # Local development
