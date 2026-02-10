@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <section class="section">
     <div style="display: flex; justify-content: space-between; align-items: baseline;">
-        <h2>LS Sail Camber Analyzer (Interactive)</h2>
+        <h2>LS Sail Camber Analyzer (Interactivo)</h2>
         <span
             style="color: #38bdf8; font-family: monospace; font-size: 0.9rem; border: 1px solid #38bdf8; padding: 2px 6px; border-radius: 4px;">{{
             version }}</span>
@@ -14,19 +14,19 @@
 
     {% if not interactive_image %}
     <!-- Upload State -->
-    <p>Upload a sail image to begin manual analysis.</p>
+    <p>Sube una imagen de vela para comenzar el análisis manual.</p>
     <div class="login-panel">
         <div class="login-box">
-            <h1>Upload Sail Image</h1>
-            <p class="login-subtitle">Supported formats: JPG, PNG</p>
+            <h1>Subir Imagen de Vela</h1>
+            <p class="login-subtitle">Formatos soportados: JPG, PNG</p>
             <form action="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" method="post"
                 enctype="multipart/form-data">
                 <div class="form-group">
-                    <label class="form-label" for="sail_image">Select Image</label>
+                    <label class="form-label" for="sail_image">Seleccionar Imagen</label>
                     <input type="file" name="sail_image" id="sail_image" class="input" required accept="image/*">
                 </div>
                 <div style="margin-top: 1.5rem;">
-                    <button type="submit" class="btn primary btn-full">Start Analysis</button>
+                    <button type="submit" class="btn primary btn-full">Iniciar Análisis</button>
                 </div>
             </form>
         </div>
@@ -40,33 +40,33 @@
                 <canvas id="sailCanvas" style="width: 100%; display: block; cursor: crosshair;"></canvas>
                 <div id="instruction-overlay"
                     style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; pointer-events: none; color: white;">
-                    Click <strong>Luff (Start)</strong> of Stripe #1
+                    Haz clic en <strong>Gratil (Inicio)</strong> de la Franja #1
                 </div>
             </div>
             <div style="margin-top: 1rem; display: flex; gap: 1rem;">
                 <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <button id="resetBtn" class="btn secondary">Reset</button>
+                    <button id="resetBtn" class="btn secondary">Reiniciar</button>
 
                     <!-- Manual Mode Toggle -->
-                    <button id="manualModeBtn" class="btn secondary">Manual Mode: OFF</button>
+                    <button id="manualModeBtn" class="btn secondary">Modo Manual: OFF</button>
                     <button id="finishManualBtn" class="btn primary"
-                        style="display:none; background: #8b5cf6; border-color: #8b5cf6;">Finish Trace</button>
+                        style="display:none; background: #8b5cf6; border-color: #8b5cf6;">Terminar Trazado</button>
 
                     <!-- Compare -->
                     <button id="compareBtn" class="btn secondary"
-                        style="border-color: #f59e0b; color: #f59e0b;">Compare</button>
+                        style="border-color: #f59e0b; color: #f59e0b;">Comparar</button>
 
                     <!-- Plot Preview Button -->
-                    <button id="plotBtn" class="btn secondary" style="border-color: #38bdf8; color: #38bdf8;">View
-                        Plot</button>
+                    <button id="plotBtn" class="btn secondary" style="border-color: #38bdf8; color: #38bdf8;">Ver
+                        Gráfico</button>
 
                     <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" class="btn secondary"
-                        style="border-color: #ef4444; color: #ef4444; text-decoration: none; display: inline-block; text-align: center;">New
-                        Image</a>
+                        style="border-color: #ef4444; color: #ef4444; text-decoration: none; display: inline-block; text-align: center;">Nueva
+                        Imagen</a>
 
                     <!-- Save Button (Always Visible) -->
-                    <button id="saveBtn" class="btn primary" style="background: #10b981; border-color: #10b981;">Save
-                        Analysis</button>
+                    <button id="saveBtn" class="btn primary" style="background: #10b981; border-color: #10b981;">Guardar
+                        Análisis</button>
                 </div>
 
                 <!-- PLOT MODAL -->
@@ -76,7 +76,7 @@
                         style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 800px; border: 1px solid #334155; position: relative;">
                         <button onclick="document.getElementById('plotModal').style.display='none'"
                             style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
-                        <h2 style="margin-bottom: 1rem;">Camber Profile Preview</h2>
+                        <h2 style="margin-bottom: 1rem;">Vista Previa del Perfil</h2>
                         <div style="position: relative; height: 400px; width: 100%;">
                             <canvas id="previewChartCanvas"></canvas>
                         </div>
@@ -90,17 +90,17 @@
                         style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; position: relative;">
                         <button onclick="document.getElementById('compareModal').style.display='none'"
                             style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
-                        <h2 style="margin-bottom: 1rem;">Compare Analysis</h2>
-                        <p style="color: #94a3b8; margin-bottom: 1rem;">Select a previous analysis to overlay as a
-                            ghost.</p>
+                        <h2 style="margin-bottom: 1rem;">Comparar Análisis</h2>
+                        <p style="color: #94a3b8; margin-bottom: 1rem;">Selecciona un análisis previo para superponer.
+                        </p>
 
                         <select id="compareSelect" class="input" style="margin-bottom: 1rem;">
-                            <option>Loading...</option>
+                            <option>Cargando...</option>
                         </select>
 
                         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                            <button class="btn secondary" onclick="clearGhosts()">Clear Ghosts</button>
-                            <button id="loadGhostBtn" class="btn primary">Load Overlay</button>
+                            <button class="btn secondary" onclick="clearGhosts()">Limpiar Superposición</button>
+                            <button id="loadGhostBtn" class="btn primary">Cargar Superposición</button>
                         </div>
                     </div>
                 </div>
@@ -115,18 +115,18 @@
             <!-- Metrics Column -->
             <div>
                 <div class="metric-card">
-                    <h2>Results</h2>
+                    <h2>Resultados</h2>
                     <div id="results-container" style="overflow-x: auto;">
                         <table id="resultsTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="border-bottom: 1px solid #475569; text-align: left;">
                                     <th style="padding: 8px; color: #94a3b8;">#</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Camber</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Draft</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Twist</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Entry</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Exit</th>
-                                    <th style="padding: 8px; color: #94a3b8;">Actions</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Profundidad</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Posición</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Torsión</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Entrada</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Salida</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -135,7 +135,7 @@
                         </table>
                         <p id="no-data-msg"
                             style="color: #64748b; font-style: italic; padding: 1rem; text-align: center;">
-                            Trace stripes to see data.</p>
+                            Traza franjas para ver datos.</p>
                     </div>
                 </div>
             </div>
@@ -146,23 +146,23 @@
             style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 200;">
             <div
                 style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
-                <h2 style="margin-bottom: 1rem;">Select Destination</h2>
-                <p style="color: #94a3b8; margin-bottom: 1.5rem;">Where do you want to save this analysis?</p>
+                <h2 style="margin-bottom: 1rem;">Seleccionar Destino</h2>
+                <p style="color: #94a3b8; margin-bottom: 1.5rem;">¿Dónde quieres guardar este análisis?</p>
 
-                <label style="display:block; margin-bottom: 0.5rem;">Boat</label>
+                <label style="display:block; margin-bottom: 0.5rem;">Barco</label>
                 <select id="boatSelect" class="input" style="margin-bottom: 1rem;">
-                    <option value="">Loading boats...</option>
+                    <option value="">Cargando barcos...</option>
                 </select>
 
-                <label style="display:block; margin-bottom: 0.5rem;">Sail</label>
+                <label style="display:block; margin-bottom: 0.5rem;">Vela</label>
                 <select id="sailSelect" class="input" style="margin-bottom: 1.5rem;" disabled>
-                    <option value="">Select a boat first</option>
+                    <option value="">Selecciona un barco primero</option>
                 </select>
 
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                     <button class="btn secondary"
-                        onclick="document.getElementById('selectSailModal').style.display='none'">Cancel</button>
-                    <button id="confirmSaveBtn" class="btn primary" disabled>Save</button>
+                        onclick="document.getElementById('selectSailModal').style.display='none'">Cancelar</button>
+                    <button id="confirmSaveBtn" class="btn primary" disabled>Guardar</button>
                 </div>
             </div>
         </div>
@@ -173,13 +173,14 @@
             <div
                 style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #10b981; text-align: center;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                <h2 style="margin-bottom: 0.5rem;">Saved Successfully!</h2>
-                <p style="color: #94a3b8; margin-bottom: 1.5rem;">Your analysis has been stored.</p>
+                <h2 style="margin-bottom: 0.5rem;">¡Guardado con éxito!</h2>
+                <p style="color: #94a3b8; margin-bottom: 1.5rem;">Tu análisis ha sido almacenado.</p>
 
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <button id="goToSailBtn" class="btn primary">Go to Sail History</button>
+                    <button id="goToSailBtn" class="btn primary">Ir al Historial de Velas</button>
                     <button class="btn secondary"
-                        onclick="document.getElementById('successModal').style.display='none'">Continue Editing</button>
+                        onclick="document.getElementById('successModal').style.display='none'">Continuar
+                        Editando</button>
                 </div>
             </div>
         </div>
@@ -203,7 +204,7 @@
 
             if (saveBtn) {
                 saveBtn.onclick = async () => {
-                    if (window.stripes.length === 0) { alert('Trace a stripe first!'); return; }
+                    if (window.stripes.length === 0) { alert('¡Traza una franja primero!'); return; }
 
                     // 1. Check if we have context
                     if (currentBoatId && currentSailId && currentBoatId !== "None" && currentSailId !== "None") {
@@ -222,14 +223,14 @@
                 modal.style.display = 'flex';
 
                 const token = await window.getAuthToken();
-                if (!token) { alert("Please sign in first."); return; }
+                if (!token) { alert("Por favor, inicia sesión primero."); return; }
 
-                boatSelect.innerHTML = '<option>Loading...</option>';
+                boatSelect.innerHTML = '<option>Cargando...</option>';
                 try {
                     const res = await fetch('/api/boats', { headers: { 'Authorization': token } });
                     const boats = await res.json();
 
-                    boatSelect.innerHTML = '<option value="">Select Boat</option>';
+                    boatSelect.innerHTML = '<option value="">Seleccionar Barco</option>';
                     boats.forEach(b => {
                         const opt = document.createElement('option');
                         opt.value = b.id;
@@ -237,7 +238,7 @@
                         boatSelect.appendChild(opt);
                     });
                 } catch (e) {
-                    boatSelect.innerHTML = '<option>Error loading boats</option>';
+                    boatSelect.innerHTML = '<option>Error cargando barcos</option>';
                 }
             }
 
@@ -245,19 +246,19 @@
                 const bid = boatSelect.value;
                 if (!bid) {
                     sailSelect.disabled = true;
-                    sailSelect.innerHTML = '<option>Select a boat first</option>';
+                    sailSelect.innerHTML = '<option>Selecciona un barco primero</option>';
                     return;
                 }
 
                 sailSelect.disabled = true;
-                sailSelect.innerHTML = '<option>Loading sails...</option>';
+                sailSelect.innerHTML = '<option>Cargando velas...</option>';
 
                 const token = await window.getAuthToken();
                 try {
                     const res = await fetch(`/api/boats/${bid}/sails`, { headers: { 'Authorization': token } });
                     const sails = await res.json();
 
-                    sailSelect.innerHTML = '<option value="">Select Sail</option>';
+                    sailSelect.innerHTML = '<option value="">Seleccionar Vela</option>';
                     sails.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s.id;
@@ -266,7 +267,7 @@
                     });
                     sailSelect.disabled = false;
                 } catch (e) {
-                    sailSelect.innerHTML = '<option>Error loading sails</option>';
+                    sailSelect.innerHTML = '<option>Error cargando velas</option>';
                 }
             };
 
@@ -286,11 +287,11 @@
             };
 
             async function performSave(bid, sid) {
-                saveBtn.innerText = "Saving...";
+                saveBtn.innerText = "Guardando...";
                 saveBtn.disabled = true;
 
                 const token = await window.getAuthToken();
-                if (!token) { alert('Not logged in!'); return; }
+                if (!token) { alert('¡No has iniciado sesión!'); return; }
 
                 // SANITIZATION: Firestore hates nested arrays. Coerce list of lists to list of objects.
                 const sanitizePath = (p) => {
@@ -331,7 +332,7 @@
                         body: JSON.stringify(payload)
                     });
 
-                    saveBtn.innerText = "Save Analysis";
+                    saveBtn.innerText = "Guardar Análisis";
                     saveBtn.disabled = false;
 
                     if (res.ok) {
@@ -343,7 +344,7 @@
                         sModal.style.display = 'flex';
                     } else {
                         const err = await res.json();
-                        alert('Save failed: ' + (err.error || 'Unknown error'));
+                        alert('Error al guardar: ' + (err.error || 'Unknown error'));
                     }
                 } catch (e) {
                     console.error(e);
@@ -472,9 +473,9 @@
             function updateInstructions() {
                 const nextId = window.stripes.length + 1;
                 if (currentClick === 0) {
-                    overlay.innerHTML = `Click <strong>Luff (Start)</strong> of Stripe #${nextId}`;
+                    overlay.innerHTML = `Haz clic en <strong>Gratil (Inicio)</strong> de la Franja #${nextId}`;
                 } else {
-                    overlay.innerHTML = `Click <strong>Leech (End)</strong> of Stripe #${nextId}`;
+                    overlay.innerHTML = `Haz clic en <strong>Baluma (Fin)</strong> de la Franja #${nextId}`;
                 }
             }
 
@@ -501,7 +502,7 @@
                 } else {
                     const p2 = { x, y };
                     const id = window.stripes.length + 1;
-                    overlay.innerHTML = "Processing...";
+                    overlay.innerHTML = "Procesando...";
 
                     try {
                         const response = await fetch('/api/trace', {
@@ -521,11 +522,11 @@
                             // Ensure path is consistent for drawing (array of arrays is what draw expects currently)
                             addResultRow(id, data.metrics);
                         } else {
-                            alert("Trace failed: " + data.error);
+                            alert("Fallo el trazado: " + data.error);
                         }
                     } catch (err) {
                         console.error(err);
-                        alert("Error contacting server");
+                        alert("Error de comunicacion con el servidor");
                     }
                     pendingP1 = null;
                     currentClick = 0;
@@ -553,7 +554,7 @@
                 <td style="padding: 8px;">${m.exit}°</td>
                 <td style="padding: 8px;">
                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <button class="btn secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="viewSpline(${id})">Focus</button>
+                        <button class="btn secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="viewSpline(${id})">Enfocar</button>
                     </div>
                 </td>
             `;
@@ -580,7 +581,7 @@
                 const midPt = s.path[midIdx];
                 const x = midPt[0];
                 const y = midPt[1];
-                const metrics = [`Camber: ${s.metrics.camber}%`, `Draft: ${s.metrics.draft_pos}%`, `Twist: ${s.metrics.twist}°`];
+                const metrics = [`Prof: ${s.metrics.camber}%`, `Pos: ${s.metrics.draft_pos}%`, `Torsión: ${s.metrics.twist}°`];
                 ctx.font = 'bold 24px monospace';
                 const lineHeight = 30; const pad = 10;
                 let maxWidth = 0;
@@ -646,7 +647,7 @@
             let previewChart = null;
 
             plotBtn.onclick = () => {
-                if (window.stripes.length === 0) { alert('No data to plot'); return; }
+                if (window.stripes.length === 0) { alert('No hay datos para graficar'); return; }
                 plotModal.style.display = 'flex';
                 renderPreviewChart();
             };
@@ -659,7 +660,7 @@
                     if (!s.metrics.normalized_curve) return null;
                     const pts = s.metrics.normalized_curve.map(p => ({ x: p[0] * 100, y: p[1] })); // Curve is [[x,y]...]
                     return {
-                        label: `Stripe #${s.id}`,
+                        label: `Franja #${s.id}`,
                         data: pts,
                         borderColor: getStripeColor(s.id),
                         backgroundColor: getStripeColor(s.id),
@@ -679,11 +680,11 @@
                             x: {
                                 type: 'linear',
                                 min: 0, max: 100,
-                                title: { display: true, text: 'Chord %' },
+                                title: { display: true, text: 'Cuerda %' },
                                 grid: { color: '#334155' }
                             },
                             y: {
-                                title: { display: true, text: 'Camber %' },
+                                title: { display: true, text: 'Profundidad %' },
                                 grid: { color: '#334155' }
                             }
                         }
@@ -698,14 +699,14 @@
             manualBtn.onclick = () => {
                 manualMode = !manualMode;
                 if (manualMode) {
-                    manualBtn.innerText = "Manual Mode: ON";
+                    manualBtn.innerText = "Modo Manual: ON";
                     manualBtn.style.borderColor = '#8b5cf6';
                     manualBtn.style.color = '#8b5cf6';
                     finishManualBtn.style.display = 'inline-block';
-                    overlay.innerHTML = "Click points along the stripe. Click 'Finish Trace' when done.";
+                    overlay.innerHTML = "Haz clic en puntos a lo largo de la franja. Clic 'Terminar Trazado' al finalizar.";
                     manualPath = [];
                 } else {
-                    manualBtn.innerText = "Manual Mode: OFF";
+                    manualBtn.innerText = "Modo Manual: OFF";
                     manualBtn.style.borderColor = '';
                     manualBtn.style.color = '';
                     finishManualBtn.style.display = 'none';
@@ -716,7 +717,7 @@
             };
 
             finishManualBtn.onclick = async () => {
-                if (manualPath.length < 3) { alert("Click at least 3 points"); return; }
+                if (manualPath.length < 3) { alert("Haz clic en al menos 3 puntos"); return; }
 
                 // Calculate logic: P1 is first, P2 is last
                 const p1 = manualPath[0];
@@ -724,7 +725,7 @@
                 const id = window.stripes.length + 1;
 
                 finishManualBtn.disabled = true;
-                finishManualBtn.innerText = "Calculating...";
+                finishManualBtn.innerText = "Calculando...";
 
                 try {
                     const response = await fetch('/api/analyze/geometry', {
@@ -753,17 +754,17 @@
                         // Reset Manual Loop
                         manualPath = [];
                         drawState();
-                        alert("Manual trace added!");
+                        alert("¡Trazo manual añadido!");
                     } else {
                         alert("Error: " + data.error);
                     }
                 } catch (e) {
                     console.error(e);
-                    alert("Network Error");
+                    alert("Error de Red");
                 }
 
                 finishManualBtn.disabled = false;
-                finishManualBtn.innerText = "Finish Trace";
+                finishManualBtn.innerText = "Terminar Trazado";
             };
 
             // --- COMPARE LOGIC ---
@@ -784,7 +785,7 @@
                 const sid = "{{ sail_id }}";
 
                 if (bid == "None" || sid == "None") {
-                    compareSelect.innerHTML = "<option>Save this sail first to compare</option>";
+                    compareSelect.innerHTML = "<option>Guarda esta vela primero para comparar</option>";
                     return;
                 }
 
@@ -794,7 +795,7 @@
 
                     compareSelect.innerHTML = "";
                     if (data.length === 0) {
-                        compareSelect.innerHTML = "<option>No other analyses found</option>";
+                        compareSelect.innerHTML = "<option>No hay otros análisis</option>";
                     } else {
                         data.forEach(a => {
                             const opt = document.createElement('option');
@@ -806,7 +807,7 @@
                         });
                     }
                 } catch (e) {
-                    compareSelect.innerHTML = "<option>Error loading</option>";
+                    compareSelect.innerHTML = "<option>Error cargando</option>";
                 }
             };
 
@@ -818,7 +819,7 @@
                 const sid = "{{ sail_id }}";
                 const token = await window.getAuthToken();
 
-                loadGhostBtn.innerText = "Loading...";
+                loadGhostBtn.innerText = "Cargando...";
 
                 try {
                     const res = await fetch(`/api/boats/${bid}/sails/${sid}/analyses/${aid}`, { headers: { 'Authorization': token } });
@@ -843,9 +844,9 @@
                     drawState();
                     document.getElementById('compareModal').style.display = 'none';
                 } catch (e) {
-                    alert("Failed to load overlay");
+                    alert("Error al cargar superposición");
                 }
-                loadGhostBtn.innerText = "Load Overlay";
+                loadGhostBtn.innerText = "Cargar Superposición";
             };
 
             window.clearGhosts = function () {

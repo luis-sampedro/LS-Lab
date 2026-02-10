@@ -202,7 +202,35 @@ def analyzer(boat_id, sail_id):
             flash(f'Error processing image: {str(e)}')
             return redirect(request.url)
 
-    return render_template('analyzer.html', version=VERSION, boat_id=boat_id, sail_id=sail_id)
+    lang = request.args.get('lang', 'en')
+    template = 'analyzer-es.html' if lang == 'es' else 'analyzer.html'
+    return render_template(template, version=VERSION, boat_id=boat_id, sail_id=sail_id)
+
+@app.route('/api/analyze/geometry', methods=['POST'])
+def api_analyze_geometry():
+    try:
+        data = request.json
+        p1 = data.get('p1')
+        p2 = data.get('p2')
+        path = data.get('path') # List of {x,y} or [x,y]
+        
+        if not p1 or not p2 or not path: 
+            return {'error': 'Missing data'}, 400
+            
+        # Convert path to numpy array [[x, y], ...]
+        import numpy as np
+        if len(path) > 0 and isinstance(path[0], dict):
+             path_arr = np.array([[p['x'], p['y']] for p in path])
+        else:
+             path_arr = np.array(path)
+             
+        from processor import calculate_interactive_geometry
+        metrics = calculate_interactive_geometry(path_arr, p1, p2)
+        
+        return {'success': True, 'metrics': metrics}
+    except Exception as e:
+        print(f"Geometry Calc Error: {e}")
+        return {'error': str(e)}, 500
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analyzer/leech', methods=['GET', 'POST'])
 def analyzer_leech(boat_id, sail_id):
