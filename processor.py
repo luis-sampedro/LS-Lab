@@ -32,31 +32,41 @@ def trace_stripe_path(image_bytes, p1, p2):
     
     cv2.line(corridor_mask, pt1, pt2, 255, thickness)
     
-    # 2. Image Processing: Dark Stripe Detection (Simplified)
+    # 2. Image Processing: Enhanced Contrast & Noise Reduction
     # Convert to Gray
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # v2.1: CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    # Better than simple normalize for handling shadows/glare locally.
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    enhanced = clahe.apply(gray)
+
+    # v2.2: Gaussian Blur
+    # Reduces grain/noise that tricks Frangi into seeing "micro-ridges"
+    blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
     
     # Invert so Dark Stripe = Bright (High Value)
-    inverted = cv2.bitwise_not(gray)
+    inverted = cv2.bitwise_not(blurred)
     
-    # Contrast Enhancement (Clip gradients)
-    # This makes the stripe "pop" against the white sail constraints
+    # Normalize result to ensure full range usage
     inverted = cv2.normalize(inverted, None, 0, 255, cv2.NORM_MINMAX)
     
-    # 3. Frangi (Ridge Detection)
-    # We still use Frangi because it's excellent at finding "lines" vs "blobs"
-    # But now we only look INSIDE the corridor.
+    # 3. Frangi (Ridge Detection) - Tuned
+    # Look for ridges of width 1-10px (sigma 1-5 covers this roughly)
+    # The 'beta' and 'c' parameters can be tuned in future if needed, defaults are usually okay.
     from skimage.filters import frangi
-    vesselness = frangi(inverted, sigmas=range(1, 5), black_ridges=False)
+    vesselness = frangi(inverted, sigmas=range(1, 6), black_ridges=False) # slightly wider range
+    
     if vesselness.max() > 0: vesselness /= vesselness.max()
     
     # 4. Cost Map Construction
     # High Vesselness = Low Cost.
     # We want cost to be 1.0 (base) - vesselness.
+    # Exponentiate to punish weak signals more? No, linear is stable.
     base_cost = 1.0 - vesselness
     
-    # Scale to integer cost 1-100
-    cost_map = (base_cost * 100).astype(np.float64)
+    # Scale to integer cost 1-1000 for finer granularity
+    cost_map = (base_cost * 1000).astype(np.float64)
     
     # 5. APPLY CORRIDOR MASK ( The "Brick Wall" )
     # Pixels outside the corridor get INFINITE cost.
@@ -68,7 +78,7 @@ def trace_stripe_path(image_bytes, p1, p2):
     # However, to be safe against slight curves outside the straight line,
     # the thickness needs to be generous.
     outside_corridor = (corridor_mask == 0)
-    cost_map[outside_corridor] = 100000.0 # Huge penalty
+    cost_map[outside_corridor] = 1000000.0 # Huge penalty
     
     # 6. Pathfinding
     # Downscale for speed/stability? No, keep precision.

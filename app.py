@@ -681,6 +681,13 @@ def ls_design_tools():
 
 
 
+@app.route('/about')
+def about():
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('about-es.html')
+    return render_template('about.html')
+
 if __name__ == '__main__':
     # Local development
     port = int(os.environ.get('PORT', 8080))
