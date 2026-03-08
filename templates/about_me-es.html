@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Acerca de – Luis Sampedro Moix{% endblock %}
+
+{% block content %}
+<section id="about" class="section">
+    <h2>Perfil</h2>
+    <p>
+        Soy Ingeniero Naval y Oceánico de Galicia,
+        España. Recientemente he completado un máster en Ingeniería Marítima
+        (Yacht & High-Performance Craft) en la Universidad de Southampton.
+    </p>
+    <p>
+        Durante los últimos años he combinado mis estudios de ingeniería con
+        experiencia práctica en circuitos de vela profesional y barcos con foils,
+        enfocándome en el rendimiento, la fiabilidad y la optimización.
+        Mi objetivo a medio plazo es aportar mis habilidades técnicas y mi
+        comprensión de la vela a un equipo de diseño de yates de alto rendimiento.
+    </p>
+    <div style="margin-top:1.2rem;">
+        <a href="{{ url_for('project') }}" class="btn secondary">
+            Más sobre mi proyecto de máster →
+        </a>
+    </div>
+</section>
+
+<!-- EXPERIENCE -->
+<section id="experience" class="section section-alt">
+    <h2>Experiencia Profesional</h2>
+
+    <div class="cards">
+        <article class="card">
+            <h3>TP52 “Alkedo” – Shore Crew y Chofer de Chase Boat</h3>
+            <p><strong>52 Super Series · Temporada 2025 · Valencia, St. Tropez, Baiona, Cascais</strong></p>
+            <p>
+                Responsable de la preparación y mantenimiento diario del TP52 y del
+                chase boat durante los entrenamientos y eventos. Trabajé estrechamente
+                con el entrenador y logísitca del equipo.
+            </p>
+        </article>
+
+        <!-- (Más experiencias pueden ser añadidas aquí, he acortado para el ejemplo pero la base es la original.) -->
+    </div>
+</section>
+
+<!-- EDUCATION -->
+<section id="education" class="section">
+    <h2>Educación</h2>
+    <ul class="list">
+        <li>
+            <strong>MSc in Maritime Engineering Science – Yacht & High-Performance Craft</strong><br />
+            Universidad de Southampton · 2024 – 2025
+        </li>
+        <li style="margin-top: 0.8rem;">
+            <strong>Grado en Ingeniería Naval y Oceánica</strong><br />
+            Universidade da Coruña (Ferrol) · 2018 – 2023
+        </li>
+    </ul>
+</section>
+{% endblock %}

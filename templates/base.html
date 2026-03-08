@@ -18,7 +18,7 @@
     <nav class="nav">
       <a href="{{ url_for('index', lang=request.args.get('lang')) }}">Home</a>
       <a href="{{ url_for('index', lang=request.args.get('lang')) }}#tools">Tools</a>
-      <a href="{{ url_for('about', lang=request.args.get('lang')) }}">Methodology</a>
+      <a href="{{ url_for('methodology', lang=request.args.get('lang')) }}">Methodology</a>
       <div class="lang-switch" style="margin-left: 1rem; display: inline-flex; gap: 0.5rem; align-items: center;">
         <a href="{{ url_for(request.endpoint, lang='en', **(request.view_args or {})) }}" title="English"
           style="text-decoration: none; font-size: 1.2rem;">🇬🇧</a>
@@ -60,6 +60,8 @@
         getDoc: getDoc,
         onAuthStateChanged: onAuthStateChanged
       };
+      
+      window.dispatchEvent(new Event('firebaseReady'));
     </script>
   </header>
   {% endblock %}

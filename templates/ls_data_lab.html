@@ -99,18 +99,32 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div>
             <h1 style="margin:0;">LS Data Lab</h1>
-            <p style="margin:0; color: #64748b; font-size: 0.9rem;">Session Analyzer</p>
+            <p style="margin:0; color: #64748b; font-size: 0.9rem;">Session Analyzer (Beta)</p>
         </div>
         <div>
             <button class="btn primary" onclick="document.getElementById('uploadModal').style.display='flex'">+ Upload
                 Log</button>
         </div>
     </div>
+    
+    <!-- AUTH WARNING BANNER (Hidden by default, shown via JS if not logged in) -->
+    <div id="auth-warning" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-size: 0.95rem;">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right: 8px;"></i> You are not logged in. Your sessions will <b>not</b> be saved to your cloud library and will be lost after closing this page. <a href="/login" style="color: #38bdf8; text-decoration: underline;">Log in here</a>.
+    </div>
 
     <!-- MAIN GRID -->
     <div class="lab-grid">
         <!-- MAP -->
         <div class="map-panel">
+            <!-- Map Controls Overlay -->
+            <div style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
+                <label style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-color-speed" checked onchange="toggleMapOverlay()"> Color Route (Speed)
+                </label>
+                <label style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-maneuvers" checked onchange="toggleMapOverlay()"> Show Maneuvers
+                </label>
+            </div>
             <div id="map"></div>
         </div>
 
@@ -149,6 +163,13 @@
 
         <!-- TIMELINE & CHARTS -->
         <div class="timeline-panel">
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: -20px; z-index: 10; padding-right: 15px;">
+                <label style="color: #38bdf8; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-sog" checked onchange="updateChartVisibility()"> SOG</label>
+                <label style="color: #f59e0b; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-cog" onchange="updateChartVisibility()"> COG</label>
+                <label style="color: #10b981; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-tws" onchange="updateChartVisibility()"> TWS</label>
+                <label style="color: #a7f3d0; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-twa" onchange="updateChartVisibility()"> TWA</label>
+                <label style="color: #ef4444; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-heel" onchange="updateChartVisibility()"> Heel</label>
+            </div>
             <div style="height: 100px; width: 100%;">
                 <canvas id="timelineChart"></canvas>
             </div>
@@ -172,9 +193,21 @@
 
         <label style="display:block; margin-bottom: 0.5rem; color: white;">Select Boat</label>
         <select id="boatSelect" class="input"
-            style="margin-bottom: 1rem; background: #1e293b; color: white; border: 1px solid #334155;">
+            style="margin-bottom: 0.5rem; background: #1e293b; color: white; border: 1px solid #334155;" onchange="handleBoatSelectChange()">
             <option value="">Guest Session (No Boat)</option>
+            <option value="_new_">+ Create New Boat</option>
             <!-- Populated by JS -->
+        </select>
+        
+        <input type="text" id="newBoatName" class="input" placeholder="Boat Name" style="display: none; margin-bottom: 0.5rem;">
+        <input type="text" id="newBoatType" class="input" placeholder="Boat Type (e.g. TP52, Moth)" style="display: none; margin-bottom: 1rem;">
+
+        <label style="display:block; margin-bottom: 0.5rem; color: white;">Data Source</label>
+        <select id="dataSource" class="input" style="margin-bottom: 1rem; background: #1e293b; color: white; border: 1px solid #334155;">
+            <option value="generic">Generic CSV / JSON</option>
+            <option value="sailmon">Sailmon MAX / E4</option>
+            <option value="vakaros">Vakaros Atlas</option>
+            <option value="bng">B&G / NMEA0183</option>
         </select>
 
         <label style="display:block; margin-bottom: 0.5rem; color: white;">Log File</label>

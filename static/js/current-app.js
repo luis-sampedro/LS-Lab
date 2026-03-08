@@ -7,27 +7,29 @@ const app = {
     init: function () {
         console.log("LS Current Initializing...");
 
-        // Wait for Firebase to be ready (if using global) or just init
+        const setupAuth = () => {
+             if (window.firebaseApp && window.firebaseApp.auth) {
+                 window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, (user) => {
+                     console.log("Auth State:", user ? user.uid : "Anon");
+                     app.data.user = user;
+                     app.data.load(); 
+                 });
+             }
+        };
+
         if (window.firebaseApp) {
-            window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, (user) => {
-                console.log("Auth State:", user ? user.uid : "Anon");
-                app.data.user = user;
-                app.data.load(); // Reload data when auth changes
-            });
+             setupAuth();
         } else {
-            console.warn("Firebase not found, using local only");
-            this.data.load();
+             this.data.load(); // Load local immediately so UI works
+             window.addEventListener('firebaseReady', setupAuth);
         }
 
         this.map.init();
         this.ui.renderHistory();
-        this.ui.renderMarks(); // Initial empty render
+        this.ui.renderMarks();
 
-        // Restore Theme
         const savedTheme = localStorage.getItem('theme') || 'dark';
-        if (savedTheme === 'light') {
-            document.body.classList.add('light-mode');
-        }
+        if (savedTheme === 'light') document.body.classList.add('light-mode');
 
         // Setup simple clock
         setInterval(() => {
@@ -45,12 +47,23 @@ const app = {
         },
 
         load: async function () {
-            // Clear current before load to avoid duplicates visually if not handled
-            this.store.history = [];
-            this.store.marks = [];
+            // ALWAYS load local data first
+            const saved = localStorage.getItem('lsc_data');
+            let localStore = {
+                history: [],
+                marks: [],
+                settings: { lang: 'en', theme: 'dark', showLabels: true }
+            };
+            if (saved) {
+                try {
+                    localStore = JSON.parse(saved);
+                    if (!localStore.settings) localStore.settings = { lang: 'en', theme: 'dark', showLabels: true };
+                } catch (e) { console.error("Local Load error", e); }
+            }
+            
+            this.store = localStore;
 
             if (this.user) {
-                // Cloud Load
                 try {
                     const { db, doc, getDoc } = window.firebaseApp;
                     const docRef = doc(db, "users", this.user.uid, "lsc_app_data", "main");
@@ -58,30 +71,27 @@ const app = {
 
                     if (docSnap.exists()) {
                         const cloudData = docSnap.data();
-                        this.store = cloudData;
-                        console.log("Loaded from Cloud");
+                        const mergedMarks = [...localStore.marks];
+                        (cloudData.marks || []).forEach(cMark => {
+                            if (!mergedMarks.find(m => m.id === cMark.id)) mergedMarks.push(cMark);
+                        });
+                        
+                        const mergedHistory = [...localStore.history];
+                        (cloudData.history || []).forEach(cHist => {
+                            if (!mergedHistory.find(h => h.id === cHist.id)) mergedHistory.push(cHist);
+                        });
+
+                        this.store.marks = mergedMarks;
+                        this.store.history = mergedHistory;
+                        this.store.settings = { ...localStore.settings, ...(cloudData.settings || {}) };
+                        
+                        localStorage.setItem('lsc_data', JSON.stringify(this.store));
+                        this.save();
                     } else {
-                        console.log("No cloud data, starting fresh or maybe upload local?");
-                        // Optional: Upload local data if cloud is empty? 
-                        // For now, let's keep it clean: Cloud is separate.
-                        // Initialize defaults
-                        this.store = {
-                            history: [],
-                            marks: [],
-                            settings: { lang: 'en', theme: 'dark', showLabels: true }
-                        };
+                        console.log("No cloud data, pushing local to cloud");
+                        this.save();
                     }
                 } catch (e) { console.error("Cloud Load Error", e); }
-            } else {
-                // Local Load
-                const saved = localStorage.getItem('lsc_data');
-                if (saved) {
-                    try {
-                        this.store = JSON.parse(saved);
-                        // Merge defaults/migrations if needed
-                        if (!this.store.settings) this.store.settings = { lang: 'en', theme: 'dark', showLabels: true };
-                    } catch (e) { console.error("Local Load error", e); }
-                }
             }
 
             // After load, refresh UI

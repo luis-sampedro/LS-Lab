@@ -445,8 +445,15 @@ def index():
 def about():
     lang = request.args.get('lang', 'en')
     if lang == 'es':
-        return render_template('about-es.html')
-    return render_template('about.html')
+        return render_template('about_me-es.html')
+    return render_template('about_me.html')
+
+@app.route('/methodology')
+def methodology():
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('methodology-es.html')
+    return render_template('methodology.html')
 
 import processor
 
