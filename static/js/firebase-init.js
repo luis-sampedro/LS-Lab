@@ -1,9 +1,9 @@
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Re-export common Auth/DB functions so consumers don't need to import from CDN
+// Re-export common Auth/DB functions
 export { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, doc, setDoc, getDoc };
 
 const firebaseConfig = {
@@ -15,10 +15,20 @@ const firebaseConfig = {
     appId: "1:402992364590:web:b087281b67a551190773bf"
 };
 
-// Singleton Pattern: Initialize only if not already initialized
+// Singleton Pattern
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Set Persistence to LOCAL (Persistent even after browser restart)
+setPersistence(auth, browserLocalPersistence)
+    .catch((error) => console.error("Persistence Error:", error));
+
+// Google Sign In Helper
+export async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    return await signInWithPopup(auth, provider);
+}
 
 // Helper to get token (returns null if not logged in)
 export async function getAuthToken() {

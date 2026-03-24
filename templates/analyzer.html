@@ -236,13 +236,19 @@
                         opt.textContent = b.name;
                         boatSelect.appendChild(opt);
                     });
+
+                    // Memory: Load last selected boat
+                    const lastBid = localStorage.getItem('lastSelectedBoatId');
+                    if (lastBid) {
+                        boatSelect.value = lastBid;
+                        await handleBoatChange(lastBid);
+                    }
                 } catch (e) {
                     boatSelect.innerHTML = '<option>Error loading boats</option>';
                 }
             }
 
-            boatSelect.onchange = async () => {
-                const bid = boatSelect.value;
+            async function handleBoatChange(bid) {
                 if (!bid) {
                     sailSelect.disabled = true;
                     sailSelect.innerHTML = '<option>Select a boat first</option>';
@@ -264,11 +270,22 @@
                         opt.textContent = `${s.code} (${s.description || ''})`;
                         sailSelect.appendChild(opt);
                     });
+                    
+                    // Memory: Load last selected sail if it belongs to this boat
+                    const lastSid = localStorage.getItem('lastSelectedSailId');
+                    const lastSidBoat = localStorage.getItem('lastSelectedSailBoatId');
+                    if (lastSid && lastSidBoat === bid) {
+                        sailSelect.value = lastSid;
+                        confirmSaveBtn.disabled = false;
+                    }
+
                     sailSelect.disabled = false;
                 } catch (e) {
                     sailSelect.innerHTML = '<option>Error loading sails</option>';
                 }
-            };
+            }
+
+            boatSelect.onchange = () => handleBoatChange(boatSelect.value);
 
             sailSelect.onchange = () => {
                 confirmSaveBtn.disabled = !sailSelect.value;
@@ -277,7 +294,14 @@
             confirmSaveBtn.onclick = async () => {
                 const bid = boatSelect.value;
                 const sid = sailSelect.value;
+                const bName = boatSelect.options[boatSelect.selectedIndex].text;
                 if (bid && sid) {
+                    // Save to memory
+                    localStorage.setItem('lastSelectedBoatId', bid);
+                    localStorage.setItem('lastSelectedBoatName', bName);
+                    localStorage.setItem('lastSelectedSailId', sid);
+                    localStorage.setItem('lastSelectedSailBoatId', bid);
+
                     document.getElementById('selectSailModal').style.display = 'none';
                     currentBoatId = bid;
                     currentSailId = sid;

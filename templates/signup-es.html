@@ -23,6 +23,13 @@
         <button type="submit" class="btn primary" style="width: 100%; justify-content: center;">Registrarse</button>
     </form>
 
+    <div style="text-align: center; margin: 1.5rem 0; color: #64748b;">— O —</div>
+
+    <button id="googleBtn" class="btn secondary"
+        style="width: 100%; justify-content: center; background: white; color: #0f172a; border: none;">
+        <span style="margin-right: 8px;">G</span> Registrarse con Google
+    </button>
+
     <p style="text-align: center; margin-top: 1.5rem; color: #64748b;">
         ¿Ya tienes cuenta? <a href="{{ url_for('login', lang='es') }}" style="color: #38bdf8;">Inicia sesión</a>
     </p>
@@ -30,7 +37,22 @@
 </div>
 
 <script type="module">
-    import { auth, createUserWithEmailAndPassword } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+    import { auth, createUserWithEmailAndPassword, signInWithGoogle } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+    async function handlePostLogin(user) {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: idToken })
+        });
+
+        if (response.ok) {
+            window.location.href = "{{ url_for('dashboard', lang='es') }}";
+        } else {
+            throw new Error("Error de autenticación en el servidor");
+        }
+    }
 
     document.getElementById('signupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -46,29 +68,23 @@
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            // Successful signup
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
-
-            // Auto login session on backend
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: idToken })
-            });
-
-            if (response.ok) {
-                window.location.href = "{{ url_for('dashboard', lang='es') }}";
-            } else {
-                errorMsg.innerText = "Cuenta creada pero falló el inicio de sesión automático.";
-                errorMsg.style.display = 'block';
-            }
-
+            await handlePostLogin(userCredential.user);
         } catch (error) {
             let msg = error.message;
             if (msg.includes('email-already-in-use')) msg = 'El correo ya está registrado.';
 
             errorMsg.innerText = msg;
+            errorMsg.style.display = 'block';
+        }
+    });
+
+    document.getElementById('googleBtn').addEventListener('click', async () => {
+        const errorMsg = document.getElementById('error-msg');
+        try {
+            const result = await signInWithGoogle();
+            await handlePostLogin(result.user);
+        } catch (error) {
+            errorMsg.innerText = error.message;
             errorMsg.style.display = 'block';
         }
     });

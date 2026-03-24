@@ -16,9 +16,9 @@
 
     <!-- Actions -->
     <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-        <a href="{{ url_for('analyzer_leech', boat_id=boat_id, sail_id=sail_id) }}" class="btn secondary"
+        <a href="{{ url_for('analyzer_leech', boat_id=boat_id, sail_id=sail_id, lang='es') }}" class="btn secondary"
             style="border-color: #f59e0b; color: #f59e0b;">+ Analizar Baluma</a>
-        <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" class="btn primary">+ Analizar Pujamen</a>
+        <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id, lang='es') }}" class="btn primary">+ Analizar Pujamen</a>
     </div>
 
     <!-- History List -->
@@ -115,7 +115,7 @@
 
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div onclick="window.location.href='/boat/${boatId}/sail/${sailId}/analysis/${a.id}'" style="cursor: pointer; flex-grow: 1;">
+                    <div onclick="window.location.href='/boat/${boatId}/sail/${sailId}/analysis/${a.id}?lang=es'" style="cursor: pointer; flex-grow: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <h3 style="color: ${accentColor}; margin: 0; font-size: 1rem;">${dateStr}</h3>
                             <span style="font-size: 0.7rem; border: 1px solid ${accentColor}; color: ${accentColor}; padding: 1px 4px; border-radius: 4px; margin-right: 1rem;">${typeLabel.toUpperCase()}</span>

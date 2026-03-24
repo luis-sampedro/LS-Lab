@@ -37,7 +37,7 @@
 </div>
 
 <script type="module">
-    import { auth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+    import { auth, createUserWithEmailAndPassword, signInWithGoogle } from "{{ url_for('static', filename='js/firebase-init.js') }}";
 
 
     async function handlePostLogin(user) {
@@ -72,10 +72,9 @@
     });
 
     document.getElementById('googleBtn').addEventListener('click', async () => {
-        const provider = new GoogleAuthProvider();
         const errorMsg = document.getElementById('error-msg');
         try {
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithGoogle();
             await handlePostLogin(result.user);
         } catch (error) {
             errorMsg.innerText = error.message;

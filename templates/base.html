@@ -27,11 +27,12 @@
 
         <!-- Auth Icon -->
         <div id="auth-status" style="margin-left: 10px; border-left: 1px solid #334155; padding-left: 10px;">
-          <a href="{{ url_for('login') }}" id="login-link"
+          <a href="{{ url_for('login', lang=request.args.get('lang')) }}" id="login-link"
             style="font-size: 0.9em; border: 1px solid #38bdf8; padding: 4px 12px; border-radius: 20px; color: #38bdf8; text-decoration: none;">Sign
             In</a>
-          <a href="{{ url_for('dashboard') }}" id="user-icon"
+          <a href="{{ url_for('dashboard', lang=request.args.get('lang')) }}" id="user-icon"
             style="display: none; align-items: center; gap: 8px; text-decoration: none;">
+            <span id="active-boat-badge" style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px; border-radius: 10px; font-family: monospace; display: none;"></span>
             <div
               style="width: 32px; height: 32px; background: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0f172a; font-weight: bold;">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -50,6 +51,18 @@
 
       // Initialize Header UI listener
       initGlobalAuthListener('login-link', 'user-icon');
+
+      // Update Active Boat Badge
+      function updateActiveBoatBadge() {
+        const badge = document.getElementById('active-boat-badge');
+        const name = localStorage.getItem('lastSelectedBoatName');
+        if (badge && name) {
+          badge.textContent = name;
+          badge.style.display = 'inline-block';
+        }
+      }
+      updateActiveBoatBadge();
+      window.addEventListener('storage', updateActiveBoatBadge);
 
       // Expose to window for non-module scripts (like current-app.js)
       window.firebaseApp = {

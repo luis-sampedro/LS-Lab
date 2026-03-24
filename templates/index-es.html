@@ -25,7 +25,7 @@
 
                 <div class="hero-buttons">
                     <a href="#tools" class="btn primary">Explorar recursos</a>
-                    <a href="{{ url_for('about') }}" class="btn secondary">Sobre mí</a>
+                    <a href="{{ url_for('about', lang='es') }}" class="btn secondary">Sobre mí</a>
                 </div>
             </div>
         </div>
@@ -55,7 +55,7 @@
         </a>
 
         <!-- LSDL -->
-        <a href="{{ url_for('ls_data_lab') }}" class="card card-link">
+        <a href="{{ url_for('ls_data_lab', lang='es') }}" class="card card-link">
             <h3>LS Data Lab (LSDL)</h3>
             <p>
                 Espacio de trabajo online para procesar datos náuticos: logs GPS, streams de sensores
@@ -63,13 +63,13 @@
                 velocidad, VMG y análisis de maniobras.
             </p>
             <p class="card-meta">
-                Estado: concepto · Plantilla temporal
+                Estado: Beta version: 1.5 · Click para abrir
             </p>
         </a>
 
         <!-- International Moth Simulator -->
-        <a href="{{ url_for('project', lang='es') }}" class="card card-link" style="border-color: #38bdf8;">
-            <h3 style="color: #38bdf8;">Simulador de un International Moth</h3>
+        <a href="{{ url_for('project', lang='es') }}" class="card card-link">
+            <h3>Simulador de un International Moth</h3>
             <p>
                 Mi Proyecto de Fin de Máster: Un simulador dinámico de 6-DOF para la clase International Moth.
                 Modelado físico de foils, aero-hidrodinámica y sistemas de control de vuelo.
@@ -94,7 +94,7 @@
         </a>
 
         <!-- LS Design Tools -->
-        <a href="{{ url_for('ls_design_tools') }}" class="card card-link">
+        <a href="{{ url_for('ls_design_tools', lang='es') }}" class="card card-link">
             <h3>LS Design Tools (LSD)</h3>
             <p>
                 Una colección de pequeñas utilidades para diseño de yates: optimizadores paramétricos
@@ -127,7 +127,8 @@
             Si quieres una visión más clásica de mi formación, educación,
             experiencia y logros, puedes visitar la sección completa "Sobre mí".
         </p>
-        <a href="{{ url_for('about') }}" class="btn secondary" style="margin-top:0.8rem; display:inline-block;">
+        <a href="{{ url_for('about', lang='es') }}" class="btn secondary"
+            style="margin-top:0.8rem; display:inline-block;">
             Ir a Sobre mí
         </a>
     </section>

@@ -19,7 +19,7 @@
         <div class="login-box">
             <h1>Subir Imagen de Vela</h1>
             <p class="login-subtitle">Formatos soportados: JPG, PNG</p>
-            <form action="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" method="post"
+            <form action="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id, lang='es') }}" method="post"
                 enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label" for="sail_image">Seleccionar Imagen</label>
@@ -60,7 +60,7 @@
                     <button id="plotBtn" class="btn secondary" style="border-color: #38bdf8; color: #38bdf8;">Ver
                         Gráfico</button>
 
-                    <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id) }}" class="btn secondary"
+                    <a href="{{ url_for('analyzer', boat_id=boat_id, sail_id=sail_id, lang='es') }}" class="btn secondary"
                         style="border-color: #ef4444; color: #ef4444; text-decoration: none; display: inline-block; text-align: center;">Nueva
                         Imagen</a>
 
@@ -237,13 +237,19 @@
                         opt.textContent = b.name;
                         boatSelect.appendChild(opt);
                     });
+
+                    // Memory: Load last selected boat
+                    const lastBid = localStorage.getItem('lastSelectedBoatId');
+                    if (lastBid) {
+                        boatSelect.value = lastBid;
+                        await handleBoatChange(lastBid);
+                    }
                 } catch (e) {
                     boatSelect.innerHTML = '<option>Error cargando barcos</option>';
                 }
             }
 
-            boatSelect.onchange = async () => {
-                const bid = boatSelect.value;
+            async function handleBoatChange(bid) {
                 if (!bid) {
                     sailSelect.disabled = true;
                     sailSelect.innerHTML = '<option>Selecciona un barco primero</option>';
@@ -265,11 +271,22 @@
                         opt.textContent = `${s.code} (${s.description || ''})`;
                         sailSelect.appendChild(opt);
                     });
+                    
+                    // Memory: Load last selected sail if it belongs to this boat
+                    const lastSid = localStorage.getItem('lastSelectedSailId');
+                    const lastSidBoat = localStorage.getItem('lastSelectedSailBoatId');
+                    if (lastSid && lastSidBoat === bid) {
+                        sailSelect.value = lastSid;
+                        confirmSaveBtn.disabled = false;
+                    }
+
                     sailSelect.disabled = false;
                 } catch (e) {
                     sailSelect.innerHTML = '<option>Error cargando velas</option>';
                 }
-            };
+            }
+
+            boatSelect.onchange = () => handleBoatChange(boatSelect.value);
 
             sailSelect.onchange = () => {
                 confirmSaveBtn.disabled = !sailSelect.value;
@@ -278,7 +295,14 @@
             confirmSaveBtn.onclick = async () => {
                 const bid = boatSelect.value;
                 const sid = sailSelect.value;
+                const bName = boatSelect.options[boatSelect.selectedIndex].text;
                 if (bid && sid) {
+                    // Save to memory
+                    localStorage.setItem('lastSelectedBoatId', bid);
+                    localStorage.setItem('lastSelectedBoatName', bName);
+                    localStorage.setItem('lastSelectedSailId', sid);
+                    localStorage.setItem('lastSelectedSailBoatId', bid);
+
                     document.getElementById('selectSailModal').style.display = 'none';
                     currentBoatId = bid;
                     currentSailId = sid;
@@ -339,7 +363,7 @@
                         const sModal = document.getElementById('successModal');
                         const goBtn = document.getElementById('goToSailBtn');
                         goBtn.onclick = () => {
-                            window.location.href = `/boat/${bid}/sail/${sid}`;
+                            window.location.href = `/boat/${bid}/sail/${sid}?lang=es`;
                         };
                         sModal.style.display = 'flex';
                     } else {

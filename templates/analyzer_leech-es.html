@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}Analizador de Baluma LS – Luis Sampedro{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<section class="section">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h2>Analizador de Baluma LS (Beta)</h2>
+        <span
+            style="color: #f59e0b; font-family: monospace; font-size: 0.9rem; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px;">v1.0.0</span>
+    </div>
+
+    {% if not interactive_image %}
+    <!-- Estado de Carga -->
+    <p>Sube una foto desde popa (mirando hacia arriba) para analizar la torsión de la baluma.</p>
+    <div class="login-panel">
+        <div class="login-box">
+            <h1>Subir Imagen de Baluma</h1>
+            <p class="login-subtitle">Formatos soportados: JPG, PNG</p>
+            <form action="{{ url_for('analyzer_leech', boat_id=boat_id, sail_id=sail_id, lang='es') }}" method="post"
+                enctype="multipart/form-data">
+                <div class="form-group">
+                    <label class="form-label" for="sail_image">Seleccionar Imagen</label>
+                    <input type="file" name="sail_image" id="sail_image" class="input" required accept="image/*">
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn primary btn-full">Iniciar Análisis</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <!-- Estado Interactivo -->
+    <div class="app-grid" style="grid-template-columns: 3fr 1fr;">
+        <!-- Columna del Canvas -->
+        <div>
+            <div class="metric-card" style="padding: 0; overflow: hidden; position: relative;">
+                <canvas id="sailCanvas" style="width: 100%; display: block; cursor: crosshair;"></canvas>
+                <div id="instruction-overlay"
+                    style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; pointer-events: none; color: white;">
+                    Haz clic en el punto de la <strong>Drizza (Arriba)</strong>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                    <button id="resetBtn" class="btn secondary">Reiniciar Pasos</button>
+                    <!-- Botón de Previsualización del Gráfico -->
+                    <button id="plotBtn" class="btn secondary" style="border-color: #38bdf8; color: #38bdf8;">Ver
+                        Gráfico</button>
+
+                    <a href="{{ url_for('analyzer_leech', boat_id=boat_id, sail_id=sail_id, lang='es') }}" class="btn secondary"
+                        style="border-color: #ef4444; color: #ef4444; text-decoration: none; display: inline-block; text-align: center;">Nueva
+                        Imagen</a>
+
+                    <!-- Botón de Guardar -->
+                    <button id="saveBtn" class="btn primary" style="background: #10b981; border-color: #10b981;">Guardar
+                        Análisis</button>
+                </div>
+
+                <!-- MODAL DEL GRÁFICO -->
+                <div id="plotModal"
+                    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 300;">
+                    <div
+                        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 800px; border: 1px solid #334155; position: relative;">
+                        <button onclick="document.getElementById('plotModal').style.display='none'"
+                            style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                        <h2 style="margin-bottom: 1rem;">Perfil de Deflexión de Baluma</h2>
+                        <div style="position: relative; height: 400px; width: 100%;">
+                            <canvas id="previewChartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lupa de Zoom -->
+                <div id="zoomScope"
+                    style="display: none; position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 2px solid #38bdf8; overflow: hidden; pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); background: #000; z-index: 100;">
+                    <canvas id="zoomCanvas" width="150" height="150"></canvas>
+                </div>
+            </div>
+
+            <!-- Columna de Métricas -->
+            <div>
+                <div class="metric-card">
+                    <h2>Métricas de Baluma</h2>
+                    <div id="results-container" style="overflow-x: auto;">
+                        <table id="resultsTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #475569; text-align: left;">
+                                    <th style="padding: 8px; color: #94a3b8;">#</th>
+                                    <th style="padding: 8px; color: #f59e0b;">Máx</th>
+                                    <th style="padding: 8px; color: #94a3b8;">25%</th>
+                                    <th style="padding: 8px; color: #94a3b8;">50%</th>
+                                    <th style="padding: 8px; color: #94a3b8;">75%</th>
+                                    <th style="padding: 8px; color: #94a3b8;">Graf</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Las filas se añaden aquí mediante JS -->
+                            </tbody>
+                        </table>
+                        <p id="no-data-msg"
+                            style="color: #64748b; font-style: italic; padding: 1rem; text-align: center;">
+                            Traza la baluma para ver los datos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Seleccionar Vela -->
+        <div id="selectSailModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 200;">
+            <div
+                style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
+                <h2 style="margin-bottom: 1rem;">Seleccionar Destino</h2>
+                <label style="display:block; margin-bottom: 0.5rem;">Barco</label>
+                <select id="boatSelect" class="input" style="margin-bottom: 1rem;">
+                    <option value="">Cargando barcos...</option>
+                </select>
+                <label style="display:block; margin-bottom: 0.5rem;">Vela</label>
+                <select id="sailSelect" class="input" style="margin-bottom: 1.5rem;" disabled>
+                    <option value="">Selecciona un barco primero</option>
+                </select>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn secondary"
+                        onclick="document.getElementById('selectSailModal').style.display='none'">Cancelar</button>
+                    <button id="confirmSaveBtn" class="btn primary" disabled>Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Éxito -->
+        <div id="successModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 200;">
+            <div
+                style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #10b981; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                <h2 style="margin-bottom: 0.5rem;">¡Guardado con Éxito!</h2>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button id="goToSailBtn" class="btn primary">Ir al Historial de Velas</button>
+                    <button class="btn secondary"
+                        onclick="document.getElementById('successModal').style.display='none'">Continuar Editando</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Scripts -->
+        {% if interactive_image %}
+        <script type="module">
+            import { getAuthToken, auth } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+            window.getAuthToken = getAuthToken;
+
+            let currentBoatId = "{{ boat_id }}" || "";
+            let currentSailId = "{{ sail_id }}" || "";
+            window.stripes = [];
+
+            // Configuración de Imagen y Canvas
+            const canvas = document.getElementById('sailCanvas');
+            const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('instruction-overlay');
+            const resultsTableBody = document.querySelector('#resultsTable tbody');
+            const noDataMsg = document.getElementById('no-data-msg');
+
+            // Zoom
+            const scope = document.getElementById('zoomScope');
+            const zoomCanvas = document.getElementById('zoomCanvas');
+            const zoomCtx = zoomCanvas.getContext('2d');
+            const ZOOM_LEVEL = 3;
+
+            let img = new Image();
+            img.src = "data:image/jpeg;base64,{{ interactive_image }}";
+
+            let currentClick = 0; // 0=Arriba(P1), 1=Escota(P2)
+            let pendingP1 = null;
+
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                drawState();
+            };
+
+            // Interacción
+            function updateInstructions() {
+                if (currentClick === 0) {
+                    overlay.innerHTML = `Haz clic en la <strong>Drizza (Arriba)</strong>`;
+                } else {
+                    overlay.innerHTML = `Haz clic en la <strong>Escota (Abajo)</strong>`;
+                }
+            }
+
+            canvas.addEventListener('mousemove', (e) => {
+                // Lógica de Zoom
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                scope.style.display = 'block';
+                scope.style.left = (e.pageX + 15) + 'px';
+                scope.style.top = (e.pageY + 15) + 'px';
+
+                zoomCtx.fillStyle = "black";
+                zoomCtx.fillRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+                const sw = zoomCanvas.width / ZOOM_LEVEL;
+                const sh = zoomCanvas.height / ZOOM_LEVEL;
+                const sx = x - sw / 2;
+                const sy = y - sh / 2;
+
+                zoomCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, zoomCanvas.width, zoomCanvas.height);
+
+                // Punto de mira
+                const cx = zoomCanvas.width / 2; const cy = zoomCanvas.height / 2;
+                zoomCtx.beginPath(); zoomCtx.strokeStyle = 'rgba(56, 189, 248, 0.8)'; zoomCtx.lineWidth = 1;
+                zoomCtx.moveTo(cx, 0); zoomCtx.lineTo(cx, zoomCanvas.height);
+                zoomCtx.moveTo(0, cy); zoomCtx.lineTo(zoomCanvas.width, cy);
+                zoomCtx.stroke();
+            });
+            canvas.addEventListener('mouseleave', () => { scope.style.display = 'none'; });
+
+            canvas.addEventListener('click', async (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                if (currentClick === 0) {
+                    pendingP1 = { x, y };
+                    currentClick = 1;
+                    drawState();
+                    updateInstructions();
+                } else {
+                    const p2 = { x, y };
+                    const id = window.stripes.length + 1;
+                    overlay.innerHTML = "Trazando borde de baluma...";
+
+                    try {
+                        const response = await fetch('/api/trace_leech', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: img.src, p1: pendingP1, p2: p2 })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            window.stripes.push({
+                                id: id,
+                                p1: pendingP1,
+                                p2: p2,
+                                path: data.path,
+                                metrics: data.metrics
+                            });
+                            addResultRow(id, data.metrics);
+                        } else {
+                            alert("Fallo el trazado: " + data.error);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Error al contactar con el servidor");
+                    }
+                    pendingP1 = null;
+                    currentClick = 0;
+                    drawState();
+                    updateInstructions();
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                window.stripes = [];
+                pendingP1 = null;
+                currentClick = 0;
+                resultsTableBody.innerHTML = '';
+                noDataMsg.style.display = 'block';
+                drawState();
+                updateInstructions();
+            });
+
+            // Visualización
+            function drawState() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                window.stripes.forEach(s => {
+                    // Dibujar Línea de Referencia (Discontinua)
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.moveTo(s.p1.x, s.p1.y);
+                    ctx.lineTo(s.p2.x, s.p2.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Dibujar Trayectoria (Sólida)
+                    if (s.path && s.path.length > 0) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = '#f59e0b'; // Ámbar para la baluma
+                        ctx.lineWidth = 3;
+                        ctx.moveTo(s.path[0][0], s.path[0][1]);
+                        for (let i = 1; i < s.path.length; i++) ctx.lineTo(s.path[i][0], s.path[i][1]);
+                        ctx.stroke();
+                    }
+
+                    // Puntos Extremos
+                    drawPoint(s.p1, 'Arriba');
+                    drawPoint(s.p2, 'Escota');
+                });
+
+                if (pendingP1) drawPoint(pendingP1, 'Arriba');
+            }
+
+            function drawPoint(p, label) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+                // Etiqueta
+                ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = 'white'; ctx.fillText(label, p.x + 12, p.y - 5);
+            }
+
+            function addResultRow(id, m) {
+                noDataMsg.style.display = 'none';
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #1e293b';
+                tr.innerHTML = `
+                <td style="padding: 8px;">#${id}</td>
+                <td style="padding: 8px; font-weight: bold; color: #f59e0b;">${m.d_max}%</td>
+                <td style="padding: 8px;">${m.d_25}%</td>
+                <td style="padding: 8px;">${m.d_50}%</td>
+                <td style="padding: 8px;">${m.d_75}%</td>
+                <td style="padding: 8px;">
+                     <button class="btn secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="viewPlot()">Gráfico</button>
+                </td>
+            `;
+                resultsTableBody.appendChild(tr);
+            }
+
+            // Lógica del Gráfico
+            const plotBtn = document.getElementById('plotBtn');
+            const plotModal = document.getElementById('plotModal');
+            let previewChart = null;
+
+            window.viewPlot = plotBtn.onclick = () => {
+                if (window.stripes.length === 0) { alert('No hay datos para graficar'); return; }
+                plotModal.style.display = 'flex';
+                renderPreviewChart();
+            };
+
+            function renderPreviewChart() {
+                const ctx = document.getElementById('previewChartCanvas').getContext('2d');
+                if (previewChart) previewChart.destroy();
+
+                const datasets = window.stripes.map(s => {
+                    if (!s.metrics.normalized_curve) return null;
+                    const pts = s.metrics.normalized_curve.map(p => ({ x: p[0] * 100, y: p[1] }));
+                    return {
+                        label: `Perfil de Baluma`,
+                        data: pts,
+                        borderColor: '#f59e0b',
+                        backgroundColor: '#f59e0b',
+                        showLine: true,
+                        pointRadius: 0
+                    };
+                }).filter(Boolean);
+
+                // Añadir Referencia
+                datasets.push({
+                    label: 'Línea Recta',
+                    data: [{ x: 0, y: 0 }, { x: 100, y: 0 }],
+                    borderColor: '#94a3b8',
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    borderWidth: 1
+                });
+
+                previewChart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 16 / 9,
+                        scales: {
+                            x: {
+                                type: 'linear', min: 0, max: 100,
+                                title: { display: true, text: 'Extensión (Arriba a Escota) %' },
+                                grid: { color: '#334155' }
+                            },
+                            y: {
+                                title: { display: true, text: 'Deflexión %' },
+                                grid: { color: '#334155' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Lógica de Guardado
+            const saveBtn = document.getElementById('saveBtn');
+            const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+            const boatSelect = document.getElementById('boatSelect');
+            const sailSelect = document.getElementById('sailSelect');
+
+            if (saveBtn) {
+                saveBtn.onclick = async () => {
+                    if (window.stripes.length === 0) { alert('¡Traza la baluma primero!'); return; }
+                    if (currentBoatId && currentSailId && currentBoatId !== "None" && currentSailId !== "None") {
+                        await performSave(currentBoatId, currentSailId);
+                    } else {
+                        const modal = document.getElementById('selectSailModal');
+                        modal.style.display = 'flex';
+                        const token = await window.getAuthToken();
+                        try {
+                            const res = await fetch('/api/boats', { headers: { 'Authorization': token } });
+                            const boats = await res.json();
+                            boatSelect.innerHTML = '<option value="">Seleccionar Barco</option>';
+                            boats.forEach(b => {
+                                const opt = document.createElement('option');
+                                opt.value = b.id; opt.textContent = b.name; boatSelect.appendChild(opt);
+                            });
+                        } catch (e) { console.error(e); }
+                    }
+                };
+            }
+
+            boatSelect.onchange = async () => {
+                const bid = boatSelect.value;
+                const token = await window.getAuthToken();
+                const res = await fetch(`/api/boats/${bid}/sails`, { headers: { 'Authorization': token } });
+                const sails = await res.json();
+                sailSelect.innerHTML = '<option value="">Seleccionar Vela</option>';
+                sails.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id; opt.textContent = s.code; sailSelect.appendChild(opt);
+                });
+                sailSelect.disabled = false;
+            };
+
+            sailSelect.onchange = () => confirmSaveBtn.disabled = !sailSelect.value;
+
+            confirmSaveBtn.onclick = async () => {
+                await performSave(boatSelect.value, sailSelect.value);
+                document.getElementById('selectSailModal').style.display = 'none';
+            };
+
+            async function performSave(bid, sid) {
+                const token = await window.getAuthToken();
+                const sanitizePath = (p) => p.map(pt => ({ x: pt[0], y: pt[1] }));
+
+                const fullMetrics = {
+                    type: 'leech',
+                    stripes: window.stripes.map(s => ({
+                        id: s.id,
+                        metrics: s.metrics,
+                        path: sanitizePath(s.path)
+                    }))
+                };
+                fullMetrics.stripes.forEach(s => {
+                    if (s.metrics.normalized_curve) s.metrics.normalized_curve = sanitizePath(s.metrics.normalized_curve);
+                });
+
+                const srcCanvas = document.getElementById('sailCanvas');
+                const MAX_WIDTH = 600;
+                const scale = Math.min(1, MAX_WIDTH / srcCanvas.width);
+                const tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = srcCanvas.width * scale;
+                tmpCanvas.height = srcCanvas.height * scale;
+                tmpCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, tmpCanvas.width, tmpCanvas.height);
+                const snapshot = tmpCanvas.toDataURL('image/jpeg', 0.6);
+
+                const payload = {
+                    date: new Date().toISOString(),
+                    metrics: fullMetrics,
+                    path: [],
+                    snapshot: snapshot
+                };
+
+                const res = await fetch(`/api/boats/${bid}/sails/${sid}/analyses`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    document.getElementById('successModal').style.display = 'flex';
+                    document.getElementById('goToSailBtn').onclick = () => window.location.href = `/boat/${bid}/sail/${sid}?lang=es`;
+                } else {
+                    alert("Error al guardar");
+                }
+            }
+
+        </script>
+        {% endif %}
+</section>
+{% endblock %}

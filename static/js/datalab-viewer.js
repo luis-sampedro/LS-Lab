@@ -32,16 +32,18 @@ function handleBoatSelectChange() {
     } else {
         nameInput.style.display = 'none';
         typeInput.style.display = 'none';
+        // Memory: Save boat selection
+        if (val) {
+            localStorage.setItem('lastSelectedBoatId', val);
+            const sel = document.getElementById('boatSelect');
+            const name = sel.options[sel.selectedIndex].text;
+            localStorage.setItem('lastSelectedBoatName', name);
+        }
     }
 }
 window.handleBoatSelectChange = handleBoatSelectChange;
 
 async function loadBoats() {
-    // Wait for auth to be ready (dumb polling or listener)
-    // Ideally we import { getAuthToken } from firebase-init
-    // For now, let's assume window.getAuthToken exists or we try to fetch
-    // If we are in module script in ls_data_lab.html, we can export it.
-    // Hack: check if window.getAuthToken is defined, retry if not
     let attempts = 0;
     while (!window.getAuthToken && attempts < 10) {
         await new Promise(r => setTimeout(r, 200));
@@ -67,6 +69,12 @@ async function loadBoats() {
                 opt.textContent = b.name;
                 sel.appendChild(opt);
             });
+
+            // Memory: Load last selected boat
+            const lastBid = localStorage.getItem('lastSelectedBoatId');
+            if (lastBid) {
+                sel.value = lastBid;
+            }
         } catch (e) { console.error("Error loading boats", e); }
     }
 }

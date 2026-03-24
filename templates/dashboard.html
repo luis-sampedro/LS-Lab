@@ -95,6 +95,9 @@
             card.className = 'card card-link';
             card.onclick = (e) => {
                 if (e.target.closest('.delete-btn')) return;
+                // Memory: Save active boat
+                localStorage.setItem('lastSelectedBoatId', boat.id);
+                localStorage.setItem('lastSelectedBoatName', boat.name);
                 window.location.href = `/boat/${boat.id}`;
             };
 

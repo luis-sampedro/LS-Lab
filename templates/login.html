@@ -23,16 +23,37 @@
         <button type="submit" class="btn primary" style="width: 100%; justify-content: center;">Sign In</button>
     </form>
 
+    <div style="text-align: center; margin: 1.5rem 0; color: #64748b;">— OR —</div>
+
+    <button id="googleBtn" class="btn secondary"
+        style="width: 100%; justify-content: center; background: white; color: #0f172a; border: none;">
+        <span style="margin-right: 8px;">G</span> Sign in with Google
+    </button>
+
     <p style="text-align: center; margin-top: 1.5rem; color: #64748b;">
         Don't have an account? <a href="{{ url_for('signup') }}" style="color: #38bdf8;">Sign up</a>
     </p>
     <div id="error-msg" style="color: #ef4444; text-align: center; margin-top: 1rem; display: none;"></div>
 </div>
 
-<!-- Firebase SDKs (Compat for easier use, or modular) -->
+<!-- Firebase SDKs -->
 <script type="module">
-    import { auth, signInWithEmailAndPassword } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+    import { auth, signInWithEmailAndPassword, signInWithGoogle } from "{{ url_for('static', filename='js/firebase-init.js') }}";
 
+    async function handlePostLogin(user) {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: idToken })
+        });
+
+        if (response.ok) {
+            window.location.href = "{{ url_for('dashboard') }}";
+        } else {
+            throw new Error("Server authentication failed");
+        }
+    }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -42,24 +63,18 @@
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // Successful login
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
+            await handlePostLogin(userCredential.user);
+        } catch (error) {
+            errorMsg.innerText = error.message;
+            errorMsg.style.display = 'block';
+        }
+    });
 
-            // Send token to server to set session cookie
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: idToken })
-            });
-
-            if (response.ok) {
-                window.location.href = "{{ url_for('dashboard') }}";
-            } else {
-                errorMsg.innerText = "Server authentication failed";
-                errorMsg.style.display = 'block';
-            }
-
+    document.getElementById('googleBtn').addEventListener('click', async () => {
+        const errorMsg = document.getElementById('error-msg');
+        try {
+            const result = await signInWithGoogle();
+            await handlePostLogin(result.user);
         } catch (error) {
             errorMsg.innerText = error.message;
             errorMsg.style.display = 'block';

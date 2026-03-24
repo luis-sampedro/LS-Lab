@@ -84,19 +84,15 @@
     });
 
     async function loadBoatDetails() {
-        // Since we don't have a direct 'get boat by id' API that returns JSON for a single boat 
-        // without fetching all boats (based on current implementation), we can either:
-        // 1. Fetch all boats and find this one.
-        // 2. Add a GET /api/boats/<id> endpoint.
-        // Let's assume Option 1 for MVP speed, or Option 2 for correctness.
-        // Wait, verify_service has get_user_boats but not get_boat.
-        // Actually, let's just fetch all boats for now, it's safer than touching backend again immediately.
-
         const res = await fetch('/api/boats', { headers: { 'Authorization': currentUserToken } });
         const boats = await res.json();
         const boat = boats.find(b => b.id === boatId);
         if (boat) {
             document.querySelector('h1').innerHTML = `${boat.name} <span style="font-size: 1rem; color: #64748b; font-weight: normal;">(${boat.type})</span>`;
+            
+            // Memory: Save active boat
+            localStorage.setItem('lastSelectedBoatId', boat.id);
+            localStorage.setItem('lastSelectedBoatName', boat.name);
         }
     }
 

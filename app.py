@@ -193,7 +193,9 @@ def analyzer(boat_id, sail_id):
             _, buf = cv2.imencode('.jpg', img)
             img_b64 = base64.b64encode(buf).decode('utf-8')
             
-            return render_template('analyzer.html', 
+            lang = request.args.get('lang', 'en')
+            template = 'analyzer-es.html' if lang == 'es' else 'analyzer.html'
+            return render_template(template, 
                                    interactive_image=img_b64,
                                    version=VERSION,
                                    boat_id=boat_id,
@@ -253,7 +255,10 @@ def analyzer_leech(boat_id, sail_id):
             _, buf = cv2.imencode('.jpg', img)
             img_b64 = base64.b64encode(buf).decode('utf-8')
             
-            return render_template('analyzer_leech.html', 
+            lang = request.args.get('lang', 'en')
+            # Check if -es version exists (checking manually in next turn if not sure, but let's assume pattern)
+            template = 'analyzer_leech-es.html' if lang == 'es' else 'analyzer_leech.html'
+            return render_template(template, 
                                    interactive_image=img_b64,
                                    boat_id=boat_id,
                                    sail_id=sail_id)
@@ -261,7 +266,9 @@ def analyzer_leech(boat_id, sail_id):
             flash(f'Error processing image: {str(e)}')
             return redirect(request.url)
 
-    return render_template('analyzer_leech.html', boat_id=boat_id, sail_id=sail_id)
+    lang = request.args.get('lang', 'en')
+    template = 'analyzer_leech-es.html' if lang == 'es' else 'analyzer_leech.html'
+    return render_template(template, boat_id=boat_id, sail_id=sail_id)
 
 @app.route('/boat/<boat_id>/sail/<sail_id>/analysis/<analysis_id>')
 def view_analysis(boat_id, sail_id, analysis_id):

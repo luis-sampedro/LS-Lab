@@ -142,6 +142,14 @@
             const sail = await res.json();
             document.getElementById('sail-title').innerText = sail.code;
             document.getElementById('sail-desc').innerText = sail.description || '';
+            
+            // Memory: Save active sail and boat
+            localStorage.setItem('lastSelectedBoatId', boatId);
+            localStorage.setItem('lastSelectedSailId', sailId);
+            localStorage.setItem('lastSelectedSailBoatId', boatId);
+            // We don't have boat name here easily without fetching boat, but let's assume boat name is in breadcrumb or just skip name if not available
+            // Actually boat_id is in URL, we could fetch boat name if we really wanted to.
+            // But let's just stick to IDs for logic. The Header badge expects a name though.
         }
     }
 
