@@ -21,8 +21,8 @@
                 style="max-width: 100%; height: auto; border-radius: 8px; display: block;">
         </div>
 
-        <div
-            style="background: rgba(15, 23, 42, 0.6); padding: 2rem; border-radius: 12px; border: 1px solid #334155; max-width: 500px;">
+        <div id="auth-action-div"
+            style="background: rgba(15, 23, 42, 0.6); padding: 2rem; border-radius: 12px; border: 1px solid #334155; max-width: 500px; margin-bottom: 2rem;">
             <h3 style="color: white; margin-bottom: 1rem;">¿Listo para optimizar tu trimado?</h3>
             <p style="color: #cbd5e1; margin-bottom: 2rem;">
                 Para generar tus propios informes y gestionar el historial de tu barco, necesitas acceder a tu panel
@@ -33,6 +33,35 @@
                 <a href="{{ url_for('signup', lang='es') }}" class="btn secondary">Registrarse</a>
             </div>
         </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid #334155; padding-top: 2rem; width: 100%; max-width: 600px;">
+            <h3 style="color: #94a3b8; font-size: 1.2rem; margin-bottom: 0.5rem;">¿Cómo funciona?</h3>
+            <p style="color: #cbd5e1; margin-bottom: 1rem; font-size: 0.95rem;">
+                ¿Tienes curiosidad por la física y la visión artificial que impulsan L3S? Lee la metodología completa detrás de la herramienta.
+            </p>
+            <a class="btn secondary" href="{{ url_for('methodology', lang=request.args.get('lang')) }}">Leer la Metodología</a>
+        </div>
     </div>
 </section>
+
+<script type="module">
+    import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const actionDiv = document.getElementById('auth-action-div');
+        onAuthStateChanged(auth, (user) => {
+            if (user && actionDiv) {
+                actionDiv.innerHTML = `
+                    <h3 style="color: white; margin-bottom: 1rem;">¡Bienvenido/a de nuevo!</h3>
+                    <p style="color: #cbd5e1; margin-bottom: 2rem;">
+                        Has iniciado sesión como <strong>${user.email}</strong>. ¿Listo para analizar una vela?
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <a href="{{ url_for('dashboard', lang=request.args.get('lang')) }}" class="btn primary" style="width: 100%;">Ir al Panel</a>
+                    </div>
+                `;
+            }
+        });
+    });
+</script>
 {% endblock %}

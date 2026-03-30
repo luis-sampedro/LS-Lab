@@ -234,8 +234,21 @@
         <div id="map"></div>
 
         <!-- Info Overlay for Live Speed tracking -->
-        <div class="map-info">
-            <span id="live-speed" title="Speed over ground">0.0 kn</span>
+        <div class="map-info" style="flex-direction: column; align-items: flex-end; gap: 4px;">
+            <div style="display:flex; align-items:baseline; gap:4px;">
+                <span id="live-speed" style="font-size: 1.8rem; font-weight: bold;">0.0</span>
+                <span style="font-size: 1rem; color: var(--text-muted);">kn</span>
+            </div>
+            <div id="live-cog-container" style="font-size: 0.9rem; color: var(--text-muted);">
+                COG: <span id="live-cog" style="color:white; font-weight:bold;">--°</span>
+            </div>
+            <div id="nav-data" style="display:none; flex-direction: column; align-items: flex-end; font-size: 0.85rem; color: var(--text-muted); padding-top:4px; border-top:1px solid #334155; margin-top:4px; min-width: 100px;">
+                <div style="color: var(--primary); margin-bottom: 2px;"><i class="fa-solid fa-location-crosshairs"></i> <span id="nav-wp-name">Target</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>BRG:</span> <span id="nav-bearing" style="color:white; font-weight:bold;">--°</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>DTW:</span> <span id="nav-dist" style="color:white; font-weight:bold;">-- NM</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>ETA:</span> <span id="nav-eta" style="color:white; font-weight:bold;">--:--</span></div>
+                <button onclick="lsnav.logic.stopNavigation()" style="margin-top: 6px; background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width:100%;">Stop</button>
+            </div>
         </div>
 
         <!-- FABs -->
@@ -287,41 +300,28 @@
         <h2 style="margin-top:0;">Chart Options</h2>
         
         <div class="list-item">
-            <span>Chart Background</span>
+            <span>Background Map</span>
             <select class="form-control" style="width:auto;" onchange="lsnav.settings.setBackground(this.value)" id="opt-bg">
                 <option value="satellite">Satellite</option>
-                <option value="street">Street Map</option>
                 <option value="ocean">Navionics Style (Esri Ocean Base)</option>
+                <option value="street">Street Map</option>
                 <option value="dark">Dark Theme</option>
             </select>
         </div>
 
         <div class="list-item">
-            <span>Show Isobaths (Depth Contours)</span>
-            <input type="checkbox" id="opt-isobaths" onchange="lsnav.settings.toggleIsobaths(this.checked)" checked style="transform: scale(1.5);">
-        </div>
-
-        <div class="list-item">
-            <span>Isobath Opacity/Color Intensity</span>
-            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.7" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
-        </div>
-
-        <div class="list-item">
-            <span>Load Isobaths at Zoom</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setIsobathZoom(this.value)" id="opt-iso-zoom">
-                <option value="1">Any Zoom (1+)</option>
-                <option value="8">Level 8+</option>
-                <option value="12">Level 12+</option>
-                <option value="14">Level 14+ (Detailed)</option>
-            </select>
-        </div>
-
-        <div class="list-item">
-            <span>Isobath Detail Level</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setIsobathDetail(this.value)" id="opt-iso-detail">
-                <option value="standard">Standard (Fast EMODnet)</option>
+            <span>Nautical Layer (Layer 1)</span>
+            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setOverlay(this.value)" id="opt-overlay">
+                <option value="standard">EMODnet Bathymetry (Standard)</option>
+                <option value="riasbaixas">Local HD Rías Baixas (Offline MBTiles)</option>
                 <option value="high">Official IHM WMS (Slow / Max Detail)</option>
+                <option value="off">Off (Hide overlays)</option>
             </select>
+        </div>
+
+        <div class="list-item">
+            <span>Layer 1 Opacity</span>
+            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.8" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
         </div>
     </div>
 

@@ -16,9 +16,9 @@
   <header class="topbar">
     <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: white;">LS</a>
     <nav class="nav">
-      <a href="{{ url_for('index', lang=request.args.get('lang')) }}">Home</a>
-      <a href="{{ url_for('index', lang=request.args.get('lang')) }}#tools">Tools</a>
-      <a href="{{ url_for('methodology', lang=request.args.get('lang')) }}">Methodology</a>
+      <a href="{{ url_for('index', lang=request.args.get('lang')) }}">{{ 'Inicio' if request.args.get('lang') == 'es' else 'Home' }}</a>
+      <a href="{{ url_for('index', lang=request.args.get('lang')) }}#tools">{{ 'Herramientas' if request.args.get('lang') == 'es' else 'Tools' }}</a>
+      <a href="{{ url_for('about', lang=request.args.get('lang')) }}">{{ 'Sobre mí' if request.args.get('lang') == 'es' else 'About me' }}</a>
       <div class="lang-switch" style="margin-left: 1rem; display: inline-flex; gap: 0.5rem; align-items: center;">
         <a href="{{ url_for(request.endpoint, lang='en', **(request.view_args or {})) }}" title="English"
           style="text-decoration: none; font-size: 1.2rem;">🇬🇧</a>

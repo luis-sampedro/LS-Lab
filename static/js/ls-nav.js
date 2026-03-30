@@ -41,22 +41,20 @@ const lsnav = {
             routes: [],    // Routes
             settings: {
                 bg: 'satellite',
-                showIsobaths: true,
-                isoOpacity: 0.7,
-                isoZoom: 8,
-                isoDetail: 'standard'
+                overlay: 'standard', // 'off', 'standard', 'high', 'riasbaixas'
+                isoOpacity: 0.8
             }
         },
 
         load: async function () {
             // Local load
             const saved = localStorage.getItem('lsnav_data');
-            let localStore = { waypoints: [], rocks: [], routes: [], settings: { bg: 'satellite', showIsobaths: true, isoOpacity: 0.7, isoZoom: 8, isoDetail: 'standard' } };
+            let localStore = { waypoints: [], rocks: [], routes: [], settings: { bg: 'satellite', overlay: 'standard', isoOpacity: 0.8 } };
             if (saved) {
                 try { 
                     localStore = JSON.parse(saved); 
-                    if (!localStore.settings) localStore.settings = { bg: 'satellite', showIsobaths: true, isoOpacity: 0.7, isoZoom: 8, isoDetail: 'standard' };
-                    if (!localStore.settings.isoDetail) localStore.settings.isoDetail = 'standard';
+                    if (!localStore.settings) localStore.settings = { bg: 'satellite', overlay: 'standard', isoOpacity: 0.8 };
+                    if (!localStore.settings.overlay) localStore.settings.overlay = 'standard';
                 } 
                 catch (e) { console.error("Local Load error", e); }
             }
@@ -209,15 +207,85 @@ const lsnav = {
 
         startGPSWatch: function() {
             if (navigator.geolocation) {
+                this.lastPosLatLng = null;
+
                 this.watchId = navigator.geolocation.watchPosition(
                     (pos) => {
                         const lat = pos.coords.latitude;
                         const lng = pos.coords.longitude;
                         const speedMps = pos.coords.speed; // meters per second, can be null
+                        const heading = pos.coords.heading; // 0-360, can be null
                         
+                        let speedKn = 0;
                         if (speedMps !== null) {
-                            const speedKn = speedMps * 1.94384;
-                            document.getElementById('live-speed').innerText = speedKn.toFixed(1) + " kn";
+                            speedKn = speedMps * 1.94384;
+                            document.getElementById('live-speed').innerText = speedKn.toFixed(1);
+                        }
+
+                        // Calculate COG (Course Over Ground)
+                        let cog = null;
+                        if (heading !== null && speedKn > 0.5) {
+                            cog = heading;
+                        } else if (this.lastPosLatLng && speedKn > 0.5) {
+                            cog = lsnav.utils.getBearing(this.lastPosLatLng, {lat: lat, lng: lng});
+                        }
+                        
+                        if (cog !== null) {
+                            document.getElementById('live-cog').innerText = cog.toFixed(0) + "°";
+                        }
+
+                        this.lastPosLatLng = {lat: lat, lng: lng};
+
+                        // Active Navigation Logic
+                        const nav = lsnav.logic.activeNav;
+                        if (nav) {
+                            let targetLatLng = null;
+                            let routeName = "Target";
+                            let isRoute = false;
+
+                            if (nav.type === 'waypoint') {
+                                const wp = lsnav.data.store.waypoints.find(w => w.id === nav.id) || lsnav.data.store.rocks.find(r => r.id === nav.id);
+                                if (wp) {
+                                    targetLatLng = {lat: wp.lat, lng: wp.lng};
+                                    routeName = wp.name || "Waypoint";
+                                }
+                            } else if (nav.type === 'route') {
+                                const rt = lsnav.data.store.routes.find(r => r.id === nav.id);
+                                if (rt && nav.index < rt.points.length) {
+                                    targetLatLng = {lat: rt.points[nav.index][0], lng: rt.points[nav.index][1]};
+                                    routeName = rt.name + " (Pt " + (nav.index + 1) + ")";
+                                    isRoute = true;
+                                } else if (rt && nav.index >= rt.points.length && rt.points.length > 0) {
+                                    lsnav.logic.stopNavigation();
+                                    alert(lsnav.data.lang === 'es' ? "¡Has llegado al final de la ruta!" : "You have reached the end of the route!");
+                                }
+                            }
+
+                            if (targetLatLng) {
+                                const distMeters = lsnav.utils.getDistance({lat: lat, lng: lng}, targetLatLng);
+                                const distNM = distMeters / 1852;
+                                const brg = lsnav.utils.getBearing({lat: lat, lng: lng}, targetLatLng);
+
+                                document.getElementById('nav-wp-name').innerText = routeName;
+                                document.getElementById('nav-bearing').innerText = brg.toFixed(0) + "°";
+                                document.getElementById('nav-dist').innerText = distNM.toFixed(2) + " NM";
+
+                                // ETA calculation (Hours = Distance / Speed)
+                                if (speedKn > 0.5) {
+                                    const hoursToTarget = distNM / speedKn;
+                                    const etaMs = Date.now() + (hoursToTarget * 60 * 60 * 1000);
+                                    const etaDate = new Date(etaMs);
+                                    const mins = etaDate.getMinutes().toString().padStart(2, '0');
+                                    document.getElementById('nav-eta').innerText = etaDate.getHours() + ":" + mins;
+                                } else {
+                                    document.getElementById('nav-eta').innerText = "--:--";
+                                }
+
+                                // Auto-advance route points if within 50 meters
+                                if (isRoute && distMeters < 50) {
+                                    lsnav.logic.activeNav.index++;
+                                }
+                            }
                         }
 
                         if (!this.userMarker) {
@@ -353,28 +421,35 @@ const lsnav = {
             }
 
             const s = lsnav.data.store.settings;
-            if (s.showIsobaths) {
-                if (s.isoDetail === 'high') {
+            if (s.overlay !== 'off') {
+                if (s.overlay === 'high') {
                     // Spanish Official Hydrographic Institute (IHM) WMS - High Detail
                     this.isobathLayer = L.layerGroup([
-                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp3', { layers: 'ENC_ES3', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: parseInt(s.isoZoom) }),
-                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp4', { layers: 'ENC_ES4', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: Math.max(11, parseInt(s.isoZoom)) }),
-                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp5', { layers: 'ENC_ES5', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: Math.max(13, parseInt(s.isoZoom)) }),
-                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp6', { layers: 'ENC_ES6', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: Math.max(15, parseInt(s.isoZoom)) })
+                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp3', { layers: 'ENC_ES3', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: 8 }),
+                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp4', { layers: 'ENC_ES4', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: 11 }),
+                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp5', { layers: 'ENC_ES5', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: 13 }),
+                        L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp6', { layers: 'ENC_ES6', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: 15 })
                     ]);
-                } else {
+                } else if (s.overlay === 'riasbaixas') {
+                    // Local Rias baixas MBTiles Navionics export
+                    this.isobathLayer = L.tileLayer('/tiles/riasbaixas/{z}/{x}/{y}.png', {
+                        maxZoom: 22,
+                        maxNativeZoom: 20, // Support high zooms via scaling
+                        opacity: parseFloat(s.isoOpacity),
+                        attribution: 'Local HD (Offline)'
+                    });
+                } else if (s.overlay === 'standard') {
                     // EMODnet Bathymetry WMS - Standard
                     this.isobathLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
                         layers: 'emodnet:contours',
                         format: 'image/png',
                         transparent: true,
                         opacity: parseFloat(s.isoOpacity),
-                        minZoom: parseInt(s.isoZoom),
                         attribution: 'EMODnet Bathymetry'
                     });
                 }
                 
-                this.isobathLayer.addTo(this.instance);
+                if (this.isobathLayer) this.isobathLayer.addTo(this.instance);
                 if (this.openseamapLayer) this.openseamapLayer.bringToFront();
             }
         }
@@ -388,6 +463,37 @@ const lsnav = {
         routingMode: false,
         currentRouteData: null,
         routingPolyline: null,
+        
+        activeNav: null, // { type: 'waypoint'|'route', id: 123, index: 0 }
+
+        startNavigation: function(type, id) {
+            this.activeNav = { type: type, id: id, index: 0 };
+            document.getElementById('nav-data').style.display = 'flex';
+            
+            let name = "Target";
+            if (type === 'waypoint') {
+                const wp = lsnav.data.store.waypoints.find(w => w.id === id);
+                if (wp) name = wp.name;
+            } else if (type === 'rock') {
+                this.activeNav.type = 'waypoint'; // treat as WP for nav
+                const rk = lsnav.data.store.rocks.find(r => r.id === id);
+                if (rk) name = "Rock: " + rk.name;
+            } else if (type === 'route') {
+                const rt = lsnav.data.store.routes.find(r => r.id === id);
+                if (rt) name = rt.name + " (Pt 1)";
+            }
+            
+            document.getElementById('nav-wp-name').innerText = name;
+            lsnav.ui.switchTab('tab-map');
+            
+            const msg = lsnav.data.lang === 'es' ? "Navegación iniciada hacia el punto destino." : "Started navigating to target point.";
+            alert(msg);
+        },
+
+        stopNavigation: function() {
+            this.activeNav = null;
+            document.getElementById('nav-data').style.display = 'none';
+        },
 
         saveWaypoint: function () {
             const name = document.getElementById('wp-name').value || "Waypoint";
@@ -564,8 +670,10 @@ const lsnav = {
                             <div><b>${item.name}</b></div>
                             <small class="text-muted">${typeTxt} | ${item.lat.toFixed(3)}, ${item.lng.toFixed(3)}</small>
                         </div>
+                    <div style="display:flex; align-items:center;">
+                        <button onclick="setTimeout(() => lsnav.logic.startNavigation('${item._t}', ${item.id}), 100)" style="color:var(--primary); background:none; border:none; margin-right:12px; font-size:1.2rem;" title="Navigate"><i class="fa-solid fa-location-arrow"></i></button>
+                        <button onclick="lsnav.data.removeMark(${item.id}, '${item._t}')" style="color:#ef4444; background:none; border:none; font-size:1.2rem;" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
-                    <button onclick="lsnav.data.removeMark(${item.id}, '${item._t}')" style="color:#ef4444; background:none; border:none;"><i class="fa-solid fa-trash"></i></button>
                 `;
                 list.appendChild(div);
             });
@@ -592,8 +700,10 @@ const lsnav = {
                             <div><b>${item.name}</b></div>
                             <small class="text-muted">${item.distance.toFixed(2)} NM | ${item.points.length} pts</small>
                         </div>
+                    <div style="display:flex; align-items:center;">
+                        <button onclick="setTimeout(() => lsnav.logic.startNavigation('route', ${item.id}), 100)" style="color:var(--primary); background:none; border:none; margin-right:12px; font-size:1.2rem;" title="Navigate"><i class="fa-solid fa-location-arrow"></i></button>
+                        <button onclick="lsnav.data.removeRoute(${item.id})" style="color:#ef4444; background:none; border:none; font-size:1.2rem;" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
-                    <button onclick="lsnav.data.removeRoute(${item.id})" style="color:#ef4444; background:none; border:none;"><i class="fa-solid fa-trash"></i></button>
                 `;
                 list.appendChild(div);
             });
@@ -632,10 +742,8 @@ const lsnav = {
         syncUI: function() {
             const s = lsnav.data.store.settings;
             if (document.getElementById('opt-bg')) document.getElementById('opt-bg').value = s.bg;
-            if (document.getElementById('opt-isobaths')) document.getElementById('opt-isobaths').checked = s.showIsobaths;
+            if (document.getElementById('opt-overlay')) document.getElementById('opt-overlay').value = s.overlay || 'standard';
             if (document.getElementById('opt-iso-opacity')) document.getElementById('opt-iso-opacity').value = s.isoOpacity;
-            if (document.getElementById('opt-iso-zoom')) document.getElementById('opt-iso-zoom').value = s.isoZoom;
-            if (document.getElementById('opt-iso-detail')) document.getElementById('opt-iso-detail').value = s.isoDetail || 'standard';
         },
         
         setBackground: function(val) {
@@ -649,26 +757,18 @@ const lsnav = {
             }
         },
 
-        toggleIsobaths: function(checked) {
-            lsnav.data.store.settings.showIsobaths = checked;
+        setOverlay: function(val) {
+            lsnav.data.store.settings.overlay = val;
             lsnav.data.save();
-            lsnav.map.updateIsobaths();
+            lsnav.map.updateIsobaths(); // Also updates the overlay now
+            
+            if (val === 'riasbaixas') {
+                 lsnav.map.instance.flyTo([42.50, -8.90], 12);
+            }
         },
 
         setIsobathOpacity: function(val) {
             lsnav.data.store.settings.isoOpacity = parseFloat(val);
-            lsnav.data.save();
-            lsnav.map.updateIsobaths();
-        },
-
-        setIsobathZoom: function(val) {
-            lsnav.data.store.settings.isoZoom = parseInt(val);
-            lsnav.data.save();
-            lsnav.map.updateIsobaths();
-        },
-        
-        setIsobathDetail: function(val) {
-            lsnav.data.store.settings.isoDetail = val;
             lsnav.data.save();
             lsnav.map.updateIsobaths();
         }
@@ -689,6 +789,19 @@ const lsnav = {
                 Math.sin(dl / 2) * Math.sin(dl / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c; 
+        },
+
+        getBearing: function(p1, p2) {
+            const lat1 = p1.lat * Math.PI / 180;
+            const lat2 = p2.lat * Math.PI / 180;
+            const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+            
+            const y = Math.sin(dLon) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            let brng = Math.atan2(y, x);
+            brng = brng * 180 / Math.PI;
+            brng = (brng + 360) % 360;
+            return brng;
         }
     }
 };

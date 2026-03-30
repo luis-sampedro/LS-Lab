@@ -211,41 +211,28 @@
         <h2 style="margin-top:0;">Opciones de Carta</h2>
         
         <div class="list-item">
-            <span>Fondo de Carta</span>
+            <span>Fondo de Mapa</span>
             <select class="form-control" style="width:auto;" onchange="lsnav.settings.setBackground(this.value)" id="opt-bg">
                 <option value="satellite">Satélite</option>
-                <option value="street">Mapa Calles</option>
                 <option value="ocean">Estilo Navionics (Esri Ocean Base)</option>
+                <option value="street">Mapa Calles</option>
                 <option value="dark">Tema Oscuro</option>
             </select>
         </div>
 
         <div class="list-item">
-            <span>Mostrar Isobáticas (Líneas de Profundidad)</span>
-            <input type="checkbox" id="opt-isobaths" onchange="lsnav.settings.toggleIsobaths(this.checked)" checked style="transform: scale(1.5);">
-        </div>
-
-        <div class="list-item">
-            <span>Intensidad de Color / Opacidad</span>
-            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.7" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
-        </div>
-
-        <div class="list-item">
-            <span>Cargar Isobáticas al Zoom</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setIsobathZoom(this.value)" id="opt-iso-zoom">
-                <option value="1">Cualquier Zoom (1+)</option>
-                <option value="8">Nivel 8+</option>
-                <option value="12">Nivel 12+</option>
-                <option value="14">Nivel 14+ (Detallado)</option>
-            </select>
-        </div>
-
-        <div class="list-item">
-            <span>Nivel de Detalle de Isobáticas</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setIsobathDetail(this.value)" id="opt-iso-detail">
-                <option value="standard">Estándar (Rápido - EMODnet)</option>
+            <span>Capa Náutica (Capa 1)</span>
+            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setOverlay(this.value)" id="opt-overlay">
+                <option value="standard">Estándar (EMODnet)</option>
+                <option value="riasbaixas">Local HD Rías Baixas (MBTiles Offline)</option>
                 <option value="high">IHM Oficial WMS (Lento / Máximo Detalle)</option>
+                <option value="off">Desactivado (Sin capa)</option>
             </select>
+        </div>
+
+        <div class="list-item">
+            <span>Opacidad Capa 1</span>
+            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.8" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
         </div>
     </div>
 

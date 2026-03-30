@@ -7,6 +7,9 @@ import stripe
 import cv2
 import numpy as np
 import base64
+import sqlite3
+import io
+from flask import send_file, abort
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -16,6 +19,33 @@ from services.firebase_service import verify_token, initialize_firebase
 
 # Init Firebase (Backend)
 initialize_firebase()
+
+@app.route('/tiles/<map_id>/<int:z>/<int:x>/<int:y>.png')
+def serve_mbtiles(map_id, z, x, y):
+    if map_id == 'riasbaixas':
+        db_path = r"C:\Users\LUIS\Desktop\riasbaixas.mbtiles"
+        if not os.path.exists(db_path):
+            return abort(404, description="MBTiles file not found")
+            
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # TMS format translation
+            tms_y = (1 << z) - 1 - y
+            
+            # Check both normal Y and TMS Y coordinates to handle XYZ AND TMS exports natively
+            cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND (tile_row=? OR tile_row=?)", (z, x, y, tms_y))
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row and row[0]:
+                return send_file(io.BytesIO(row[0]), mimetype='image/png')
+            else:
+                return abort(404, description="Tile not found")
+        except Exception as e:
+            return abort(500, description=str(e))
+    return abort(404)
 
 @app.route('/dashboard')
 def dashboard():
