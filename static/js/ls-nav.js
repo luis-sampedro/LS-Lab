@@ -42,7 +42,8 @@ const lsnav = {
             settings: {
                 bg: 'satellite',
                 overlay: 'standard', // 'off', 'standard', 'high', 'riasbaixas'
-                isoOpacity: 0.8
+                isoOpacity: 0.8,
+                gpsInfo: false
             }
         },
 
@@ -235,6 +236,24 @@ const lsnav = {
                         }
 
                         this.lastPosLatLng = {lat: lat, lng: lng};
+                        
+                        // Update GPS Legend
+                        if (lsnav.data.store.settings.gpsInfo) {
+                            const lgCoords = document.getElementById('gps-coords');
+                            const lgTime = document.getElementById('gps-time');
+                            const lgAcc = document.getElementById('gps-acc');
+                            if (lgCoords) {
+                                lgCoords.innerText = lat.toFixed(5) + ", " + lng.toFixed(5);
+                            }
+                            if (lgTime) {
+                                const d = new Date(pos.timestamp || Date.now());
+                                lgTime.innerText = d.toLocaleTimeString();
+                            }
+                            if (lgAcc) {
+                                const acc = pos.coords.accuracy ? pos.coords.accuracy.toFixed(0) + "m" : "--";
+                                lgAcc.innerText = acc;
+                            }
+                        }
 
                         // Active Navigation Logic
                         const nav = lsnav.logic.activeNav;
@@ -431,8 +450,9 @@ const lsnav = {
                         L.tileLayer.wms('https://ideihm.covam.es/wms/cartaENCp6', { layers: 'ENC_ES6', format: 'image/png', transparent: true, opacity: parseFloat(s.isoOpacity), minZoom: 15 })
                     ]);
                 } else if (s.overlay === 'riasbaixas') {
-                    // Local Rias baixas MBTiles Navionics export
-                    this.isobathLayer = L.tileLayer('/tiles/riasbaixas/{z}/{x}/{y}.png', {
+                    // Points to static/tiles for GitHub / Firebase Static Hosting compatibility
+                    // Ensure you export as Cache (Standard) from SAS.Planet and put the 'riasbaixas' folder inside static/tiles/
+                    this.isobathLayer = L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', {
                         maxZoom: 22,
                         maxNativeZoom: 20, // Support high zooms via scaling
                         opacity: parseFloat(s.isoOpacity),
@@ -744,6 +764,19 @@ const lsnav = {
             if (document.getElementById('opt-bg')) document.getElementById('opt-bg').value = s.bg;
             if (document.getElementById('opt-overlay')) document.getElementById('opt-overlay').value = s.overlay || 'standard';
             if (document.getElementById('opt-iso-opacity')) document.getElementById('opt-iso-opacity').value = s.isoOpacity;
+            if (document.getElementById('opt-gps-info')) {
+                document.getElementById('opt-gps-info').checked = s.gpsInfo || false;
+                lsnav.settings.toggleGpsInfo(s.gpsInfo || false);
+            }
+        },
+        
+        toggleGpsInfo: function(val) {
+            lsnav.data.store.settings.gpsInfo = val;
+            lsnav.data.save();
+            const legend = document.getElementById('gps-info-legend');
+            if (legend) {
+                legend.style.display = val ? 'block' : 'none';
+            }
         },
         
         setBackground: function(val) {
@@ -758,6 +791,16 @@ const lsnav = {
         },
 
         setOverlay: function(val) {
+            // Check auth explicitly here before applying to store
+            if (val === 'riasbaixas' && !lsnav.data.user) {
+                const msg = lsnav.data.lang === 'es' ? "Inicia sesión para usar las cartas locales (HD offline)." : "Log in to use Offline HD local charts.";
+                alert(msg);
+                val = 'standard';
+                if (document.getElementById('opt-overlay')) {
+                    document.getElementById('opt-overlay').value = 'standard';
+                }
+            }
+            
             lsnav.data.store.settings.overlay = val;
             lsnav.data.save();
             lsnav.map.updateIsobaths(); // Also updates the overlay now

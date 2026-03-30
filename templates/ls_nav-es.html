@@ -165,6 +165,15 @@
 <div class="app-viewport">
     <div id="tab-map" class="active" style="width:100%; flex:1; position:relative;">
         <div id="map"></div>
+
+    <!-- GPS INFO LEGEND -->
+    <div id="gps-info-legend" style="display:none; position:absolute; bottom:80px; left:10px; z-index:1000; background:rgba(15,23,42,0.8); color:#f8fafc; padding:10px; border-radius:8px; border:1px solid #334155; font-size:0.85rem; pointer-events:none; font-family:monospace; min-width: 150px;">
+        <div style="margin-bottom:4px; font-weight:bold; color:#facc15;">Info GPS (Vivo)</div>
+        <div>Coords: <span id="gps-coords">--</span></div>
+        <div>Hora: <span id="gps-time">--</span></div>
+        <div>Precisión: <span id="gps-acc">--</span></div>
+    </div>
+
         <div class="map-info">
             <span id="live-speed" title="Velocidad sobre el fondo">0.0 kn</span>
         </div>
@@ -234,6 +243,15 @@
             <span>Opacidad Capa 1</span>
             <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.8" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
         </div>
+
+        <div class="list-item">
+            <span>Mostrar Info de GPS (Leyenda)</span>
+            <label class="switch">
+                <input type="checkbox" id="opt-gps-info" onchange="lsnav.settings.toggleGpsInfo(this.checked)">
+                <span class="slider round"></span>
+            </label>
+        </div>
+        <button onclick="alert('Has guardado tu configuración inicial por defecto.');" style="width:100%; background:var(--primary); color:white; border:none; padding:10px; border-radius:6px; margin-top:1rem;">Guardar Selección como Defecto</button>
     </div>
 
     <nav class="bottom-nav">
