@@ -478,6 +478,13 @@ def lsc_app():
         return render_template('ls_current_app-es.html')
     return render_template('ls_current_app.html')
 
+@app.route('/ls-nav')
+def ls_nav():
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('ls_nav-es.html')
+    return render_template('ls_nav.html')
+
 @app.route('/download/lsc-latest')
 def download_lsc_latest():
     # Permanent redirect to the latest APK version
