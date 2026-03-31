@@ -6,24 +6,24 @@
 const lsnav = {
     init: function () {
         console.log("LS Nav Initializing...");
-        
+
         // Detect lang
         this.data.lang = document.documentElement.lang || 'en';
 
         const setupAuth = () => {
-             if (window.firebaseApp && window.firebaseApp.auth) {
-                 window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, (user) => {
-                     this.data.user = user;
-                     this.data.load(); 
-                 });
-             }
+            if (window.firebaseApp && window.firebaseApp.auth) {
+                window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, (user) => {
+                    this.data.user = user;
+                    this.data.load();
+                });
+            }
         };
 
         if (window.firebaseApp) {
-             setupAuth();
+            setupAuth();
         } else {
-             this.data.load(); 
-             window.addEventListener('firebaseReady', setupAuth);
+            this.data.load();
+            window.addEventListener('firebaseReady', setupAuth);
         }
 
         this.map.init();
@@ -52,11 +52,11 @@ const lsnav = {
             const saved = localStorage.getItem('lsnav_data');
             let localStore = { waypoints: [], rocks: [], routes: [], settings: { bg: 'satellite', overlay: 'standard', isoOpacity: 0.8 } };
             if (saved) {
-                try { 
-                    localStore = JSON.parse(saved); 
+                try {
+                    localStore = JSON.parse(saved);
                     if (!localStore.settings) localStore.settings = { bg: 'satellite', overlay: 'standard', isoOpacity: 0.8 };
                     if (!localStore.settings.overlay) localStore.settings.overlay = 'standard';
-                } 
+                }
                 catch (e) { console.error("Local Load error", e); }
             }
             this.store = localStore;
@@ -71,14 +71,14 @@ const lsnav = {
 
                     if (docSnap.exists()) {
                         const cloudData = docSnap.data();
-                        
+
                         // Merge rocks
                         const mergedRocks = [...localStore.rocks];
                         (cloudData.rocks || []).forEach(cRock => {
                             if (!mergedRocks.find(r => r.id === cRock.id)) mergedRocks.push(cRock);
                         });
                         this.store.rocks = mergedRocks;
-                        
+
                         // Save back local
                         localStorage.setItem('lsnav_data', JSON.stringify(this.store));
                         this.save();
@@ -102,7 +102,7 @@ const lsnav = {
         save: async function () {
             // Local
             localStorage.setItem('lsnav_data', JSON.stringify(this.store));
-            
+
             // Cloud (Rocks only to save space, but we can save all)
             if (this.user) {
                 try {
@@ -158,7 +158,7 @@ const lsnav = {
     // --- MAP ---
     map: {
         instance: null,
-        layers: {}, 
+        layers: {},
         userMarker: null,
         watchId: null,
         bgLayer: null,
@@ -195,7 +195,7 @@ const lsnav = {
                     lsnav.logic.addRoutePoint(e.latlng);
                 }
             });
-            
+
             // Normal click also for routing
             this.instance.on('click', (e) => {
                 if (lsnav.logic.pickingMode) {
@@ -206,7 +206,7 @@ const lsnav = {
             });
         },
 
-        startGPSWatch: function() {
+        startGPSWatch: function () {
             if (navigator.geolocation) {
                 this.lastPosLatLng = null;
 
@@ -216,7 +216,7 @@ const lsnav = {
                         const lng = pos.coords.longitude;
                         const speedMps = pos.coords.speed; // meters per second, can be null
                         const heading = pos.coords.heading; // 0-360, can be null
-                        
+
                         let speedKn = 0;
                         if (speedMps !== null) {
                             speedKn = speedMps * 1.94384;
@@ -228,15 +228,15 @@ const lsnav = {
                         if (heading !== null && speedKn > 0.5) {
                             cog = heading;
                         } else if (this.lastPosLatLng && speedKn > 0.5) {
-                            cog = lsnav.utils.getBearing(this.lastPosLatLng, {lat: lat, lng: lng});
+                            cog = lsnav.utils.getBearing(this.lastPosLatLng, { lat: lat, lng: lng });
                         }
-                        
+
                         if (cog !== null) {
                             document.getElementById('live-cog').innerText = cog.toFixed(0) + "°";
                         }
 
-                        this.lastPosLatLng = {lat: lat, lng: lng};
-                        
+                        this.lastPosLatLng = { lat: lat, lng: lng };
+
                         // Update GPS Legend
                         if (lsnav.data.store.settings.gpsInfo) {
                             const lgCoords = document.getElementById('gps-coords');
@@ -265,13 +265,13 @@ const lsnav = {
                             if (nav.type === 'waypoint') {
                                 const wp = lsnav.data.store.waypoints.find(w => w.id === nav.id) || lsnav.data.store.rocks.find(r => r.id === nav.id);
                                 if (wp) {
-                                    targetLatLng = {lat: wp.lat, lng: wp.lng};
+                                    targetLatLng = { lat: wp.lat, lng: wp.lng };
                                     routeName = wp.name || "Waypoint";
                                 }
                             } else if (nav.type === 'route') {
                                 const rt = lsnav.data.store.routes.find(r => r.id === nav.id);
                                 if (rt && nav.index < rt.points.length) {
-                                    targetLatLng = {lat: rt.points[nav.index][0], lng: rt.points[nav.index][1]};
+                                    targetLatLng = { lat: rt.points[nav.index][0], lng: rt.points[nav.index][1] };
                                     routeName = rt.name + " (Pt " + (nav.index + 1) + ")";
                                     isRoute = true;
                                 } else if (rt && nav.index >= rt.points.length && rt.points.length > 0) {
@@ -281,9 +281,9 @@ const lsnav = {
                             }
 
                             if (targetLatLng) {
-                                const distMeters = lsnav.utils.getDistance({lat: lat, lng: lng}, targetLatLng);
+                                const distMeters = lsnav.utils.getDistance({ lat: lat, lng: lng }, targetLatLng);
                                 const distNM = distMeters / 1852;
-                                const brg = lsnav.utils.getBearing({lat: lat, lng: lng}, targetLatLng);
+                                const brg = lsnav.utils.getBearing({ lat: lat, lng: lng }, targetLatLng);
 
                                 document.getElementById('nav-wp-name').innerText = routeName;
                                 document.getElementById('nav-bearing').innerText = brg.toFixed(0) + "°";
@@ -321,17 +321,17 @@ const lsnav = {
             }
         },
 
-        centerOnUser: function() {
+        centerOnUser: function () {
             if (this.userMarker) {
                 this.instance.flyTo(this.userMarker.getLatLng(), 14);
             } else {
-                this.instance.locate({setView: true, maxZoom: 14});
+                this.instance.locate({ setView: true, maxZoom: 14 });
             }
         },
 
         renderMark: function (mark, type) {
             // Icon config based on type
-            let iconHtml = type === 'rock' 
+            let iconHtml = type === 'rock'
                 ? `<svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                      <circle cx="12" cy="12" r="11" fill="#93c5fd" stroke="black" stroke-width="1.5" stroke-dasharray="3,2"/>
                      <line x1="12" y1="5" x2="12" y2="19" stroke="black" stroke-width="2.5" stroke-linecap="round"/>
@@ -339,7 +339,7 @@ const lsnav = {
                      <line x1="5.9" y1="15.5" x2="18.1" y2="8.5" stroke="black" stroke-width="2.5" stroke-linecap="round"/>
                    </svg>`
                 : '<i class="fa-solid fa-location-dot" style="color:#0ea5e9; font-size:24px; text-shadow:0 0 5px black;"></i>';
-                
+
             const icon = L.divIcon({
                 className: 'custom-div-icon',
                 html: iconHtml,
@@ -348,29 +348,29 @@ const lsnav = {
             });
 
             const marker = L.marker([mark.lat, mark.lng], { icon: icon });
-            
+
             // Popups
             let popupText = `<b>${mark.name}</b><br>${mark.lat.toFixed(4)}, ${mark.lng.toFixed(4)}`;
             if (mark.desc) popupText += `<br><i>${mark.desc}</i>`;
             marker.bindPopup(popupText);
-            
+
             marker.addTo(this.instance);
             this.layers["mark_" + mark.id] = marker;
         },
 
         renderRoute: function (rt) {
             if (!rt.points || rt.points.length < 2) return;
-            
+
             const line = L.polyline(rt.points, { color: '#facc15', weight: 3, dashArray: '5, 10' }).addTo(this.instance);
-            
+
             // Tooltip showing name and distance
             line.bindTooltip(`${rt.name} (${rt.distance.toFixed(1)} NM)`, { permanent: false, direction: 'center' });
             this.layers["route_" + rt.id] = line;
-            
+
             // Draw small circles at waypoints
             const group = L.layerGroup().addTo(this.instance);
             rt.points.forEach((p, idx) => {
-                L.circleMarker(p, {radius: 4, color: '#facc15', fillOpacity: 1}).addTo(group);
+                L.circleMarker(p, { radius: 4, color: '#facc15', fillOpacity: 1 }).addTo(group);
             });
             this.layers["route_pts_" + rt.id] = group;
         },
@@ -395,9 +395,9 @@ const lsnav = {
             this.layers = {};
         },
 
-        updateBackground: function(type) {
+        updateBackground: function (type) {
             if (this.bgLayer) this.instance.removeLayer(this.bgLayer);
-            
+
             if (type === 'satellite') {
                 this.bgLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     attribution: 'Tiles &copy; Esri', maxZoom: 18
@@ -425,7 +425,7 @@ const lsnav = {
                     attribution: '&copy; CartoDB'
                 });
             }
-            
+
             if (this.bgLayer) {
                 this.bgLayer.addTo(this.instance);
                 // Ensure bg is at the bottom
@@ -433,7 +433,7 @@ const lsnav = {
             }
         },
 
-        updateIsobaths: function() {
+        updateIsobaths: function () {
             if (this.isobathLayer) {
                 this.instance.removeLayer(this.isobathLayer);
                 this.isobathLayer = null;
@@ -456,7 +456,7 @@ const lsnav = {
                         maxZoom: 22,
                         maxNativeZoom: 20, // Support high zooms via scaling
                         opacity: parseFloat(s.isoOpacity),
-                        attribution: 'Local HD (Offline)'
+                        attribution: 'Local (LS PRO)'
                     });
                 } else if (s.overlay === 'standard') {
                     // EMODnet Bathymetry WMS - Standard
@@ -468,7 +468,7 @@ const lsnav = {
                         attribution: 'EMODnet Bathymetry'
                     });
                 }
-                
+
                 if (this.isobathLayer) this.isobathLayer.addTo(this.instance);
                 if (this.openseamapLayer) this.openseamapLayer.bringToFront();
             }
@@ -479,17 +479,17 @@ const lsnav = {
     logic: {
         pickingMode: false,
         pickingType: null, // 'waypoint' or 'rock'
-        
+
         routingMode: false,
         currentRouteData: null,
         routingPolyline: null,
-        
+
         activeNav: null, // { type: 'waypoint'|'route', id: 123, index: 0 }
 
-        startNavigation: function(type, id) {
+        startNavigation: function (type, id) {
             this.activeNav = { type: type, id: id, index: 0 };
             document.getElementById('nav-data').style.display = 'flex';
-            
+
             let name = "Target";
             if (type === 'waypoint') {
                 const wp = lsnav.data.store.waypoints.find(w => w.id === id);
@@ -502,15 +502,15 @@ const lsnav = {
                 const rt = lsnav.data.store.routes.find(r => r.id === id);
                 if (rt) name = rt.name + " (Pt 1)";
             }
-            
+
             document.getElementById('nav-wp-name').innerText = name;
             lsnav.ui.switchTab('tab-map');
-            
+
             const msg = lsnav.data.lang === 'es' ? "Navegación iniciada hacia el punto destino." : "Started navigating to target point.";
             alert(msg);
         },
 
-        stopNavigation: function() {
+        stopNavigation: function () {
             this.activeNav = null;
             document.getElementById('nav-data').style.display = 'none';
         },
@@ -518,14 +518,14 @@ const lsnav = {
         saveWaypoint: function () {
             const name = document.getElementById('wp-name').value || "Waypoint";
             if (!this.tempLat) return alert("Please pick a location on the chart.");
-            
+
             lsnav.data.addWaypoint({
                 id: Date.now(),
                 name: name,
                 lat: this.tempLat,
                 lng: this.tempLng
             });
-            
+
             lsnav.ui.closeModals();
             this.tempLat = null; this.tempLng = null;
         },
@@ -539,7 +539,7 @@ const lsnav = {
 
             const desc = document.getElementById('rock-desc').value || "";
             if (!this.tempLat) return alert("Please pick a location on the chart.");
-            
+
             lsnav.data.addRock({
                 id: Date.now(),
                 name: "Hazard / Rock",
@@ -547,17 +547,17 @@ const lsnav = {
                 lat: this.tempLat,
                 lng: this.tempLng
             });
-            
+
             lsnav.ui.closeModals();
             this.tempLat = null; this.tempLng = null;
         },
 
-        startRouteBuilder: function() {
+        startRouteBuilder: function () {
             const name = document.getElementById('route-name').value || "Route";
             const method = document.getElementById('route-method').value;
-            
+
             if (method === 'auto') {
-                const msg = lsnav.data.lang === 'es' 
+                const msg = lsnav.data.lang === 'es'
                     ? "El auto-enrutamiento marítimo complejo requiere APIs premium. Se utilizará enrutamiento directo (A -> B)."
                     : "Complex maritime auto-routing requires premium APIs. Direct line routing (A -> B) will be used.";
                 alert(msg);
@@ -570,7 +570,7 @@ const lsnav = {
                 points: [],
                 distance: 0
             };
-            
+
             this.routingMode = true;
             lsnav.ui.closeModals();
             const startMsg = lsnav.data.lang === 'es' ? "Toca el mapa para añadir puntos. Pulsa el botón flotante ✅ para finalizar." : "Tap the map to add points. Tap the floating ✅ button to finish.";
@@ -585,48 +585,48 @@ const lsnav = {
             finishBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
             finishBtn.onclick = () => lsnav.logic.finishRoute();
             controls.prepend(finishBtn);
-            
+
             // Create temporary polyline
-            this.routingPolyline = L.polyline([], {color: '#ef4444', weight: 4, dashArray: '5,5'}).addTo(lsnav.map.instance);
+            this.routingPolyline = L.polyline([], { color: '#ef4444', weight: 4, dashArray: '5,5' }).addTo(lsnav.map.instance);
         },
 
-        addRoutePoint: function(latlng) {
+        addRoutePoint: function (latlng) {
             if (!this.routingMode) return;
             this.currentRouteData.points.push([latlng.lat, latlng.lng]);
             this.routingPolyline.setLatLngs(this.currentRouteData.points);
-            
+
             // Recalculate distance
             let distNM = 0;
             const pts = this.currentRouteData.points;
-            for(let i = 1; i < pts.length; i++) {
-                const p1 = {lat: pts[i-1][0], lng: pts[i-1][1]};
-                const p2 = {lat: pts[i][0], lng: pts[i][1]};
+            for (let i = 1; i < pts.length; i++) {
+                const p1 = { lat: pts[i - 1][0], lng: pts[i - 1][1] };
+                const p2 = { lat: pts[i][0], lng: pts[i][1] };
                 const dm = lsnav.utils.getDistance(p1, p2);
                 distNM += (dm / 1852);
             }
             this.currentRouteData.distance = distNM;
         },
 
-        finishRoute: function() {
+        finishRoute: function () {
             if (this.currentRouteData.points.length > 1) {
                 lsnav.data.addRoute(this.currentRouteData);
             }
-            
+
             // Cleanup
             this.routingMode = false;
             this.currentRouteData = null;
             if (this.routingPolyline) lsnav.map.instance.removeLayer(this.routingPolyline);
             this.routingPolyline = null;
-            
+
             const btn = document.getElementById('btn-finish-route');
             if (btn) btn.remove();
         },
 
-        handleMapPick: function(latlng) {
+        handleMapPick: function (latlng) {
             this.pickingMode = false;
             this.tempLat = latlng.lat;
             this.tempLng = latlng.lng;
-            
+
             // Reopen correct modal
             if (this.pickingType === 'rock') {
                 lsnav.ui.openRockModal();
@@ -659,10 +659,10 @@ const lsnav = {
             const list = document.getElementById('marks-list');
             if (!list) return;
             list.innerHTML = '';
-            
+
             const isEs = lsnav.data.lang === 'es';
-            const allMarks = [...lsnav.data.store.waypoints.map(w => ({...w, _t:'waypoint'})), ...lsnav.data.store.rocks.map(r => ({...r, _t:'rock'}))];
-            
+            const allMarks = [...lsnav.data.store.waypoints.map(w => ({ ...w, _t: 'waypoint' })), ...lsnav.data.store.rocks.map(r => ({ ...r, _t: 'rock' }))];
+
             if (allMarks.length === 0) {
                 list.innerHTML = `<p class="text-muted" style="font-size:0.9rem;">${isEs ? 'No hay marcas.' : 'No marks.'}</p>`;
                 return;
@@ -671,8 +671,8 @@ const lsnav = {
             allMarks.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                
-                let iconHtml = item._t === 'rock' 
+
+                let iconHtml = item._t === 'rock'
                     ? `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:block;">
                          <circle cx="12" cy="12" r="11" fill="#93c5fd" stroke="black" stroke-width="1.5" stroke-dasharray="3,2"/>
                          <line x1="12" y1="5" x2="12" y2="19" stroke="black" stroke-width="2.5" stroke-linecap="round"/>
@@ -680,12 +680,12 @@ const lsnav = {
                          <line x1="5.9" y1="15.5" x2="18.1" y2="8.5" stroke="black" stroke-width="2.5" stroke-linecap="round"/>
                        </svg>`
                     : `<i class="fa-solid fa-location-dot" style="color:white;"></i>`;
-                    
+
                 let typeTxt = item._t === 'rock' ? (isEs ? 'Roca' : 'Rock') : 'Waypoint';
 
                 div.innerHTML = `
                     <div class="item-main" onclick="lsnav.map.instance.flyTo([${item.lat}, ${item.lng}], 15); lsnav.ui.switchTab('tab-map')">
-                        <div class="item-icon" style="${item._t==='rock'?'background:transparent; border:none;':''}">${iconHtml}</div>
+                        <div class="item-icon" style="${item._t === 'rock' ? 'background:transparent; border:none;' : ''}">${iconHtml}</div>
                         <div>
                             <div><b>${item.name}</b></div>
                             <small class="text-muted">${typeTxt} | ${item.lat.toFixed(3)}, ${item.lng.toFixed(3)}</small>
@@ -703,7 +703,7 @@ const lsnav = {
             const list = document.getElementById('routes-list');
             if (!list) return;
             list.innerHTML = '';
-            
+
             const isEs = lsnav.data.lang === 'es';
             if (lsnav.data.store.routes.length === 0) {
                 list.innerHTML = `<p class="text-muted" style="font-size:0.9rem;">${isEs ? 'No hay rutas.' : 'No routes.'}</p>`;
@@ -734,15 +734,15 @@ const lsnav = {
             lsnav.logic.pickingMode = false;
         },
 
-        openWaypointModal: function() {
+        openWaypointModal: function () {
             document.getElementById('modal-waypoint').classList.add('open');
         },
 
-        openRockModal: function() {
+        openRockModal: function () {
             document.getElementById('modal-rock').classList.add('open');
         },
 
-        openRouteModal: function() {
+        openRouteModal: function () {
             document.getElementById('modal-route').classList.add('open');
         },
 
@@ -759,7 +759,7 @@ const lsnav = {
 
     // --- SETTINGS ---
     settings: {
-        syncUI: function() {
+        syncUI: function () {
             const s = lsnav.data.store.settings;
             if (document.getElementById('opt-bg')) document.getElementById('opt-bg').value = s.bg;
             if (document.getElementById('opt-overlay')) document.getElementById('opt-overlay').value = s.overlay || 'standard';
@@ -769,8 +769,8 @@ const lsnav = {
                 lsnav.settings.toggleGpsInfo(s.gpsInfo || false);
             }
         },
-        
-        toggleGpsInfo: function(val) {
+
+        toggleGpsInfo: function (val) {
             lsnav.data.store.settings.gpsInfo = val;
             lsnav.data.save();
             const legend = document.getElementById('gps-info-legend');
@@ -778,19 +778,19 @@ const lsnav = {
                 legend.style.display = val ? 'block' : 'none';
             }
         },
-        
-        setBackground: function(val) {
+
+        setBackground: function (val) {
             lsnav.data.store.settings.bg = val;
             lsnav.data.save();
             lsnav.map.updateBackground(val);
-            
+
             // Focus on Galicia Coast briefly when selecting oceanic Navionics style
-            if(val === 'ocean') {
-                 lsnav.map.instance.flyTo([42.85, -9.1], 9);
+            if (val === 'ocean') {
+                lsnav.map.instance.flyTo([42.85, -9.1], 9);
             }
         },
 
-        setOverlay: function(val) {
+        setOverlay: function (val) {
             // Check auth explicitly here before applying to store
             if (val === 'riasbaixas' && !lsnav.data.user) {
                 const msg = lsnav.data.lang === 'es' ? "Inicia sesión para usar las cartas locales (HD offline)." : "Log in to use Offline HD local charts.";
@@ -800,17 +800,17 @@ const lsnav = {
                     document.getElementById('opt-overlay').value = 'standard';
                 }
             }
-            
+
             lsnav.data.store.settings.overlay = val;
             lsnav.data.save();
             lsnav.map.updateIsobaths(); // Also updates the overlay now
-            
+
             if (val === 'riasbaixas') {
-                 lsnav.map.instance.flyTo([42.50, -8.90], 12);
+                lsnav.map.instance.flyTo([42.50, -8.90], 12);
             }
         },
 
-        setIsobathOpacity: function(val) {
+        setIsobathOpacity: function (val) {
             lsnav.data.store.settings.isoOpacity = parseFloat(val);
             lsnav.data.save();
             lsnav.map.updateIsobaths();
@@ -831,14 +831,14 @@ const lsnav = {
                 Math.cos(f1) * Math.cos(f2) *
                 Math.sin(dl / 2) * Math.sin(dl / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; 
+            return R * c;
         },
 
-        getBearing: function(p1, p2) {
+        getBearing: function (p1, p2) {
             const lat1 = p1.lat * Math.PI / 180;
             const lat2 = p2.lat * Math.PI / 180;
             const dLon = (p2.lng - p1.lng) * Math.PI / 180;
-            
+
             const y = Math.sin(dLon) * Math.cos(lat2);
             const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
             let brng = Math.atan2(y, x);
