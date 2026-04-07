@@ -29,6 +29,16 @@ const lsnav = {
         this.map.init();
         this.ui.renderMarks();
         this.ui.renderRoutes();
+
+        // Initialize SQL.js for MBTiles support
+        if (window.initSqlJs) {
+            window.initSqlJs({
+                locateFile: file => `/static/lib/${file}`
+            }).then(SQL => {
+                window.SQL = SQL;
+                console.log("SQL.js Initialized");
+            }).catch(e => console.error("SQL.js Init Error", e));
+        }
     },
 
     // --- DATA ---
@@ -164,10 +174,31 @@ const lsnav = {
         bgLayer: null,
         isobathLayer: null,
         openseamapLayer: null,
+        mbtilesLayer: null,
 
         init: function () {
             // Center near Vigo / Rias Baixas (NW Spain)
             this.instance = L.map('map', { zoomControl: false }).setView([42.2328, -8.7226], 10);
+
+            // Debug Zoom Info
+            const zoomControl = L.control({position: 'topleft'});
+            zoomControl.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'debug-zoom');
+                this._div.style.backgroundColor = 'rgba(0,0,0,0.6)';
+                this._div.style.color = '#fff';
+                this._div.style.padding = '4px 8px';
+                this._div.style.borderRadius = '4px';
+                this._div.style.fontSize = '12px';
+                this._div.style.fontWeight = 'bold';
+                this._div.innerHTML = 'Zoom: ' + map.getZoom();
+                return this._div;
+            };
+            zoomControl.addTo(this.instance);
+            
+            this.instance.on('zoomend', () => {
+                const el = document.querySelector('.debug-zoom');
+                if (el) el.innerHTML = 'Zoom: ' + this.instance.getZoom();
+            });
 
             this.updateBackground(lsnav.data.store.settings.bg);
 
@@ -438,8 +469,17 @@ const lsnav = {
                 this.instance.removeLayer(this.isobathLayer);
                 this.isobathLayer = null;
             }
+            if (this.mbtilesLayer) {
+                this.instance.removeLayer(this.mbtilesLayer);
+                this.mbtilesLayer = null;
+            }
 
             const s = lsnav.data.store.settings;
+            const mbtilesRow = document.getElementById('row-mbtiles-upload');
+            if (mbtilesRow) {
+                mbtilesRow.style.display = (s.overlay === 'mbtiles') ? 'flex' : 'none';
+            }
+
             if (s.overlay !== 'off') {
                 if (s.overlay === 'high') {
                     // Spanish Official Hydrographic Institute (IHM) WMS - High Detail
@@ -451,13 +491,28 @@ const lsnav = {
                     ]);
                 } else if (s.overlay === 'riasbaixas') {
                     // Points to static/tiles for GitHub / Firebase Static Hosting compatibility
-                    // Ensure you export as Cache (Standard) from SAS.Planet and put the 'riasbaixas' folder inside static/tiles/
-                    this.isobathLayer = L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', {
-                        maxZoom: 22,
-                        maxNativeZoom: 20, // Support high zooms via scaling
-                        opacity: parseFloat(s.isoOpacity),
-                        attribution: 'Local (LS PRO)'
-                    });
+                    // Layer stacking trick to natively support "sparse" directories without breaking
+                    let pane = this.instance.getPane('riasbaixasPane');
+                    if (!pane) {
+                        pane = this.instance.createPane('riasbaixasPane');
+                        pane.style.zIndex = 400; // overlay
+                    }
+                    pane.style.opacity = parseFloat(s.isoOpacity);
+
+                    const tr = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+                    this.isobathLayer = L.layerGroup([
+                        L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', { maxZoom: 22, maxNativeZoom: 12, pane: 'riasbaixasPane', attribution: 'Local (LS PRO)', errorTileUrl: tr }),
+                        L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', { maxZoom: 22, minZoom: 13, maxNativeZoom: 14, pane: 'riasbaixasPane', errorTileUrl: tr }),
+                        L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', { maxZoom: 22, minZoom: 15, maxNativeZoom: 17, pane: 'riasbaixasPane', errorTileUrl: tr }),
+                        L.tileLayer('/static/tiles/riasbaixas/{z}/{x}/{y}.png', { maxZoom: 22, minZoom: 18, maxNativeZoom: 19, pane: 'riasbaixasPane', errorTileUrl: tr })
+                    ]);
+                } else if (s.overlay === 'mbtiles') {
+                    if (this._localMBTilesBuffer) {
+                        this.mbtilesLayer = L.tileLayer.mbTiles(this._localMBTilesBuffer, {
+                            maxZoom: 22,
+                            opacity: parseFloat(s.isoOpacity)
+                        });
+                    }
                 } else if (s.overlay === 'standard') {
                     // EMODnet Bathymetry WMS - Standard
                     this.isobathLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
@@ -470,6 +525,7 @@ const lsnav = {
                 }
 
                 if (this.isobathLayer) this.isobathLayer.addTo(this.instance);
+                if (this.mbtilesLayer) this.mbtilesLayer.addTo(this.instance);
                 if (this.openseamapLayer) this.openseamapLayer.bringToFront();
             }
         }
@@ -808,6 +864,18 @@ const lsnav = {
             if (val === 'riasbaixas') {
                 lsnav.map.instance.flyTo([42.50, -8.90], 12);
             }
+        },
+
+        loadLocalMBTiles: function (file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                lsnav.map._localMBTilesBuffer = e.target.result;
+                lsnav.map.updateIsobaths();
+                const msg = lsnav.data.lang === 'es' ? "Archivo MBTiles cargado correctamente." : "MBTiles file loaded successfully.";
+                alert(msg);
+            };
+            reader.readAsArrayBuffer(file);
         },
 
         setIsobathOpacity: function (val) {

@@ -154,6 +154,9 @@
 
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<!-- SQLite for MBTiles -->
+<script src="{{ url_for('static', filename='lib/sql-wasm.js') }}"></script>
+<script src="{{ url_for('static', filename='js/Leaflet.TileLayer.MBTiles.js') }}"></script>
 <script>
     // Set standard language var for JS translation logic
     document.documentElement.lang = 'es';
@@ -234,9 +237,16 @@
             <select class="form-control" style="width:auto;" onchange="lsnav.settings.setOverlay(this.value)" id="opt-overlay">
                 <option value="standard">Estándar (EMODnet)</option>
                 <option value="riasbaixas">Local HD Rías Baixas (LS PRO)</option>
+                <option value="mbtiles">Paquete Local MBTiles (.mbtiles)</option>
                 <option value="high">IHM Oficial WMS (Lento / Máximo Detalle)</option>
                 <option value="off">Desactivado (Sin capa)</option>
             </select>
+        </div>
+
+        <div class="list-item" id="row-mbtiles-upload" style="display:none;">
+            <span>Cargar archivo MBTiles</span>
+            <button onclick="document.getElementById('mbtiles-input').click()" class="form-control" style="width:auto; background:var(--primary); color:white; border:none; font-weight:bold;">Seleccionar Archivo</button>
+            <input type="file" id="mbtiles-input" accept=".mbtiles" style="display:none;" onchange="lsnav.settings.loadLocalMBTiles(this.files[0])">
         </div>
 
         <div class="list-item">
