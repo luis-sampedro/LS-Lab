@@ -48,8 +48,11 @@
         });
 
         if (response.ok) {
-            window.location.href = "{{ url_for('dashboard', lang='es') }}";
+            const urlParams = new URLSearchParams(window.location.search);
+            const nextUrl = urlParams.get('next') || "{{ url_for('my_fleet', lang='es') }}";
+            window.location.href = nextUrl;
         } else {
+
             throw new Error("Error de autenticación en el servidor");
         }
     }

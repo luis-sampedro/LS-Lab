@@ -49,8 +49,11 @@
         });
 
         if (response.ok) {
-            window.location.href = "{{ url_for('dashboard') }}";
+            const urlParams = new URLSearchParams(window.location.search);
+            const nextUrl = urlParams.get('next') || "{{ url_for('my_fleet') }}";
+            window.location.href = nextUrl;
         } else {
+
             throw new Error("Server authentication failed");
         }
     }

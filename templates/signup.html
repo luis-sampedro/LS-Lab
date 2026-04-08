@@ -50,7 +50,7 @@
         });
 
         if (response.ok) {
-            window.location.href = "{{ url_for('dashboard') }}";
+            window.location.href = "{{ url_for('my_fleet') }}";
         } else {
             throw new Error("Server authentication failed");
         }

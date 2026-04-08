@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Cuenta – Luis Sampedro{% endblock %}
+
+{% block content %}
+<div class="internal-page">
+    <div class="internal-nav">
+        <a href="{{ url_for('index', lang='es') }}">← Volver al Inicio</a>
+        <div>
+            <span id="account-last-login" class="section-note" style="margin-top: 0;"></span>
+        </div>
+    </div>
+
+    <h1>Tu Perfil</h1>
+    <p>Gestiona tu información personal, sigue tu suscripción y accede a herramientas profesionales.</p>
+
+
+    <div class="app-grid">
+        <!-- Columna de Información Personal -->
+        <div class="app-column">
+            <div class="internal-card">
+                <h2>Información Personal</h2>
+                <div class="form-group">
+                    <label class="form-label">Nombre para mostrar</label>
+                    <input type="text" id="display-name" class="input" placeholder="Tu Nombre">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Correo Electrónico</label>
+                    <input type="email" id="display-email" class="input" disabled>
+                    <p class="form-help">El correo electrónico no se puede cambiar.</p>
+                </div>
+                <button id="save-profile-btn" class="btn primary small-btn">Guardar Perfil</button>
+
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.8rem;">Seguridad</h3>
+                    <p class="form-help" style="margin-bottom: 1rem;">Haz clic abajo para recibir un enlace seguro para cambiar tu contraseña. Esto funciona tanto para cuentas normales como de Google.</p>
+                    <button id="change-password-btn" class="btn secondary small-btn">Cambiar Contraseña</button>
+                    <div id="password-feedback" style="margin-top: 0.8rem; font-size: 0.85rem; display: none;"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="app-column">
+            <div class="internal-card">
+                <h2>Suscripción y Acceso</h2>
+                <div id="pro-status-card" class="metric-card" style="margin-bottom: 1rem; border-color: #38bdf8; background: rgba(56, 189, 248, 0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span id="status-text" style="font-weight: 700; font-size: 1.1rem;">Comprobando estado...</span>
+                            <p id="status-desc" style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Cargando los beneficios de tu perfil...</p>
+                        </div>
+                        <div id="status-badge-placeholder"></div>
+                    </div>
+                </div>
+
+                <div id="tier-details" style="margin-top: 1.5rem;">
+                    <h3 style="font-size: 0.9rem; color: #e2e8f0; margin-bottom: 1rem;">Niveles Disponibles</h3>
+                    
+                    <div class="subscription-tier" style="margin-bottom: 1rem; padding: 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>Vista Previa Gratuita</strong>
+                            <span style="color: #38bdf8;">€0</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #94a3b8;">Herramientas básicas y 1 lección gratuita por curso.</p>
+                    </div>
+
+                    <div class="subscription-tier" style="margin-bottom: 1rem; padding: 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>A La Carta</strong>
+                            <span style="color: #38bdf8;">Desde €10</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #94a3b8;">Acceso de por vida a los cursos específicos que compres.</p>
+                    </div>
+
+                    <div class="subscription-tier highlight" style="padding: 12px; border-radius: 8px; border: 1px solid #facc15; background: rgba(250, 204, 21, 0.05);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong style="color: #facc15;">LS-PRO</strong>
+                            <span style="color: #facc15;">Mejor Valor</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #e2e8f0; margin-top: 4px;">Acceso total a todos los cursos online, **Cartas Náuticas Protegidas (Rias Baixas)**, y funciones avanzadas en **L3S y LS Data Lab**.</p>
+                    </div>
+                </div>
+
+                <div id="pro-unlock-section" style="margin-top: 1.5rem;">
+                    <p class="form-help">¿Tienes un código maestro? Desbloquea PRO al instante:</p>
+                    <div class="form-group" style="display: flex; gap: 8px;">
+                        <input type="text" id="master-code-input" class="input" placeholder="Introduce el Código">
+                        <button id="unlock-pro-btn" class="btn secondary small-btn">Activar</button>
+                    </div>
+                    <div id="unlock-error" class="form-error" style="display: none;"></div>
+                </div>
+            </div>
+
+
+            <div class="internal-card">
+                <h2>Inscripciones</h2>
+                <div id="courses-list">
+                    <p class="form-help" id="enrollment-status">Aún no estás inscrito en ningún curso.</p>
+                    <div id="pro-courses-note" style="display: none;">
+                        <p style="color: #22c55e; font-size: 0.9rem;">✓ PRO: Todos los cursos desbloqueados.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, onAuthStateChanged, sendPasswordResetEmail } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = "{{ url_for('login', lang='es') }}";
+            return;
+        }
+
+        document.getElementById('display-email').value = user.email;
+        if (user.metadata.lastSignInTime) {
+            document.getElementById('account-last-login').textContent = "Última actividad: " + new Date(user.metadata.lastSignInTime).toLocaleDateString('es-ES');
+        }
+
+        // Fetch Profile
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch('/api/user/profile', {
+                headers: { 'Authorization': token }
+            });
+            if (response.ok) {
+                const profile = await response.json();
+                if (profile.name) document.getElementById('display-name').value = profile.name;
+                
+                updateStatusUI(profile.is_pro);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    function updateStatusUI(isPro) {
+        const statusText = document.getElementById('status-text');
+        const statusDesc = document.getElementById('status-desc');
+        const badgePlaceholder = document.getElementById('status-badge-placeholder');
+        const unlockSection = document.getElementById('pro-unlock-section');
+        const courseNote = document.getElementById('pro-courses-note');
+        const enrollmentStatus = document.getElementById('enrollment-status');
+
+        if (isPro) {
+            statusText.textContent = "LS-PRO Activo";
+            statusText.style.color = "#facc15";
+            statusDesc.textContent = "Tienes acceso total a todas las cartas, herramientas y cursos.";
+            badgePlaceholder.innerHTML = '<span class="pro-badge large">LS-PRO</span>';
+            unlockSection.style.display = 'none';
+            courseNote.style.display = 'block';
+            enrollmentStatus.style.display = 'none';
+        } else {
+            statusText.textContent = "LS Lab Gratis";
+            statusDesc.textContent = "Mejora a PRO para desbloquear las cartas de Rias Baixas y funciones avanzadas del Data Lab.";
+            badgePlaceholder.innerHTML = '<span class="tag-pill" style="border-color: #94a3b8; color: #94a3b8;">GRATIS</span>';
+            unlockSection.style.display = 'block';
+            courseNote.style.display = 'none';
+        }
+    }
+
+
+    // Guardar Perfil
+    document.getElementById('save-profile-btn').addEventListener('click', async () => {
+        const name = document.getElementById('display-name').value;
+        const btn = document.getElementById('save-profile-btn');
+        btn.textContent = "Guardando...";
+        btn.disabled = true;
+
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch('/api/user/profile', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: name })
+            });
+
+            if (response.ok) {
+                btn.textContent = "¡Guardado!";
+                setTimeout(() => { btn.textContent = "Guardar Perfil"; btn.disabled = false; }, 2000);
+            }
+        } catch (err) {
+            console.error(err);
+            btn.textContent = "Error";
+            btn.disabled = false;
+        }
+    });
+
+    // Desbloquear PRO
+    document.getElementById('unlock-pro-btn').addEventListener('click', async () => {
+        const code = document.getElementById('master-code-input').value;
+        const errorDiv = document.getElementById('unlock-error');
+        errorDiv.style.display = 'none';
+
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch('/api/user/activate-pro', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                updateStatusUI(true);
+                window.location.reload();
+            } else {
+                errorDiv.textContent = result.error || "Código inválido.";
+                errorDiv.style.display = 'block';
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    // Lógica de Cambio de Contraseña
+    document.getElementById('change-password-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('change-password-btn');
+        const feedback = document.getElementById('password-feedback');
+        const email = auth.currentUser.email;
+
+        btn.disabled = true;
+        btn.textContent = "Enviando...";
+        feedback.style.display = 'none';
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            feedback.textContent = "¡Correo de restablecimiento enviado! Revisa tu bandeja de entrada.";
+            feedback.style.color = "#4ade80";
+            feedback.style.display = 'block';
+            btn.textContent = "Enviado";
+        } catch (err) {
+            console.error(err);
+            feedback.textContent = "Error: " + err.message;
+            feedback.style.color = "#ef4444";
+            feedback.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = "Cambiar Contraseña";
+        }
+    });
+</script>
+
+{% endblock %}

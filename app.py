@@ -9,7 +9,7 @@ import numpy as np
 import base64
 import sqlite3
 import io
-from flask import send_file, abort
+from flask import send_file, abort, send_from_directory
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -23,6 +23,23 @@ initialize_firebase()
 @app.route('/tiles/<map_id>/<int:z>/<int:x>/<int:y>.png')
 def serve_mbtiles(map_id, z, x, y):
     if map_id == 'riasbaixas':
+        # SECURITY CHECK FOR PRO
+        auth_header = request.headers.get('Authorization')
+        # If no auth header, maybe it's in the URL as a token? 
+        token = request.args.get('token')
+        if not token and auth_header:
+            token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
+            
+        if not token:
+            return abort(401, description="Authentication required for PRO charts")
+            
+        user = verify_token(token)
+        if not user: return abort(401, description="Invalid token")
+        
+        from services.firebase_service import is_user_pro
+        if not is_user_pro(user['uid']):
+            return abort(403, description="PRO subscription required for this map")
+
         db_path = r"C:\Users\LUIS\Desktop\riasbaixas.mbtiles"
         if not os.path.exists(db_path):
             return abort(404, description="MBTiles file not found")
@@ -47,15 +64,87 @@ def serve_mbtiles(map_id, z, x, y):
             return abort(500, description=str(e))
     return abort(404)
 
-@app.route('/dashboard')
-def dashboard():
-    # Session check is handled by Firebase client-side for now (and API token verification)
-    # Ideally we'd verify a session cookie here too, but for this Phase 3 MVP, 
-    # we render the page and let JS redirect if not logged in.
+
+
+@app.route('/my-account')
+def my_account():
     lang = request.args.get('lang', 'en')
     if lang == 'es':
-        return render_template('dashboard-es.html')
-    return render_template('dashboard.html')
+        return render_template('my_account-es.html')
+    return render_template('my_account.html')
+
+@app.route('/api/user/profile', methods=['GET', 'POST'])
+def api_user_profile():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return {'error': 'No token'}, 401
+    user = verify_token(auth_header)
+    if not user: return {'error': 'Invalid token'}, 401
+    uid = user['uid']
+    
+    from services.firebase_service import get_user_profile, update_user_profile
+    
+    if request.method == 'GET':
+        profile = get_user_profile(uid)
+        return flask.jsonify(profile if profile else {})
+        
+    if request.method == 'POST':
+        data = request.json
+        if update_user_profile(uid, data):
+            return {'success': True}
+        return {'error': 'Update failed'}, 500
+
+@app.route('/api/download/mbtiles/<path:filename>')
+def api_download_mbtiles(filename):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        # Check if token is in query param for easier download links if needed, 
+        # but header is safer. Let's support both for usability.
+        token = request.args.get('token')
+    else:
+        token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
+    
+    if not token: return abort(401)
+    
+    user = verify_token(token)
+    if not user: return abort(401)
+    
+    from services.firebase_service import is_user_pro
+    if not is_user_pro(user['uid']):
+        return abort(403, description="PRO status required for downloads")
+    
+    directory = os.path.join(app.root_path, 'protected_downloads')
+    return send_from_directory(directory, filename, as_attachment=True)
+
+def api_activate_pro():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return {'error': 'No token'}, 401
+    user = verify_token(auth_header)
+    if not user: return {'error': 'Invalid token'}, 401
+    uid = user['uid']
+    
+    data = request.json
+    code = data.get('code', '').upper().strip()
+    
+    # MASTER_CODE from environment variable or fallback for development
+    master_code = os.environ.get('MASTER_CODE', 'LUISIÑO').upper()
+    
+    if code == master_code:
+        from services.firebase_service import update_user_profile
+        if update_user_profile(uid, {'is_pro': True}):
+            return {'success': True, 'message': 'PRO activated!'}
+        return {'error': 'Failed to update status'}, 500
+    else:
+        return {'error': 'Invalid code. Keep searching!'}, 403
+
+
+@app.route('/my-fleet')
+def my_fleet():
+    # Session check is handled by Firebase client-side for now
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('my_fleet-es.html')
+    return render_template('my_fleet.html')
+
 
 @app.route('/login')
 def login():

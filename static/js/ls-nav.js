@@ -107,7 +107,37 @@ const lsnav = {
             lsnav.ui.renderMarks();
             lsnav.ui.renderRoutes();
             lsnav.settings.syncUI();
+            
+            // PRO Status Check for Downloads
+            if (this.user) {
+                this.checkProStatus();
+            }
         },
+
+        checkProStatus: async function() {
+            try {
+                const token = await this.user.getIdToken();
+                const response = await fetch('/api/user/profile', {
+                    headers: { 'Authorization': token }
+                });
+                if (response.ok) {
+                    const profile = await response.json();
+                    if (profile.is_pro) {
+                        const dlSection = document.getElementById('pro-downloads-section');
+                        if (dlSection) dlSection.style.display = 'block';
+                        
+                        const dlLink = document.getElementById('download-riasbaixas');
+                        if (dlLink) {
+                            dlLink.href = `/api/download/mbtiles/RB-LSPRO-z18.mbtiles?token=${token}`;
+                        }
+
+                    }
+                }
+            } catch (err) {
+                console.error("Pro Status Check Error", err);
+            }
+        },
+
 
         save: async function () {
             // Local
@@ -285,6 +315,17 @@ const lsnav = {
                                 lgAcc.innerText = acc;
                             }
                         }
+
+                        // Update Permanent Monitoring Legend (always)
+                        const monLat = document.getElementById('mon-lat');
+                        const monLng = document.getElementById('mon-lng');
+                        const monAcc = document.getElementById('mon-acc');
+                        const monTime = document.getElementById('mon-time');
+                        if (monLat) monLat.innerText = lat.toFixed(5);
+                        if (monLng) monLng.innerText = lng.toFixed(5);
+                        if (monAcc) monAcc.innerText = pos.coords.accuracy ? pos.coords.accuracy.toFixed(0) + "m" : "--";
+                        if (monTime) monTime.innerText = new Date(pos.timestamp || Date.now()).toLocaleTimeString();
+
 
                         // Active Navigation Logic
                         const nav = lsnav.logic.activeNav;

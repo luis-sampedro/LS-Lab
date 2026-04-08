@@ -408,9 +408,10 @@ body {
 
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.4rem;
 }
+
 
 .app-column {
   display: flex;
@@ -1196,10 +1197,11 @@ body {
 /* ---------- INTERNAL PAGE LAYOUT (Foiling Academy, About, etc.) ---------- */
 
 .internal-page {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 3rem auto;
-  padding: 0 6vw;
+  padding: 0 4vw;
 }
+
 
 .internal-page h1 {
   font-size: 2rem;
@@ -1359,3 +1361,35 @@ body {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
+
+/* Tool Submenu Styles */
+.user-dropdown-item {
+  position: relative;
+}
+
+.user-dropdown-submenu {
+  position: absolute;
+  top: 0;
+  right: 100%; /* Open to the left */
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  min-width: 180px;
+  width: max-content;
+  box-shadow: -10px 10px 25px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  z-index: 4001;
+  margin-right: 5px;
+}
+
+.user-dropdown-item:hover > .user-dropdown-submenu {
+  display: flex !important;
+}
+
+.user-dropdown-submenu a {
+  border: none !important;
+  white-space: nowrap;
+}
+

@@ -68,18 +68,30 @@
         background: #1e293b;
     }
 
-    #tab-map { display: none; }
-    #tab-map.active { display: block; }
+    #tab-map {
+        display: none;
+    }
+
+    #tab-map.active {
+        display: block;
+    }
+
     .tab-page {
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: var(--nav-height);
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: var(--nav-height);
         background: var(--bg-dark);
         overflow-y: auto;
         padding: 1rem;
         display: none;
         z-index: 1001;
     }
-    .tab-page.active { display: block; }
+
+    .tab-page.active {
+        display: block;
+    }
 
     .bottom-nav {
         height: var(--nav-height);
@@ -107,8 +119,13 @@
         padding: 8px 0;
     }
 
-    .nav-btn.active { color: var(--primary); }
-    .nav-btn i { font-size: 1.2rem; }
+    .nav-btn.active {
+        color: var(--primary);
+    }
+
+    .nav-btn i {
+        font-size: 1.2rem;
+    }
 
     .map-controls {
         position: absolute;
@@ -134,10 +151,23 @@
         cursor: pointer;
         transition: transform 0.1s;
     }
-    .fab:active { transform: scale(0.95); }
-    .fab-primary { background-color: var(--primary); }
-    .fab-danger { background-color: var(--danger); }
-    .fab-secondary { background-color: #1e293b; border: 1px solid #475569; }
+
+    .fab:active {
+        transform: scale(0.95);
+    }
+
+    .fab-primary {
+        background-color: var(--primary);
+    }
+
+    .fab-danger {
+        background-color: var(--danger);
+    }
+
+    .fab-secondary {
+        background-color: #1e293b;
+        border: 1px solid #475569;
+    }
 
     .map-info {
         position: absolute;
@@ -157,7 +187,10 @@
 
     .modal-overlay {
         position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         background: rgba(0, 0, 0, 0.7);
         display: none;
         align-items: center;
@@ -165,7 +198,9 @@
         z-index: 1000;
     }
 
-    .modal-overlay.open { display: flex; }
+    .modal-overlay.open {
+        display: flex;
+    }
 
     .modal-card {
         background: var(--bg-card);
@@ -176,13 +211,17 @@
         border: 1px solid #475569;
     }
 
-    .form-group { margin-bottom: 1rem; }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
     .form-group label {
         display: block;
         color: var(--text-muted);
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
     }
+
     .form-control {
         width: 100%;
         padding: 0.8rem;
@@ -192,7 +231,10 @@
         color: white;
         font-size: 1rem;
     }
-    .form-checkbox { margin-right: 8px; }
+
+    .form-checkbox {
+        margin-right: 8px;
+    }
 
     .list-item {
         background: var(--bg-card);
@@ -204,11 +246,13 @@
         justify-content: space-between;
         align-items: center;
     }
+
     .item-main {
         display: flex;
         align-items: center;
         gap: 12px;
     }
+
     .item-icon {
         width: 40px;
         height: 40px;
@@ -219,7 +263,6 @@
         justify-content: center;
         font-size: 1.2rem;
     }
-
 </style>
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -236,13 +279,14 @@
     <div id="tab-map" class="active" style="width:100%; flex:1; position:relative;">
         <div id="map"></div>
 
-    <!-- GPS INFO LEGEND -->
-    <div id="gps-info-legend" style="display:none; position:absolute; bottom:80px; left:10px; z-index:1000; background:rgba(15,23,42,0.8); color:#f8fafc; padding:10px; border-radius:8px; border:1px solid #334155; font-size:0.85rem; pointer-events:none; font-family:monospace; min-width: 150px;">
-        <div style="margin-bottom:4px; font-weight:bold; color:#facc15;">GPS Live Info</div>
-        <div>Coords: <span id="gps-coords">--</span></div>
-        <div>Time: <span id="gps-time">--</span></div>
-        <div>Precision: <span id="gps-acc">--</span></div>
-    </div>
+        <!-- GPS INFO LEGEND -->
+        <div id="gps-info-legend"
+            style="display:none; position:absolute; bottom:80px; left:10px; z-index:1000; background:rgba(15,23,42,0.8); color:#f8fafc; padding:10px; border-radius:8px; border:1px solid #334155; font-size:0.85rem; pointer-events:none; font-family:monospace; min-width: 150px;">
+            <div style="margin-bottom:4px; font-weight:bold; color:#facc15;">GPS Live Info</div>
+            <div>Coords: <span id="gps-coords">--</span></div>
+            <div>Time: <span id="gps-time">--</span></div>
+            <div>Precision: <span id="gps-acc">--</span></div>
+        </div>
 
         <!-- Info Overlay for Live Speed tracking -->
         <div class="map-info" style="flex-direction: column; align-items: flex-end; gap: 4px;">
@@ -253,12 +297,18 @@
             <div id="live-cog-container" style="font-size: 0.9rem; color: var(--text-muted);">
                 COG: <span id="live-cog" style="color:white; font-weight:bold;">--°</span>
             </div>
-            <div id="nav-data" style="display:none; flex-direction: column; align-items: flex-end; font-size: 0.85rem; color: var(--text-muted); padding-top:4px; border-top:1px solid #334155; margin-top:4px; min-width: 100px;">
-                <div style="color: var(--primary); margin-bottom: 2px;"><i class="fa-solid fa-location-crosshairs"></i> <span id="nav-wp-name">Target</span></div>
-                <div style="display:flex; justify-content:space-between; width:100%;"><span>BRG:</span> <span id="nav-bearing" style="color:white; font-weight:bold;">--°</span></div>
-                <div style="display:flex; justify-content:space-between; width:100%;"><span>DTW:</span> <span id="nav-dist" style="color:white; font-weight:bold;">-- NM</span></div>
-                <div style="display:flex; justify-content:space-between; width:100%;"><span>ETA:</span> <span id="nav-eta" style="color:white; font-weight:bold;">--:--</span></div>
-                <button onclick="lsnav.logic.stopNavigation()" style="margin-top: 6px; background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width:100%;">Stop</button>
+            <div id="nav-data"
+                style="display:none; flex-direction: column; align-items: flex-end; font-size: 0.85rem; color: var(--text-muted); padding-top:4px; border-top:1px solid #334155; margin-top:4px; min-width: 100px;">
+                <div style="color: var(--primary); margin-bottom: 2px;"><i class="fa-solid fa-location-crosshairs"></i>
+                    <span id="nav-wp-name">Target</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>BRG:</span> <span
+                        id="nav-bearing" style="color:white; font-weight:bold;">--°</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>DTW:</span> <span
+                        id="nav-dist" style="color:white; font-weight:bold;">-- NM</span></div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><span>ETA:</span> <span
+                        id="nav-eta" style="color:white; font-weight:bold;">--:--</span></div>
+                <button onclick="lsnav.logic.stopNavigation()"
+                    style="margin-top: 6px; background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width:100%;">Stop</button>
             </div>
         </div>
 
@@ -288,7 +338,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
             <h2 style="margin:0;">Routes</h2>
             <button onclick="lsnav.ui.openRouteModal()" class="btn-primary"
-                style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:8px;">+ New</button>
+                style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:8px;">+
+                New</button>
         </div>
         <div id="routes-list"></div>
     </div>
@@ -298,9 +349,11 @@
             <h2 style="margin:0;">Waypoints & Rocks</h2>
             <div style="display:flex; gap:8px;">
                 <button onclick="lsnav.ui.openRockModal()" class="btn-primary"
-                    style="background:var(--danger); border:none; color:white; padding:8px; border-radius:8px;">+ Rock</button>
+                    style="background:var(--danger); border:none; color:white; padding:8px; border-radius:8px;">+
+                    Rock</button>
                 <button onclick="lsnav.ui.openWaypointModal()" class="btn-primary"
-                    style="background:var(--primary); border:none; color:white; padding:8px; border-radius:8px;">+ WP</button>
+                    style="background:var(--primary); border:none; color:white; padding:8px; border-radius:8px;">+
+                    WP</button>
             </div>
         </div>
         <div id="marks-list"></div>
@@ -309,10 +362,11 @@
     <!-- SETTINGS TAB -->
     <div id="tab-settings" class="tab-page">
         <h2 style="margin-top:0;">Chart Options</h2>
-        
+
         <div class="list-item">
             <span>Background Map</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setBackground(this.value)" id="opt-bg">
+            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setBackground(this.value)"
+                id="opt-bg">
                 <option value="satellite">Satellite</option>
                 <option value="ocean">Navionics Style (Esri Ocean Base)</option>
                 <option value="street">Street Map</option>
@@ -322,7 +376,8 @@
 
         <div class="list-item">
             <span>Nautical Layer (Layer 1)</span>
-            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setOverlay(this.value)" id="opt-overlay">
+            <select class="form-control" style="width:auto;" onchange="lsnav.settings.setOverlay(this.value)"
+                id="opt-overlay">
                 <option value="standard">EMODnet Bathymetry (Standard)</option>
                 <option value="riasbaixas">Local HD Rías Baixas (LS PRO)</option>
                 <option value="mbtiles">Local MBTiles Package</option>
@@ -333,24 +388,66 @@
 
         <div class="list-item" id="row-mbtiles-upload" style="display:none;">
             <span>Load MBTiles File</span>
-            <button onclick="document.getElementById('mbtiles-input').click()" class="form-control" style="width:auto; background:var(--primary); color:white; border:none; font-weight:bold;">Select File</button>
-            <input type="file" id="mbtiles-input" accept=".mbtiles" style="display:none;" onchange="lsnav.settings.loadLocalMBTiles(this.files[0])">
+            <button onclick="document.getElementById('mbtiles-input').click()" class="form-control"
+                style="width:auto; background:var(--primary); color:white; border:none; font-weight:bold;">Select
+                File</button>
+            <input type="file" id="mbtiles-input" accept=".mbtiles" style="display:none;"
+                onchange="lsnav.settings.loadLocalMBTiles(this.files[0])">
         </div>
 
         <div class="list-item">
             <span>Layer 1 Opacity</span>
-            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.8" onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
+            <input type="range" id="opt-iso-opacity" min="0.1" max="1.0" step="0.1" value="0.8"
+                onchange="lsnav.settings.setIsobathOpacity(this.value)" style="width: 100px;">
         </div>
 
         <div class="list-item">
-            <span>Show GPS Info Legend</span>
+            <span>Show GPS Info Legend in Chart</span>
             <label class="switch">
                 <input type="checkbox" id="opt-gps-info" onchange="lsnav.settings.toggleGpsInfo(this.checked)">
                 <span class="slider round"></span>
             </label>
         </div>
-        <button onclick="let msg = (document.documentElement.lang==='es')?'Has guardado tu configuración inicial por defecto.':'Set as your new default configuration.'; alert(msg);" style="width:100%; background:var(--primary); color:white; border:none; padding:10px; border-radius:6px; margin-top:1rem;">Save Current Settings as Default</button>
+        <button
+            onclick="let msg = (document.documentElement.lang==='es')?'Has guardado tu configuración inicial por defecto.':'Set as your new default configuration.'; alert(msg);"
+            style="width:100%; background:var(--primary); color:white; border:none; padding:10px; border-radius:6px; margin-top:1rem;">Save
+            Current Settings as Default</button>
+
+        <!-- PRO EXCLUSIVE DOWNLOADS -->
+        <div id="pro-downloads-section"
+            style="display:none; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <h3 style="color:#facc15; font-size: 1rem;"><i class="fa-solid fa-star"></i> PRO Downloads</h3>
+            <div class="list-item" style="border-color: #facc15;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <span style="font-weight:bold;">Rías Baixas HD (RB-LSPRO)</span>
+                    <small class="text-muted">Offline MBTiles (575MB)</small>
+                </div>
+
+                <a id="download-riasbaixas" href="#" class="btn primary small-btn"
+                    style="text-decoration:none;">Download</a>
+            </div>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">Load these files in "Local MBTiles Package"
+                for full offline navigation.</p>
+        </div>
+
+        <!-- PERMANENT GPS MONITORING -->
+        <div
+            style="margin-top: 2.5rem; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid #334155;">
+            <div style="margin-bottom:8px; font-weight:bold; color:#38bdf8; font-size: 0.9rem;">GPS Monitoring</div>
+            <div
+                style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; font-family: monospace;">
+                <div class="text-muted">Latitude:</div>
+                <div id="mon-lat">--</div>
+                <div class="text-muted">Longitude:</div>
+                <div id="mon-lng">--</div>
+                <div class="text-muted">Accuracy:</div>
+                <div id="mon-acc">--</div>
+                <div class="text-muted">Fix Time:</div>
+                <div id="mon-time">--</div>
+            </div>
+        </div>
     </div>
+
 
 
     <!-- BOTTOM NAVIGATION -->
@@ -384,12 +481,15 @@
             <label>Name</label>
             <input type="text" id="wp-name" class="form-control" placeholder="WP 1">
         </div>
-        <button onclick="lsnav.ui.pickOnMap('waypoint')" style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
+        <button onclick="lsnav.ui.pickOnMap('waypoint')"
+            style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
             <i class="fa-solid fa-hand-pointer"></i> Pick on Chart (Hold 1s)
         </button>
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
-            <button onclick="lsnav.ui.closeModals()" style="background:transparent; border:none; color:white;">Cancel</button>
-            <button onclick="lsnav.logic.saveWaypoint()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Save</button>
+            <button onclick="lsnav.ui.closeModals()"
+                style="background:transparent; border:none; color:white;">Cancel</button>
+            <button onclick="lsnav.logic.saveWaypoint()"
+                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Save</button>
         </div>
     </div>
 </div>
@@ -403,12 +503,16 @@
             <label>Description (Optional)</label>
             <input type="text" id="rock-desc" class="form-control" placeholder="Hidden rock at low tide">
         </div>
-        <button onclick="lsnav.ui.pickOnMap('rock')" style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
+        <button onclick="lsnav.ui.pickOnMap('rock')"
+            style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
             <i class="fa-solid fa-hand-pointer"></i> Pick on Chart (Hold 1s)
         </button>
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
-            <button onclick="lsnav.ui.closeModals()" style="background:transparent; border:none; color:white;">Cancel</button>
-            <button onclick="lsnav.logic.saveRock()" style="background:var(--danger); color:white; border:none; padding:10px 20px; border-radius:8px;">Save Danger</button>
+            <button onclick="lsnav.ui.closeModals()"
+                style="background:transparent; border:none; color:white;">Cancel</button>
+            <button onclick="lsnav.logic.saveRock()"
+                style="background:var(--danger); color:white; border:none; padding:10px 20px; border-radius:8px;">Save
+                Danger</button>
         </div>
     </div>
 </div>
@@ -428,11 +532,15 @@
                 <option value="auto">Auto-routing (Experimental)</option>
             </select>
         </div>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">After saving, tap on the map sequentially to build your route.</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">After saving, tap on the map
+            sequentially to build your route.</p>
 
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
-            <button onclick="lsnav.ui.closeModals()" style="background:transparent; border:none; color:white;">Cancel</button>
-            <button onclick="lsnav.logic.startRouteBuilder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Start Routing</button>
+            <button onclick="lsnav.ui.closeModals()"
+                style="background:transparent; border:none; color:white;">Cancel</button>
+            <button onclick="lsnav.logic.startRouteBuilder()"
+                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Start
+                Routing</button>
         </div>
     </div>
 </div>

@@ -59,6 +59,35 @@ def create_user(email, password):
         print(f"Error creating user: {e}")
         raise e
 
+def get_user_profile(uid):
+    """Fetches user profile data from Firestore."""
+    if not db: return None
+    try:
+        doc = db.collection('users').document(uid).get()
+        if doc.exists:
+            return doc.to_dict()
+        return None
+    except Exception as e:
+        print(f"Error getting user profile: {e}")
+        return None
+
+def update_user_profile(uid, data):
+    """Updates user profile data in Firestore."""
+    if not db: return False
+    try:
+        # Merge data
+        db.collection('users').document(uid).set(data, merge=True)
+        return True
+    except Exception as e:
+        print(f"Error updating user profile: {e}")
+        return False
+
+def is_user_pro(uid):
+    """Checks if a user has PRO status."""
+    profile = get_user_profile(uid)
+    return profile.get('is_pro', False) if profile else False
+
+
 def verify_token(id_token):
     """Verifies ID token from client."""
     try:
