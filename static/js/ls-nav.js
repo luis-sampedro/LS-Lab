@@ -128,7 +128,15 @@ const lsnav = {
                         
                         const dlLink = document.getElementById('download-riasbaixas');
                         if (dlLink) {
-                            dlLink.href = `/api/download/mbtiles/RB-LSPRO-z18.mbtiles?token=${token}`;
+                            const isEs = this.lang === 'es';
+                            const body = isEs 
+                                ? "Hola Luis,%0A%0AEstoy interesado en obtener el paquete MBTiles de las Rías Baixas para navegación offline. ¿Podrías enviármelo?%0A%0ASaludos."
+                                : "Hi Luis,%0A%0AI am interested in obtaining the Rías Baixas MBTiles package for offline navigation. Could you please send it to me?%0A%0ABest regards.";
+                            const subject = isEs 
+                                ? "Solicitud de Cartas MBTiles (LS-PRO)"
+                                : "MBTiles Package Request (LS-PRO)";
+                            
+                            dlLink.href = `mailto:luis.sampedro.moix@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(decodeURIComponent(body))}`;
                         }
 
                     }

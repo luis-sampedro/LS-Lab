@@ -3,8 +3,22 @@
 {% block title %}LS Foiling Academy{% endblock %}
 
 {% block content %}
-<div class="hero academy-hero"
-    style="background-image: url('{{ url_for('static', filename='images/foiling-hero.jpg') }}');">
+<div class="hero academy-hero video-hero">
+    <!-- Smart Mirror Video Background -->
+    <div class="video-bg-container">
+        <!-- Blurred Layer -->
+        <video autoplay muted loop playsinline class="video-bg-blur">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+        <!-- Sharp Main Layer -->
+        <video autoplay muted loop playsinline class="video-bg-main" poster="{{ url_for('static', filename='images/foiling-on-water-bg.png') }}">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+    
+    <!-- Dark Gradient Overlay -->
+    <div class="hero-video-overlay"></div>
+
     <div class="hero-overlay">
         <div class="hero-text">
             <h1>LS Foiling <span>Academy</span></h1>
@@ -60,7 +74,7 @@
                 <li>1 Free Lesson per Course</li>
                 <li>Course Catalog Access</li>
             </ul>
-            <a href="#" class="btn secondary small-btn auth-trigger">Sign Up Free</a>
+            <a href="{{ url_for('signup', next=url_for('ls_foiling_academy_catalog', filter='free')) }}" class="btn secondary small-btn">Sign Up Free</a>
         </div>
 
         <!-- Trial Tier -->
@@ -73,7 +87,7 @@
                 <li>7-Day Duration</li>
                 <li>One-time offer</li>
             </ul>
-            <a href="#" class="btn secondary small-btn auth-trigger">Start Trial</a>
+            <a href="mailto:luis.sampedro.moix@gmail.com?subject=LSFA Pro Trial Request&body=Hi Luis, I would like to request a 7-day PRO Trial code for the LS Foiling Academy. Thanks!" class="btn secondary small-btn">Request Trial Code</a>
         </div>
 
         <!-- Individual Tier -->
@@ -87,7 +101,7 @@
                 <li>Intermediate: €25</li>
                 <li>Advanced: €50</li>
             </ul>
-            <a href="{{ url_for('ls_foiling_academy_catalog') }}" class="btn secondary small-btn">Browse Courses</a>
+            <a href="{{ url_for('signup', next=url_for('ls_foiling_academy_catalog')) }}" class="btn secondary small-btn">Browse Courses</a>
         </div>
 
         <!-- Pro Tier -->
@@ -103,7 +117,7 @@
                 <li>Full LS Lab Suite Access</li>
                 <li>Priority Support</li>
             </ul>
-            <a href="#" class="btn primary small-btn">View LS PRO</a>
+            <a href="mailto:luis.sampedro.moix@gmail.com?subject=LS PRO Subscription Interest&body=Hi Luis, I am interested in the full LS PRO subscription. Please send me more information on how to subscribe. Best regards." class="btn primary small-btn">Contact for LS-PRO</a>
         </div>
 
     </div>

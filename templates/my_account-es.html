@@ -131,14 +131,17 @@
                 const profile = await response.json();
                 if (profile.name) document.getElementById('display-name').value = profile.name;
                 
-                updateStatusUI(profile.is_pro);
+                updateStatusUI(profile);
             }
         } catch (err) {
             console.error(err);
         }
     });
 
-    function updateStatusUI(isPro) {
+    function updateStatusUI(profile) {
+        const isPro = profile.is_pro;
+        const isTrial = profile.is_trial;
+
         const statusText = document.getElementById('status-text');
         const statusDesc = document.getElementById('status-desc');
         const badgePlaceholder = document.getElementById('status-badge-placeholder');
@@ -147,19 +150,38 @@
         const enrollmentStatus = document.getElementById('enrollment-status');
 
         if (isPro) {
-            statusText.textContent = "LS-PRO Activo";
+            statusText.textContent = "LS-PRO Activa";
             statusText.style.color = "#facc15";
-            statusDesc.textContent = "Tienes acceso total a todas las cartas, herramientas y cursos.";
+            statusDesc.textContent = "Tienes acceso completo permanente a todas las cartas, herramientas y cursos.";
             badgePlaceholder.innerHTML = '<span class="pro-badge large">LS-PRO</span>';
+            unlockSection.style.display = 'none';
+            courseNote.style.display = 'block';
+            enrollmentStatus.style.display = 'none';
+        } else if (isTrial) {
+            statusText.textContent = "Prueba PRO Activa";
+            statusText.style.color = "#38bdf8";
+
+            // Calculate days left
+            let daysLeft = "7";
+            if (profile.trial_started_at) {
+                const start = new Date(profile.trial_started_at);
+                const diff = (new Date() - start) / (1000 * 60 * 60 * 24);
+                daysLeft = Math.max(0, Math.ceil(7 - diff));
+            }
+
+            statusDesc.textContent = `Tienes acceso a todos los cursos de la foiling academy. Expira en ${daysLeft} días.`;
+            badgePlaceholder.innerHTML = '<span class="pro-badge large" style="background: #38bdf8;">PRUEBA</span>';
             unlockSection.style.display = 'none';
             courseNote.style.display = 'block';
             enrollmentStatus.style.display = 'none';
         } else {
             statusText.textContent = "LS Lab Gratis";
-            statusDesc.textContent = "Mejora a PRO para desbloquear las cartas de Rias Baixas y funciones avanzadas del Data Lab.";
+            statusText.style.color = "#e2e8f0";
+            statusDesc.textContent = "Mejora a PRO o solicita una Prueba para desbloquear las cartas de las Rías Baixas y cursos de foiling.";
             badgePlaceholder.innerHTML = '<span class="tag-pill" style="border-color: #94a3b8; color: #94a3b8;">GRATIS</span>';
             unlockSection.style.display = 'block';
             courseNote.style.display = 'none';
+            enrollmentStatus.style.display = 'block';
         }
     }
 

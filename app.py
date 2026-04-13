@@ -9,6 +9,7 @@ import numpy as np
 import base64
 import sqlite3
 import io
+from datetime import datetime, timedelta
 from flask import send_file, abort, send_from_directory
 
 # Initialize Flask App
@@ -85,6 +86,20 @@ def api_user_profile():
     
     if request.method == 'GET':
         profile = get_user_profile(uid)
+        if profile and profile.get('is_trial'):
+            # Check expiration
+            start_ts = profile.get('trial_started_at')
+            if start_ts:
+                # Firestore timestamp can be datetime or internal obj depending on fetch
+                # services/firebase_service.py usually returns dicts from to_dict()
+                # which converts Timestamps to datetimes.
+                if isinstance(start_ts, datetime):
+                    if datetime.now(start_ts.tzinfo) > start_ts + timedelta(days=7):
+                        # Expired
+                        update_user_profile(uid, {'is_trial': False, 'is_pro': False})
+                        profile['is_trial'] = False
+                        profile['is_pro'] = False
+        
         return flask.jsonify(profile if profile else {})
         
     if request.method == 'POST':
@@ -115,6 +130,7 @@ def api_download_mbtiles(filename):
     directory = os.path.join(app.root_path, 'protected_downloads')
     return send_from_directory(directory, filename, as_attachment=True)
 
+@app.route('/api/user/activate-pro', methods=['POST'])
 def api_activate_pro():
     auth_header = request.headers.get('Authorization')
     if not auth_header: return {'error': 'No token'}, 401
@@ -127,12 +143,21 @@ def api_activate_pro():
     
     # MASTER_CODE from environment variable or fallback for development
     master_code = os.environ.get('MASTER_CODE', 'LUISIÑO').upper()
+    trial_code = "ÑOTH"
     
+    from services.firebase_service import update_user_profile
     if code == master_code:
-        from services.firebase_service import update_user_profile
-        if update_user_profile(uid, {'is_pro': True}):
+        if update_user_profile(uid, {'is_pro': True, 'is_trial': False}):
             return {'success': True, 'message': 'PRO activated!'}
         return {'error': 'Failed to update status'}, 500
+    elif code == trial_code:
+        if update_user_profile(uid, {
+            'is_trial': True, 
+            'is_pro': False,
+            'trial_started_at': datetime.now()
+        }):
+            return {'success': True, 'message': '7-Day Trial activated!'}
+        return {'error': 'Failed to activate trial'}, 500
     else:
         return {'error': 'Invalid code. Keep searching!'}, 403
 

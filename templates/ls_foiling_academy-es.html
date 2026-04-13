@@ -3,17 +3,29 @@
 {% block title %}LS Foiling Academy{% endblock %}
 
 {% block content %}
-<div class="hero academy-hero"
-    style="background-image: url('{{ url_for('static', filename='images/foiling-hero.jpg') }}');">
+<div class="hero academy-hero video-hero">
+    <!-- Smart Mirror Video Background -->
+    <div class="video-bg-container">
+        <!-- Blurred Layer -->
+        <video autoplay muted loop playsinline class="video-bg-blur">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+        <!-- Sharp Main Layer -->
+        <video autoplay muted loop playsinline class="video-bg-main" poster="{{ url_for('static', filename='images/foiling-on-water-bg.png') }}">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+    
+    <!-- Dark Gradient Overlay -->
+    <div class="hero-video-overlay"></div>
+
     <div class="hero-overlay">
         <div class="hero-text">
             <h1>LS Foiling <span>Academy</span></h1>
-            <p>Domina el arte de navegar y foilear con instructores de talla mundial. Desde como realizar los primeros
-                vuelos hasta como encontrar una
-                estrategia ganadora o llevar tu desempeño al siguiente nivel.</p>
+            <p>Domina el arte de navegar y foilear con instrucción de primer nivel. Desde tus primeros vuelos hasta estrategia de regata.</p>
             <div class="hero-buttons">
-                <a href="#" id="start-now-btn" class="btn primary">¡Empieza Ahora!</a>
-                <a href="#pricing" class="btn secondary">Ver Precios</a>
+                <a href="#" id="start-now-btn" class="btn primary">¡Empezar ahora!</a>
+                <a href="#pricing" class="btn secondary">Ver precios</a>
             </div>
         </div>
     </div>
@@ -62,7 +74,7 @@
                 <li>1 Lección Gratis por Curso</li>
                 <li>Acceso al Catálogo</li>
             </ul>
-            <a href="#" class="btn secondary small-btn auth-trigger">Regístrate Gratis</a>
+            <a href="{{ url_for('signup', next=url_for('ls_foiling_academy_catalog', filter='free')) }}" class="btn secondary small-btn">Regístrate Gratis</a>
         </div>
 
         <!-- Trial Tier -->
@@ -75,7 +87,7 @@
                 <li>Duración de 7 Días</li>
                 <li>Oferta única</li>
             </ul>
-            <a href="#" class="btn secondary small-btn auth-trigger">Iniciar Prueba</a>
+            <a href="mailto:luis.sampedro.moix@gmail.com?subject=Solicitud de Prueba PRO LSFA&body=Hola Luis, me gustaría solicitar un código de prueba PRO de 7 días para la LS Foiling Academy. ¡Gracias!" class="btn secondary small-btn">Solicitar Código de Prueba</a>
         </div>
 
         <!-- Individual Tier -->
@@ -89,8 +101,7 @@
                 <li>Intermedio: €25</li>
                 <li>Avanzado: €50</li>
             </ul>
-            <a href="{{ url_for('ls_foiling_academy_catalog', lang='es') }}" class="btn secondary small-btn">Ver
-                Cursos</a>
+            <a href="{{ url_for('signup', next=url_for('ls_foiling_academy_catalog')) }}" class="btn secondary small-btn">Ver Cursos</a>
         </div>
 
         <!-- Pro Tier -->
@@ -106,7 +117,7 @@
                 <li>Acceso Suite LS Lab</li>
                 <li>Soporte Prioritario</li>
             </ul>
-            <a href="#" class="btn primary small-btn">Ver LS PRO</a>
+            <a href="mailto:luis.sampedro.moix@gmail.com?subject=Interés en Suscripción LS PRO&body=Hola Luis, estoy interesado en la suscripción completa LS PRO. Por favor, envíame más información sobre cómo suscribirme. Saludos." class="btn primary small-btn">Contactar por LS-PRO</a>
         </div>
 
     </div>

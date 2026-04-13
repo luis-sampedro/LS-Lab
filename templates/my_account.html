@@ -131,14 +131,17 @@
                 const profile = await response.json();
                 if (profile.name) document.getElementById('display-name').value = profile.name;
                 
-                updateStatusUI(profile.is_pro);
+                updateStatusUI(profile);
             }
         } catch (err) {
             console.error(err);
         }
     });
 
-    function updateStatusUI(isPro) {
+    function updateStatusUI(profile) {
+        const isPro = profile.is_pro;
+        const isTrial = profile.is_trial;
+        
         const statusText = document.getElementById('status-text');
         const statusDesc = document.getElementById('status-desc');
         const badgePlaceholder = document.getElementById('status-badge-placeholder');
@@ -149,17 +152,36 @@
         if (isPro) {
             statusText.textContent = "LS-PRO Active";
             statusText.style.color = "#facc15";
-            statusDesc.textContent = "You have full access to all charts, tools, and courses.";
+            statusDesc.textContent = "You have full permanent access to all charts, tools, and courses.";
             badgePlaceholder.innerHTML = '<span class="pro-badge large">LS-PRO</span>';
             unlockSection.style.display = 'none';
             courseNote.style.display = 'block';
             enrollmentStatus.style.display = 'none';
+        } else if (isTrial) {
+            statusText.textContent = "Pro Trial Active";
+            statusText.style.color = "#38bdf8";
+            
+            // Calculate days left
+            let daysLeft = "7";
+            if (profile.trial_started_at) {
+                const start = new Date(profile.trial_started_at);
+                const diff = (new Date() - start) / (1000 * 60 * 60 * 24);
+                daysLeft = Math.max(0, Math.ceil(7 - diff));
+            }
+            
+            statusDesc.textContent = `You have full access to all foiling academy courses. Expires in ${daysLeft} days.`;
+            badgePlaceholder.innerHTML = '<span class="pro-badge large" style="background: #38bdf8;">TRIAL</span>';
+            unlockSection.style.display = 'none'; // Keep hidden but maybe show a "Buy PRO" link later
+            courseNote.style.display = 'block';
+            enrollmentStatus.style.display = 'none';
         } else {
             statusText.textContent = "LS Lab Free";
-            statusDesc.textContent = "Upgrade to PRO to unlock Rias Baixas charts and advanced Data Lab features.";
+            statusText.style.color = "#e2e8f0";
+            statusDesc.textContent = "Upgrade to PRO or request a Trial to unlock Rias Baixas charts and foiling courses.";
             badgePlaceholder.innerHTML = '<span class="tag-pill" style="border-color: #94a3b8; color: #94a3b8;">FREE</span>';
             unlockSection.style.display = 'block';
             courseNote.style.display = 'none';
+            enrollmentStatus.style.display = 'block';
         }
     }
 

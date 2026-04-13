@@ -139,6 +139,69 @@ body {
   margin-top: 0.6rem;
 }
 
+/* Video Background Utility (Smart Mirror for Vertical Video) */
+.video-bg-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  background-color: #020617;
+}
+
+/* Background Layer: Blurred and covers the whole screen */
+.video-bg-blur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(25px) brightness(0.5);
+  transform: scale(1.1); /* Prevent blur bleed at edges */
+  opacity: 0.6;
+}
+
+/* Foreground Layer: Sharp and maintains aspect ratio */
+.video-bg-main {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  transform: translateX(-50%);
+  object-fit: contain; /* Don't crop the vertical action */
+  z-index: 2;
+}
+
+/* Mobile: Just show the main video covering the screen */
+@media (max-width: 768px) {
+  .video-bg-blur {
+    display: none;
+  }
+  .video-bg-main {
+    width: 100%;
+    object-fit: cover; /* Fill the vertical phone screen */
+  }
+}
+
+.video-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.video-hero .hero-overlay {
+  z-index: 10;
+}
+
+.hero-video-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.7));
+  z-index: 5;
+}
+
 /* ---------- BUTTONS ---------- */
 
 .btn {

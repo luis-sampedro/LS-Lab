@@ -10,6 +10,7 @@
     <!-- Filter Buttons -->
     <div class="filters-row">
         <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn filter-sec" data-filter="free">Gratis (Preview)</button>
         <button class="filter-btn filter-beg" data-filter="beginner">Principiante (Verde)</button>
         <button class="filter-btn filter-int" data-filter="intermediate">Intermedio (Amarillo)</button>
         <button class="filter-btn filter-adv" data-filter="advanced">Avanzado (Rojo)</button>
@@ -19,106 +20,205 @@
     <div class="cards" id="course-grid">
 
         <!-- ROW 1: FOILING -->
-        <div class="card course-card level-beginner" data-level="beginner">
-            <span class="course-badge">Foiling</span>
+        <div class="card course-card level-beginner" data-level="beginner" data-free="true">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Foiling</span>
+                <span class="status-icon unlocked" title="Desbloqueado"><i class="fas fa-unlock"></i></span>
+            </div>
             <h3>Conceptos Básicos de Foiling</h3>
             <p>Primeros vuelos, estabilidad y seguridad. La base del vuelo.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-beg', lang='es') }}"
                 class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-intermediate" data-level="intermediate">
-            <span class="course-badge">Foiling</span>
+        <div class="card course-card level-intermediate" data-level="intermediate" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Foiling</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Equilibrio y Vuelo Sostenido</h3>
             <p>Dominando la altura de vuelo, maniobras y tiempos de vuelo extendidos.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-int', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-advanced" data-level="advanced">
-            <span class="course-badge">Foiling</span>
+        <div class="card course-card level-advanced" data-level="advanced" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Foiling</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Foiling de Siguiente Nivel</h3>
             <p>Técnicas de regata, manejo a alta velocidad y maniobras agresivas.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='foil-adv', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
         <!-- ROW 2: SAILING PERFORMANCE -->
-        <div class="card course-card level-beginner" data-level="beginner">
-            <span class="course-badge">Performance</span>
+        <div class="card course-card level-beginner" data-level="beginner" data-free="true">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Performance</span>
+                <span class="status-icon unlocked" title="Desbloqueado"><i class="fas fa-unlock"></i></span>
+            </div>
             <h3>Conceptos Básicos de Rendimiento</h3>
             <p>Entendiendo VMG, polares y los fundamentos de la velocidad del barco.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-beg', lang='es') }}"
                 class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-intermediate" data-level="intermediate">
-            <span class="course-badge">Performance</span>
+        <div class="card course-card level-intermediate" data-level="intermediate" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Performance</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Estrategia y Táctica</h3>
             <p>Gestión del campo de regata, roles de viento y tácticas de flota.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-int', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-advanced" data-level="advanced">
-            <span class="course-badge">Performance</span>
+        <div class="card course-card level-advanced" data-level="advanced" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Performance</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Análisis de Datos y Optimización</h3>
             <p>Usando sensores y datos para refinar el rendimiento y ganar regatas.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='sail-adv', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
         <!-- ROW 3: MAINTENANCE -->
-        <div class="card course-card level-beginner" data-level="beginner">
-            <span class="course-badge">Mantenimiento</span>
+        <div class="card course-card level-beginner" data-level="beginner" data-free="true">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Mantenimiento</span>
+                <span class="status-icon unlocked" title="Desbloqueado"><i class="fas fa-unlock"></i></span>
+            </div>
             <h3>Cabullería y Reparaciones</h3>
             <p>Trabajos esenciales con cabos, nudos y reparaciones básicas de fibra.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-beg', lang='es') }}"
                 class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-intermediate" data-level="intermediate">
-            <span class="course-badge">Mantenimiento</span>
+        <div class="card course-card level-intermediate" data-level="intermediate" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Mantenimiento</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Puesta a Punto del Aparejo</h3>
             <p>Ajustando el mástil y los obenques para potencia y control óptimos.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-int', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
-        <div class="card course-card level-advanced" data-level="advanced">
-            <span class="course-badge">Mantenimiento</span>
+        <div class="card course-card level-advanced" data-level="advanced" data-free="false">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="course-badge">Mantenimiento</span>
+                <span class="status-icon locked" title="Requiere PRO/Prueba"><i class="fas fa-lock"></i></span>
+            </div>
             <h3>Ajuste de Velas y Composites</h3>
             <p>Análisis avanzado de forma de vela y trabajo con fibra de carbono.</p>
             <a href="{{ url_for('ls_foiling_academy_course', course_id='maint-adv', lang='es') }}"
-                class="btn secondary small-btn" style="margin-top: 1rem;">Ver Curso</a>
+                class="btn secondary small-btn locked-action" style="margin-top: 1rem;">Ver Curso</a>
         </div>
 
     </div>
 </div>
 
-<script>
+<script type="module">
+    import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
+
     document.addEventListener('DOMContentLoaded', () => {
         const buttons = document.querySelectorAll('.filter-btn');
         const cards = document.querySelectorAll('.course-card');
 
+        // Initial check for URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialFilter = urlParams.get('filter');
+        if (initialFilter) {
+            const btn = document.querySelector(`.filter-btn[data-filter="${initialFilter}"]`);
+            if (btn) btn.click();
+        }
+
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
-                // Active state
                 buttons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
                 const filter = btn.getAttribute('data-filter');
-
                 cards.forEach(card => {
                     const level = card.getAttribute('data-level');
-                    if (filter === 'all' || level === filter) {
+                    const isFree = card.getAttribute('data-free') === 'true';
+                    
+                    if (filter === 'all') {
                         card.style.display = 'block';
+                    } else if (filter === 'free') {
+                        card.style.display = isFree ? 'block' : 'none';
                     } else {
-                        card.style.display = 'none';
+                        card.style.display = level === filter ? 'block' : 'none';
                     }
                 });
             });
         });
+
+        // User Access Logic
+        onAuthStateChanged(auth, async (user) => {
+            let isPro = false;
+            let isTrial = false;
+
+            if (user) {
+                try {
+                    const token = await user.getIdToken();
+                    const response = await fetch('/api/user/profile', {
+                        headers: { 'Authorization': token }
+                    });
+                    if (response.ok) {
+                        const profile = await response.json();
+                        isPro = profile.is_pro;
+                        isTrial = profile.is_trial;
+                    }
+                } catch (err) { console.error(err); }
+            }
+
+            // Update UI Icons and behavior
+            cards.forEach(card => {
+                const isFree = card.getAttribute('data-free') === 'true';
+                const hasAccess = isFree || isPro || isTrial;
+                const icon = card.querySelector('.status-icon i');
+                const btn = card.querySelector('.btn');
+
+                if (hasAccess) {
+                    icon.classList.remove('fa-lock');
+                    icon.classList.add('fa-unlock');
+                    icon.parentElement.classList.remove('locked');
+                    icon.parentElement.classList.add('unlocked');
+                    btn.classList.remove('locked-action');
+                    btn.onclick = null;
+                } else {
+                    icon.classList.remove('fa-unlock');
+                    icon.classList.add('fa-lock');
+                    icon.parentElement.classList.remove('unlocked');
+                    icon.parentElement.classList.add('locked');
+                    btn.classList.add('locked-action');
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        window.location.href = "{{ url_for('ls_foiling_academy', lang='es') }}#pricing";
+                    };
+                }
+            });
+        });
     });
 </script>
+<style>
+    .status-icon {
+        font-size: 1.2rem;
+        padding: 5px;
+    }
+    .status-icon.locked { color: #94a3b8; }
+    .status-icon.unlocked { color: #facc15; }
+    .locked-action {
+        opacity: 0.7;
+        background: #475569 !important;
+        cursor: pointer;
+    }
+</style>
 {% endblock %}
