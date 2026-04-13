@@ -577,6 +577,25 @@ def api_single_analysis(boat_id, sail_id, analysis_id):
     if delete_analysis(uid, boat_id, sail_id, analysis_id):
         return {'success': True}
     return {'error': 'Failed to delete'}, 500
+
+@app.route('/api/boats/<boat_id>/reports', methods=['POST'])
+def api_boat_reports(boat_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return {'error': 'No token'}, 401
+    user = verify_token(auth_header)
+    if not user: return {'error': 'Invalid token'}, 401
+    uid = user['uid']
+    
+    from services.firebase_service import add_datalab_report
+    data = request.json
+    try:
+        report_id = add_datalab_report(uid, boat_id, data)
+        if report_id:
+            return {'success': True, 'id': report_id}
+        return {'error': 'Could not save report'}, 500
+    except Exception as e:
+        return {'error': str(e)}, 500
+
 # Firebase & Stripe setup skeleton
 # In production, credentials should be loaded from secure environment variables or Google Secret Manager
 # if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):

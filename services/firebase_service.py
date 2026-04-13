@@ -289,3 +289,18 @@ def create_lead(email, interest_type):
     except Exception as e:
         print(f"Error creating lead: {e}")
         return None
+
+def add_datalab_report(uid, boat_id, report_data):
+    """Saves a Data Lab analysis report to a boat's subcollection."""
+    if not db: return None
+    try:
+        reports_ref = db.collection('users').document(uid).collection('boats').document(boat_id).collection('datalab_reports')
+        
+        # Add server timestamp
+        report_data['created_at'] = firestore.SERVER_TIMESTAMP
+        
+        _, doc_ref = reports_ref.add(report_data)
+        return doc_ref.id
+    except Exception as e:
+        print(f"Error creating datalab report: {e}")
+        raise e

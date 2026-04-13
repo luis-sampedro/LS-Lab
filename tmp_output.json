@@ -1,0 +1,43 @@
+{
+  "columns": [
+    "time",
+    "servertime",
+    "latitude",
+    "longitude",
+    "HDT - Heading True",
+    "SOG - Speed over Ground",
+    "COG - Course over Ground",
+    "TWA - True Wind Angle",
+    "TWD - True Wind Direction",
+    "Heel",
+    "Trim Fore / Aft",
+    "VMG - Velocity Made Good",
+    "Time to Gun",
+    "GPS Satellites",
+    "GPS HAcc",
+    "Battery Charge",
+    "Battery 1 Voltage",
+    "Battery 1 Temperature"
+  ],
+  "first_row": [
+    "2026-04-11 12:21:48.1",
+    "2026-04-11 15:07:11.335",
+    "42.122547",
+    "-8.846843",
+    "101.3",
+    "0.01002163",
+    "101.3",
+    "",
+    "",
+    "11.6",
+    "-3.41",
+    "",
+    "",
+    "7",
+    "8.414",
+    "96",
+    "4.078",
+    "-247.1"
+  ],
+  "total_rows": 10035
+}

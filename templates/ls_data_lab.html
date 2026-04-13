@@ -89,39 +89,140 @@
         flex-grow: 1;
         accent-color: #38bdf8;
     }
+
+    .chart-var-selector {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .var-pill {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #94a3b8;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .var-pill:hover {
+        background: #334155;
+    }
+
+    .var-pill.active[data-id="sog"] {
+        border-color: #38bdf8;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+    }
+
+    .var-pill.active[data-id="cog"] {
+        border-color: #f59e0b;
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .var-pill.active[data-id="tws"] {
+        border-color: #10b981;
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .var-pill.active[data-id="twa"] {
+        border-color: #a7f3d0;
+        color: #a7f3d0;
+        background: rgba(167, 243, 208, 0.1);
+    }
+
+    .var-pill.active[data-id="heel"] {
+        border-color: #ef4444;
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .var-pill.inactive {
+        opacity: 0.5;
+        border-style: dashed;
+    }
+
+    .chart-zoom-controls {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        z-index: 100;
+    }
+
+    .zoom-btn {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid #334155;
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+        backdrop-filter: blur(4px);
+    }
+
+    .zoom-btn:hover {
+        background: #38bdf8;
+        border-color: #38bdf8;
+        color: #0f172a;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="section" style="padding: 1rem;">
+<section class="section" style="padding: 1rem; max-width: 100%; width: 100%; margin: 0 auto; overflow: hidden;">
 
-    <!-- HEADER -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div>
             <h1 style="margin:0;">LS Data Lab</h1>
-            <p style="margin:0; color: #64748b; font-size: 0.9rem;">Session Analyzer (Beta)</p>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <p style="margin:0; color: #64748b; font-size: 0.9rem;">Session Analyzer (Beta Version 2.0)</p>
+                <div id="auth-warning"
+                    style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Not logged in - All changes will be lost. <a
+                        href="/login" style="color: #38bdf8; text-decoration: underline;">Log in</a>
+                </div>
+            </div>
         </div>
         <div>
             <button class="btn primary" onclick="document.getElementById('uploadModal').style.display='flex'">+ Upload
                 Log</button>
         </div>
     </div>
-    
-    <!-- AUTH WARNING BANNER (Hidden by default, shown via JS if not logged in) -->
-    <div id="auth-warning" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-size: 0.95rem;">
-        <i class="fa-solid fa-triangle-exclamation" style="margin-right: 8px;"></i> You are not logged in. Your sessions will <b>not</b> be saved to your cloud library and will be lost after closing this page. <a href="/login" style="color: #38bdf8; text-decoration: underline;">Log in here</a>.
-    </div>
+
+
 
     <!-- MAIN GRID -->
     <div class="lab-grid">
         <!-- MAP -->
         <div class="map-panel">
             <!-- Map Controls Overlay -->
-            <div style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
-                <label style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                    <input type="checkbox" id="toggle-color-speed" checked onchange="toggleMapOverlay()"> Color Route (Speed)
+            <div
+                style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
+                <label
+                    style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-color-speed" checked onchange="toggleMapOverlay()"> Color Route
+                    (Speed)
                 </label>
-                <label style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <label
+                    style="color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
                     <input type="checkbox" id="toggle-maneuvers" checked onchange="toggleMapOverlay()"> Show Maneuvers
                 </label>
             </div>
@@ -137,7 +238,7 @@
             <div class="metric-box">
                 <span class="metric-label">Speed (SOG)</span>
                 <span class="metric-value" style="color: #38bdf8;" id="val-sog">0.0</span>
-                <span class="metric-label">knots</span>
+                <span class="metric-label" id="lbl-sog-unit">knots</span>
             </div>
             <div class="metric-box">
                 <span class="metric-label">Heading (COG)</span>
@@ -145,12 +246,25 @@
                 <span class="metric-label">degrees</span>
             </div>
             <div class="metric-box">
-                <span class="metric-label">Wind (TWS)</span>
+                <span class="metric-label">Heading (HDT)</span>
+                <span class="metric-value" style="color: #f59e0b;" id="val-hdt">--</span>
+                <span class="metric-label">degrees</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-label" id="lbl-tws">Wind (TWS)<span class="auto-badge"
+                        style="display:none; color:#f59e0b; font-size:0.6rem; margin-left:4px;">(AUTO)</span></span>
                 <span class="metric-value" style="color: #10b981;" id="val-tws">--</span>
                 <span class="metric-label">knots</span>
             </div>
             <div class="metric-box">
-                <span class="metric-label">Angle (TWA)</span>
+                <span class="metric-label" id="lbl-twd">Direction (TWD)<span class="auto-badge"
+                        style="display:none; color:#f59e0b; font-size:0.6rem; margin-left:4px;">(AUTO)</span></span>
+                <span class="metric-value" style="color: #10b981;" id="val-twd">--</span>
+                <span class="metric-label">degrees</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-label" id="lbl-twa">Angle (TWA)<span class="auto-badge"
+                        style="display:none; color:#f59e0b; font-size:0.6rem; margin-left:4px;">(AUTO)</span></span>
                 <span class="metric-value" style="color: #10b981;" id="val-twa">--</span>
                 <span class="metric-label">degrees</span>
             </div>
@@ -163,17 +277,66 @@
 
         <!-- TIMELINE & CHARTS -->
         <div class="timeline-panel">
-            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-bottom: -20px; z-index: 10; padding-right: 15px;">
-                <label style="color: #38bdf8; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-sog" checked onchange="updateChartVisibility()"> SOG</label>
-                <label style="color: #f59e0b; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-cog" onchange="updateChartVisibility()"> COG</label>
-                <label style="color: #10b981; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-tws" onchange="updateChartVisibility()"> TWS</label>
-                <label style="color: #a7f3d0; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-twa" onchange="updateChartVisibility()"> TWA</label>
-                <label style="color: #ef4444; font-size: 0.8rem; cursor: pointer;"><input type="checkbox" id="chart-heel" onchange="updateChartVisibility()"> Heel</label>
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem;">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn secondary small-btn"
+                        onclick="document.getElementById('windSettingsModal').style.display='flex'">⚙️ Settings</button>
+                    <button class="btn secondary small-btn" onclick="autoDetectRaces()">🔍 Auto Detect Races</button>
+                    <button class="btn secondary small-btn" onclick="autoDetectLegs()">🔍 Auto Detect Legs</button>
+                    <button class="btn secondary small-btn" onclick="splitManual()">✂️ Split Here</button>
+                    <button class="btn secondary small-btn" onclick="clearSegments()"
+                        style="color:#ef4444; border-color:#ef4444;">❌ Clear</button>
+                </div>
+                <div>
+                    <button class="btn primary small-btn" onclick="saveReport()">💾 Save Report</button>
+                </div>
             </div>
-            <div style="height: 100px; width: 100%;">
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <div class="chart-var-selector">
+                        <div class="var-pill active" data-id="sog" id="btn-chart-sog" onclick="toggleVariable('sog')">
+                            SOG</div>
+                        <div class="var-pill inactive" data-id="cog" id="btn-chart-cog" onclick="toggleVariable('cog')">
+                            COG</div>
+                        <div class="var-pill inactive" data-id="tws" id="btn-chart-tws" onclick="toggleVariable('tws')">
+                            TWS</div>
+                        <div class="var-pill inactive" data-id="twd" id="btn-chart-twd" onclick="toggleVariable('twd')">
+                            TWD</div>
+                        <div class="var-pill inactive" data-id="twa" id="btn-chart-twa" onclick="toggleVariable('twa')">
+                            TWA</div>
+                        <div class="var-pill inactive" data-id="heel" id="btn-chart-heel"
+                            onclick="toggleVariable('heel')">Heel</div>
+                    </div>
+                    <div style="width: 1px; height: 20px; background: #334155;" class="desktop-only"></div>
+                    <div class="chart-var-selector" id="dynamic-segment-filters">
+                        <!-- Populated by JS for isolating Races/Legs -->
+                        <div class="var-pill active" id="btn-filter-all" onclick="isolateSegmentGroup('all')">All
+                            Segments</div>
+                    </div>
+                </div>
+                <div class="chart-var-selector" style="background: transparent; border: none; padding: 0;">
+                    <button class="zoom-btn" onclick="chartZoom(0.8)" title="Zoom In"
+                        style="border: 1px solid #334155; margin-right: 2px;">+</button>
+                    <button class="zoom-btn" onclick="chartZoom(1.2)" title="Zoom Out"
+                        style="border: 1px solid #334155; margin-right: 2px;">-</button>
+                    <button class="zoom-btn" onclick="resetChartZoom()" title="Reset View"
+                        style="border: 1px solid #334155;">↺</button>
+                </div>
+            </div>
+            <div style="height: 100px; width: 100%; position: relative;">
                 <canvas id="timelineChart"></canvas>
             </div>
-            <div class="controls">
+
+            <!-- Segment Ribbon -->
+            <div id="segmentRibbon"
+                style="display: flex; width: 100%; height: 16px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 0.5rem; position: relative;">
+                <!-- Segments rendered via JS -->
+            </div>
+
+            <div class="controls" style="margin-top: 0.5rem;">
                 <button id="playBtn" class="btn secondary" style="padding: 0.5rem 1rem;">▶</button>
                 <input type="range" id="timeSlider" min="0" max="100" value="0" step="1">
                 <span id="timeDisplay" style="font-family: monospace; color: #94a3b8;">00:00</span>
@@ -193,21 +356,26 @@
 
         <label style="display:block; margin-bottom: 0.5rem; color: white;">Select Boat</label>
         <select id="boatSelect" class="input"
-            style="margin-bottom: 0.5rem; background: #1e293b; color: white; border: 1px solid #334155;" onchange="handleBoatSelectChange()">
+            style="margin-bottom: 0.5rem; background: #1e293b; color: white; border: 1px solid #334155;"
+            onchange="handleBoatSelectChange()">
             <option value="">Guest Session (No Boat)</option>
             <option value="_new_">+ Create New Boat</option>
             <!-- Populated by JS -->
         </select>
-        
-        <input type="text" id="newBoatName" class="input" placeholder="Boat Name" style="display: none; margin-bottom: 0.5rem;">
-        <input type="text" id="newBoatType" class="input" placeholder="Boat Type (e.g. TP52, Moth)" style="display: none; margin-bottom: 1rem;">
+
+        <input type="text" id="newBoatName" class="input" placeholder="Boat Name"
+            style="display: none; margin-bottom: 0.5rem;">
+        <input type="text" id="newBoatType" class="input" placeholder="Boat Type (e.g. TP52, Moth)"
+            style="display: none; margin-bottom: 1rem;">
 
         <label style="display:block; margin-bottom: 0.5rem; color: white;">Data Source</label>
-        <select id="dataSource" class="input" style="margin-bottom: 1rem; background: #1e293b; color: white; border: 1px solid #334155;">
+        <select id="dataSource" class="input"
+            style="margin-bottom: 1rem; background: #1e293b; color: white; border: 1px solid #334155;">
             <option value="generic">Generic CSV / JSON</option>
             <option value="sailmon">Sailmon MAX / E4</option>
             <option value="vakaros">Vakaros Atlas</option>
             <option value="bng">B&G / NMEA0183</option>
+            <option value="gpx">GPX Track (Export)</option>
         </select>
 
         <label style="display:block; margin-bottom: 0.5rem; color: white;">Log File</label>
@@ -216,7 +384,38 @@
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
             <button class="btn secondary"
                 onclick="document.getElementById('uploadModal').style.display='none'">Cancel</button>
-            <button class="btn primary" id="uploadBtn">Upload Analysis</button>
+            <button class="btn primary" id="uploadBtn">Upload Log</button>
+        </div>
+    </div>
+</div>
+
+<!-- WIND SETTINGS MODAL -->
+<div id="windSettingsModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 9999;">
+    <div
+        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #334155;">
+        <h2>Auto-Detect Legs Settings</h2>
+        <p style="color: #94a3b8; margin-bottom: 1rem;">Choose how to estimate wind direction for identifying
+            Upwind/Downwind legs.</p>
+
+        <label style="display:block; margin-bottom: 0.5rem; color: white;">Wind Data Source</label>
+        <select id="windMode" class="input"
+            style="margin-bottom: 1.5rem; background: #1e293b; color: white; border: 1px solid #334155;">
+            <option value="sensor">1. TWA/TWD from Sensor</option>
+            <option value="heuristic">2. Estimate via GPS (Tack symmetry)</option>
+            <option value="api">3. Online Meteo Prediction (API)</option>
+        </select>
+
+        <label style="display:block; margin-bottom: 0.5rem; color: white;">Speed Units</label>
+        <select id="sogUnit" class="input"
+            style="margin-bottom: 1.5rem; background: #1e293b; color: white; border: 1px solid #334155;" onchange="updateFrame(playbackIndex)">
+            <option value="kn">Knots (kn)</option>
+            <option value="ms">Meters per second (m/s)</option>
+        </select>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn primary" onclick="document.getElementById('windSettingsModal').style.display='none'">Save
+                & Close</button>
         </div>
     </div>
 </div>
