@@ -258,6 +258,36 @@
         justify-content: center;
         font-size: 1.2rem;
     }
+
+    .ctx-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        transition: background 0.2s;
+    }
+
+    .ctx-item:hover {
+        background: #334155;
+    }
+
+    .ctx-divider {
+        height: 1px;
+        background: #334155;
+        margin: 4px 0;
+    }
+
+    .tag-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #334155;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        color: #94a3b8;
+        margin-left: 6px;
+    }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <!-- SQLite for MBTiles -->
@@ -310,6 +340,9 @@
                 style="background:var(--primary); border:none; color:white; padding:8px 16px; border-radius:8px;">+
                 Nueva</button>
         </div>
+        <div style="margin-bottom: 10px;">
+            <input type="text" class="form-control" placeholder="Filtrar por etiqueta..." oninput="lsnav.ui.renderRoutes(this.value)" style="padding:6px 12px; font-size:0.9rem;">
+        </div>
         <div id="routes-list"></div>
     </div>
 
@@ -324,6 +357,9 @@
                     style="background:var(--primary); border:none; color:white; padding:8px; border-radius:8px;">+
                     WP</button>
             </div>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <input type="text" class="form-control" placeholder="Filtrar por etiqueta..." oninput="lsnav.ui.renderMarks(this.value)" style="padding:6px 12px; font-size:0.9rem;">
         </div>
         <div id="marks-list"></div>
     </div>
@@ -411,6 +447,20 @@
                 <div id="mon-time">--</div>
             </div>
         </div>
+
+        <!-- IMPORT/EXPORT DATA -->
+        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #334155;">
+            <h3 style="color:var(--primary); font-size: 1rem;"><i class="fa-solid fa-cloud-arrow-down"></i> Copia de seguridad</h3>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="lsnav.utils.exportRocks()" class="fab-secondary" style="width:auto; padding: 8px 16px; border-radius: 6px; flex:1; font-size:0.9rem; color:white;">
+                    <i class="fa-solid fa-download"></i> Exportar Rocas
+                </button>
+                <button onclick="document.getElementById('import-rocks-input').click()" class="fab-secondary" style="width:auto; padding: 8px 16px; border-radius: 6px; flex:1; font-size:0.9rem; color:white;">
+                    <i class="fa-solid fa-upload"></i> Importar Rocas
+                </button>
+                <input type="file" id="import-rocks-input" accept=".json" style="display:none;" onchange="lsnav.utils.importRocks(this.files[0])">
+            </div>
+        </div>
     </div>
 
 
@@ -437,10 +487,18 @@
 <!-- MODALS -->
 <div id="modal-waypoint" class="modal-overlay">
     <div class="modal-card">
-        <h3>Añadir Waypoint</h3>
+        <h3 id="modal-waypoint-title">Añadir Waypoint</h3>
         <div class="form-group">
             <label>Nombre</label>
             <input type="text" id="wp-name" class="form-control" placeholder="WP 1">
+        </div>
+        <div class="form-group">
+            <label>Descripción (Opcional)</label>
+            <input type="text" id="wp-desc" class="form-control" placeholder="Información del waypoint">
+        </div>
+        <div class="form-group">
+            <label>Etiqueta / Categoría</label>
+            <input type="text" id="wp-tag" class="form-control" placeholder="General, Pesca, Puerto...">
         </div>
         <button onclick="lsnav.ui.pickOnMap('waypoint')"
             style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
@@ -449,7 +507,7 @@
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
             <button onclick="lsnav.ui.closeModals()"
                 style="background:transparent; border:none; color:white;">Cancelar</button>
-            <button onclick="lsnav.logic.saveWaypoint()"
+            <button id="btn-save-wp" onclick="lsnav.logic.saveWaypoint()"
                 style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Guardar</button>
         </div>
     </div>
@@ -457,11 +515,19 @@
 
 <div id="modal-rock" class="modal-overlay">
     <div class="modal-card" style="border-color: var(--danger);">
-        <h3 style="color: var(--danger);">Añadir Roca/Peligro</h3>
+        <h3 id="modal-rock-title" style="color: var(--danger);">Añadir Roca/Peligro</h3>
         <p style="font-size: 0.8rem; color: var(--text-muted);">Guardado permanentemente en tu cuenta.</p>
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="rock-name" class="form-control" value="Hazard / Rock">
+        </div>
         <div class="form-group">
             <label>Descripción (Opcional)</label>
             <input type="text" id="rock-desc" class="form-control" placeholder="Roca invisible en marea baja">
+        </div>
+        <div class="form-group">
+            <label>Etiqueta / Categoría</label>
+            <input type="text" id="rock-tag" class="form-control" value="Danger">
         </div>
         <button onclick="lsnav.ui.pickOnMap('rock')"
             style="width:100%; background:#334155; color:white; border:none; padding:8px; border-radius:6px; margin-bottom: 1rem;">
@@ -470,7 +536,7 @@
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
             <button onclick="lsnav.ui.closeModals()"
                 style="background:transparent; border:none; color:white;">Cancelar</button>
-            <button onclick="lsnav.logic.saveRock()"
+            <button id="btn-save-rock" onclick="lsnav.logic.saveRock()"
                 style="background:var(--danger); color:white; border:none; padding:10px 20px; border-radius:8px;">Guardar
                 Peligro</button>
         </div>
@@ -479,27 +545,50 @@
 
 <div id="modal-route" class="modal-overlay">
     <div class="modal-card">
-        <h3>Crear Ruta</h3>
+        <h3 id="modal-route-title">Crear Ruta</h3>
         <div class="form-group">
             <label>Nombre de Ruta</label>
             <input type="text" id="route-name" class="form-control" placeholder="ej. Combarro a Cies">
         </div>
         <div class="form-group">
+            <label>Etiqueta / Categoría</label>
+            <input type="text" id="route-tag" class="form-control" placeholder="Crucero, Regata...">
+        </div>
+        <div class="form-group">
             <label>Método de Ruta</label>
             <select id="route-method" class="form-control">
-                <option value="manual">Manual (Tramos rectos)</option>
+                <option value="manual">Manual (Tramos en Mapa)</option>
+                <option value="waypoints">Desde Waypoints (Seleccionar)</option>
                 <option value="auto">Auto-ruta (Experimental)</option>
             </select>
         </div>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Tras guardar, haz clic en el mapa
-            secuencialmente para crear tu ruta.</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Tras guardar, sigue las instrucciones para crear tu ruta.</p>
 
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
             <button onclick="lsnav.ui.closeModals()"
                 style="background:transparent; border:none; color:white;">Cancelar</button>
-            <button onclick="lsnav.logic.startRouteBuilder()"
-                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Iniciar
-                Diseño</button>
+            <button id="btn-save-route" onclick="lsnav.logic.startRouteBuilder()"
+                style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Iniciar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Waypoint Selection Modal for Route Builder -->
+<div id="modal-route-waypoints" class="modal-overlay">
+    <div class="modal-card" style="display:flex; flex-direction:column; max-height:80dvh;">
+        <h3>Seleccionar Waypoints</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Puntos en Ruta: <span id="route-wp-current-len">0</span> pts</p>
+        
+        <div id="route-wp-list" style="overflow-y:auto; flex:1; margin:10px 0; border:1px solid #334155; border-radius:8px; padding:8px;">
+            <!-- WP list populated by JS -->
+        </div>
+
+        <div style="display:flex; justify-content:space-between; gap:1rem; margin-top:10px;">
+            <button onclick="lsnav.logic.cancelRouteWaypointBuilder()" style="background:transparent; border:none; color:var(--danger);">Cancelar</button>
+            <div>
+                <button onclick="lsnav.logic.clearRouteWaypointBuilder()" style="background:transparent; border:none; color:white; margin-right:8px;">Reset</button>
+                <button onclick="lsnav.logic.finishRoute()" style="background:var(--success); color:white; border:none; padding:10px 20px; border-radius:8px;"><i class="fa-solid fa-check"></i> Finalizar</button>
+            </div>
         </div>
     </div>
 </div>
