@@ -549,10 +549,17 @@ def api_analyses(boat_id, sail_id):
         
         try:
             # SANITIZATION: Firestore hates nested arrays (list of lists).
-            # ...
-            # (Sanitization logic is the same, just keeping the block context)
-            
-            # ... (Sanitizers) ...
+            def sanitize_lists(obj):
+                if isinstance(obj, list):
+                    if len(obj) > 0 and isinstance(obj[0], list):
+                        return [{"x": float(p[0]), "y": float(p[1])} if len(p) >= 2 else {"x": p[0], "y": p[0]} for p in obj]
+                    return [sanitize_lists(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {k: sanitize_lists(v) for k, v in obj.items()}
+                return obj
+
+            metrics = sanitize_lists(metrics)
+            path = sanitize_lists(path)
 
             aid = create_analysis(uid, boat_id, sail_id, date_str, metrics, path, snapshot)
             return {'success': True, 'id': aid}

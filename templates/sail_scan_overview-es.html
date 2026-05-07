@@ -57,7 +57,7 @@
                         Has iniciado sesión como <strong>${user.email}</strong>. ¿Listo para analizar una vela?
                     </p>
                     <div style="display: flex; gap: 1rem; justify-content: center;">
-                        <a href="{{ url_for('dashboard', lang=request.args.get('lang')) }}" class="btn primary" style="width: 100%;">Ir al Panel</a>
+                        <a href="{{ url_for('my_fleet', lang=request.args.get('lang')) }}" class="btn primary" style="width: 100%;">Ir al Panel</a>
                     </div>
                 `;
             }
