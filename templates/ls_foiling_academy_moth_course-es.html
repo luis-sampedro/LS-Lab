@@ -207,6 +207,57 @@
         border: 2px solid var(--lsfa-accent);
         box-shadow: 0 0 60px rgba(56, 189, 248, 0.4);
     }
+
+    .photo-stack {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding-bottom: 5rem;
+    }
+
+    .photo-main {
+        width: 90%;
+        border-radius: 2rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.1);
+        transform: rotate(-3deg);
+        position: relative;
+        z-index: 1;
+        transition: transform 0.4s ease;
+    }
+
+    .photo-secondary {
+        width: 75%;
+        border-radius: 2rem;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+        border: 2px solid rgba(56, 189, 248, 0.3);
+        position: absolute;
+        bottom: -2rem;
+        right: 0;
+        transform: rotate(4deg);
+        z-index: 2;
+        transition: all 0.4s ease;
+    }
+
+    .photo-stack:hover .photo-main {
+        transform: rotate(-1deg) scale(0.98);
+    }
+
+    .photo-stack:hover .photo-secondary {
+        transform: rotate(0deg) scale(1.05);
+        border-color: var(--lsfa-accent);
+    }
+
+    @media (max-width: 768px) {
+        .photo-stack {
+            padding-bottom: 3rem;
+        }
+        .photo-secondary {
+            width: 70%;
+            bottom: -1rem;
+        }
+    }
 </style>
 
 <div class="hero moth-hero video-hero">
@@ -316,10 +367,14 @@
         </div>
         <div style="flex: 1; text-align: center; position: relative;">
             <div
-                style="background: var(--lsfa-accent); width: 200px; height: 200px; border-radius: 50%; filter: blur(100px); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; opacity: 0.3;">
+                style="background: var(--lsfa-accent); width: 300px; height: 300px; border-radius: 50%; filter: blur(120px); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; opacity: 0.2;">
             </div>
-            <img src="{{ url_for('static', filename='images/luis-on-boat.jpg') }}" alt="LSFA Training"
-                style="max-width: 100%; border-radius: 2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); position: relative; z-index: 1; border: 1px solid rgba(255,255,255,0.1);">
+            <div class="photo-stack">
+                <img src="{{ url_for('static', filename='images/luis-on-boat.jpg') }}" alt="LSFA Training"
+                    class="photo-main">
+                <img src="{{ url_for('static', filename='images/the-whiteboard.jpg') }}" alt="The Whiteboard - LSFA Theory"
+                    class="photo-secondary">
+            </div>
         </div>
     </div>
 </div>
