@@ -212,50 +212,56 @@
         position: relative;
         width: 100%;
         max-width: 600px;
-        margin: 0 auto;
-        padding-bottom: 5rem;
+        margin: 3rem auto;
+        height: 400px;
     }
 
-    .photo-main {
-        width: 90%;
+    .photo-main { /* Luis on boat - Large on the Right */
+        width: 80%;
+        position: absolute;
+        right: 0;
+        top: 0;
         border-radius: 2rem;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         border: 1px solid rgba(255,255,255,0.1);
-        transform: rotate(-3deg);
-        position: relative;
+        transform: rotate(0deg);
         z-index: 1;
-        transition: transform 0.4s ease;
+        transition: all 0.4s ease;
     }
 
-    .photo-secondary {
-        width: 75%;
+    .photo-secondary { /* Whiteboard - Small on the Left */
+        width: 55%;
+        position: absolute;
+        left: -5%;
+        bottom: -2rem;
         border-radius: 2rem;
         box-shadow: 0 30px 60px rgba(0,0,0,0.6);
         border: 2px solid rgba(56, 189, 248, 0.3);
-        position: absolute;
-        bottom: -2rem;
-        right: 0;
-        transform: rotate(4deg);
+        transform: rotate(0deg);
         z-index: 2;
         transition: all 0.4s ease;
     }
 
     .photo-stack:hover .photo-main {
-        transform: rotate(-1deg) scale(0.98);
+        transform: rotate(3deg) scale(1.02);
+        z-index: 1;
     }
 
     .photo-stack:hover .photo-secondary {
-        transform: rotate(0deg) scale(1.05);
+        transform: rotate(-6deg) scale(1.1);
         border-color: var(--lsfa-accent);
+        z-index: 3;
     }
 
     @media (max-width: 768px) {
         .photo-stack {
-            padding-bottom: 3rem;
+            height: 300px;
+        }
+        .photo-main {
+            width: 85%;
         }
         .photo-secondary {
-            width: 70%;
-            bottom: -1rem;
+            width: 65%;
         }
     }
 </style>
