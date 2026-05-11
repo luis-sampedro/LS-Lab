@@ -688,14 +688,14 @@ def ls_foiling_academy_moth_course():
     # For now, we only have the Spanish version of the premium landing
     if lang == 'es':
         return render_template('ls_foiling_academy_moth_course-es.html')
-    return render_template('ls_foiling_academy_moth_course-es.html') # Fallback to ES
+    return render_template('ls_foiling_academy_moth_course.html')
 
 @app.route('/foiling-academy/on-water/moth/booking')
 def ls_foiling_academy_moth_booking():
     lang = request.args.get('lang', 'en')
     if lang == 'es':
         return render_template('ls_foiling_academy_moth_booking-es.html')
-    return render_template('ls_foiling_academy_moth_booking-es.html')
+    return render_template('ls_foiling_academy_moth_booking.html')
 
 @app.route('/api/moth/calendar')
 def api_moth_calendar():

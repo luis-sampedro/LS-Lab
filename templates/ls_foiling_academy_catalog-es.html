@@ -3,7 +3,7 @@
 {% block title %}LS Foiling Academy - Catálogo{% endblock %}
 
 {% block content %}
-<div class="section">
+<div class="section" style="padding-top: 4rem;">
     <h1>Catálogo de Cursos</h1>
     <p>Explora nuestros cursos técnicos y de navegación. Filtra por nivel de dificultad.</p>
 
@@ -221,4 +221,11 @@
         cursor: pointer;
     }
 </style>
+
+<div class="section" style="padding: 4rem 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+    <a href="{{ url_for('ls_foiling_academy', lang='es') }}" style="color: var(--lsfa-accent); text-decoration: none; font-weight: 700; font-size: 1.1rem;">
+        <- Volver a Foiling Academy
+    </a>
+</div>
+
 {% endblock %}
