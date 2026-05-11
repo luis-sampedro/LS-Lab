@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan B2C - Curso de Iniciación al Foiling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0a192f;
+            --secondary: #172a45;
+            --accent: #64ffda;
+            --text-main: #e6f1ff;
+            --text-dim: #8892b0;
+            --highlight: #f59e0b; /* Amber for pricing/urgency */
+            --white: #ffffff;
+            --shadow: 0 10px 30px -15px rgba(2, 12, 27, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        header {
+            height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(rgba(10, 25, 47, 0.8), rgba(10, 25, 47, 0.9)), url('static/moth-plan-bg.jpg');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            margin-bottom: 1rem;
+            color: var(--white);
+            text-transform: uppercase;
+            letter-spacing: -2px;
+        }
+
+        .hero-content p {
+            font-size: 1.25rem;
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* Section Styling */
+        section {
+            padding: 5rem 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title::after {
+            content: "";
+            display: block;
+            height: 1px;
+            width: 300px;
+            background: var(--secondary);
+            flex-grow: 1;
+        }
+
+        /* Poster Concept Grid */
+        .poster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--secondary);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+
+        .card h3 {
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .card ul {
+            list-style: none;
+        }
+
+        .card li {
+            margin-bottom: 1rem;
+            color: var(--text-dim);
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .card li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            background: var(--secondary);
+            border-radius: 20px;
+            padding: 4rem;
+            text-align: center;
+            margin: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-section::before {
+            content: "TARIFA DE VUELO";
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-family: 'Outfit';
+            font-size: 8rem;
+            font-weight: 900;
+            opacity: 0.03;
+            pointer-events: none;
+        }
+
+        .price-tag {
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--highlight);
+            margin: 1rem 0;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .price-item {
+            padding: 2rem;
+            background: rgba(23, 42, 69, 0.5);
+            border-radius: 15px;
+            border: 1px solid var(--accent);
+        }
+
+        .price-item .pax {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .price-item .amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        /* Strategy Phases */
+        .phase {
+            margin-bottom: 4rem;
+            padding-left: 2rem;
+            border-left: 4px solid var(--accent);
+        }
+
+        .phase h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .phase .badge {
+            background: var(--accent);
+            color: var(--primary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        footer {
+            padding: 4rem 0;
+            text-align: center;
+            border-top: 1px solid var(--secondary);
+            color: var(--text-dim);
+        }
+
+        .logos {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 2rem;
+            opacity: 0.6;
+            filter: grayscale(1);
+        }
+
+        @media (max-width: 768px) {
+            .section-title::after { width: 100px; }
+            .pricing-section { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="hero-content">
+            <p>Estrategia de Visibilización B2C</p>
+            <h1>MOTH FOILING ACADEMY</h1>
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <!-- SECTION 1: EL CARTEL -->
+        <section id="cartel">
+            <h2 class="section-title">01. El Cartel: El Gancho Visual</h2>
+            <div class="poster-grid">
+                <div class="card">
+                    <h3>Impacto y Promesa</h3>
+                    <ul>
+                        <li><strong>Imagen:</strong> Moth volando (ESP-656), estable y rápido.</li>
+                        <li><strong>Titular:</strong> CURSO DE INICIACIÓN AL FOILING DE ALTO NIVEL.</li>
+                        <li><strong>Subtítulo:</strong> De la pizarra al vuelo controlado.</li>
+                        <li><strong>Promesa:</strong> ¡VUELO ASEGURADO! (Destacado).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Ganchos de Venta</h3>
+                    <ul>
+                        <li>Sesión teórica y agua en grupo reducido.</li>
+                        <li>Feedback personalizado y análisis de vídeo.</li>
+                        <li>Acceso a Plataforma Web técnica.</li>
+                        <li><strong>Escasez:</strong> Plazas preferentes Técnicos y Selección.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: PRICING HACK -->
+        <section id="pricing">
+            <h2 class="section-title">02. El "Hack" del Precio</h2>
+            <div class="pricing-section">
+                <h3>TARIFA DE VUELO BASE</h3>
+                <div class="price-tag">300€ / DÍA</div>
+                <p>Divide el coste con tu tripulación para volar al mejor precio.</p>
+                
+                <div class="price-grid">
+                    <div class="price-item">
+                        <div class="pax">Grupo de 3</div>
+                        <div class="amount">100€<small>/pax</small></div>
+                    </div>
+                    <div class="price-item">
+                        <div class="pax">Grupo de 4</div>
+                        <div class="amount">75€<small>/pax</small></div>
+                    </div>
+                    <div class="price-item">
+                        <div class="pax">Grupo de 5</div>
+                        <div class="amount">60€<small>/pax</small></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: ESTRATEGIA RRSS -->
+        <section id="social">
+            <h2 class="section-title">03. Estrategia en RRSS (Hype & FOMO)</h2>
+            
+            <div class="phase">
+                <h3><span class="badge">FASE 1</span> Lanzamiento & Adrenalina</h3>
+                <p>Vídeos cortos (Reels) con música dinámica. El mensaje es: "¿Te vas a quedar atrás?". Captar atención masiva de la flota.</p>
+            </div>
+
+            <div class="phase">
+                <h3><span class="badge">FASE 2</span> Autoridad & Método</h3>
+                <p>Carruseles mostrando la "Pizarra" y la plataforma web. Demostrar que no es suerte, es física y método de alto nivel.</p>
+            </div>
+
+            <div class="phase">
+                <h3><span class="badge">FASE 3</span> Prueba Social</h3>
+                <p>Vídeos de alumnos volando por primera vez. Testimonios reales. Generar el miedo a quedarse fuera (FOMO).</p>
+            </div>
+        </section>
+
+        <!-- SECTION 4: PLAN SEMANAL -->
+        <section id="weekly-plan">
+            <h2 class="section-title">04. Plan Semanal de Contenidos (Reels)</h2>
+            <div class="card" style="background: var(--secondary); padding: 0; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: rgba(100, 255, 218, 0.1); color: var(--accent);">
+                            <th style="padding: 1.5rem;">DÍA</th>
+                            <th style="padding: 1.5rem;">CONTENIDO (REEL)</th>
+                            <th style="padding: 1.5rem;">TÍTULO / HOOK</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid rgba(136, 146, 176, 0.1);">
+                            <td style="padding: 1.5rem; font-weight: 700;">LUNES</td>
+                            <td style="padding: 1.5rem; color: var(--text-dim);">Vuelo en slow-motion con música épica. Corte rápido al despegue.</td>
+                            <td style="padding: 1.5rem;">"¿Aún navegas en 2D? Es hora de despegar. 🚀"</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(136, 146, 176, 0.1);">
+                            <td style="padding: 1.5rem; font-weight: 700;">MIÉRCOLES</td>
+                            <td style="padding: 1.5rem; color: var(--text-dim);">Clip de la "Pizarra" explicando un concepto técnico + clip de agua aplicándolo.</td>
+                            <td style="padding: 1.5rem;">"La Física del Vuelo: No es suerte, es método. 📐"</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(136, 146, 176, 0.1);">
+                            <td style="padding: 1.5rem; font-weight: 700;">VIERNES</td>
+                            <td style="padding: 1.5rem; color: var(--text-dim);">Reacción de un alumno logrando su primer vuelo estable (Gritos de alegría).</td>
+                            <td style="padding: 1.5rem;">"Vuelo Garantizado: La cara de tu primer despegue. 😄"</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1.5rem; font-weight: 700;">DOMINGO</td>
+                            <td style="padding: 1.5rem; color: var(--text-dim);">Recopilación rápida (Mashup) de la semana + Recordatorio de plazas.</td>
+                            <td style="padding: 1.5rem;">"Tu flota ya está volando... ¿Te quedas en tierra? ⏳"</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card" style="margin-top: 2rem; border-left: 4px solid var(--highlight);">
+                <h3>📺 Referencia: Vídeo LSFA YouTube</h3>
+                <p>Usa el vídeo oficial de la <strong>LS Foiling Academy</strong> como "Landing Page Visual" en tus historias. Extrae fragmentos de alta calidad para los Reels técnicos (Fase 2).</p>
+                <p style="margin-top: 1rem; font-size: 0.9rem; font-style: italic;">"El vídeo largo educa, el Reel corto enamora."</p>
+            </div>
+        </section>
+
+        <section style="text-align: center; padding-top: 0;">
+            <p style="color: var(--accent); font-weight: 700; margin-bottom: 1rem;">RESERVA EN:</p>
+            <h2 style="font-size: 3rem; color: var(--white);">escora.rfgvela.es</h2>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Plan de Negocio Privado - Luis Sampedro Foiling Academy (LSFA)</p>
+            <div class="logos">
+                <span>[LOGOTIPO CGV]</span>
+                <span>[LOGOTIPO RFGV]</span>
+                <span>[XUNTA DE GALICIA]</span>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

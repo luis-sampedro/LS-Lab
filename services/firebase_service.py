@@ -304,3 +304,64 @@ def add_datalab_report(uid, boat_id, report_data):
     except Exception as e:
         print(f"Error creating datalab report: {e}")
         raise e
+
+def get_moth_bookings(date_str=None):
+    """Fetches all bookings for a date or all dates if date_str is None."""
+    if not db: return {}
+    try:
+        if date_str:
+            doc = db.collection('moth_bookings').document(date_str).get()
+            return doc.to_dict() if doc.exists else {}
+        else:
+            docs = db.collection('moth_bookings').stream()
+            return {d.id: d.to_dict() for d in docs}
+    except Exception as e:
+        print(f"Error getting moth bookings: {e}")
+        return {}
+
+def book_moth_day(uid, date_str):
+    """Registers a user for a specific day. Returns status or error."""
+    if not db: return {'error': 'Database not initialized'}
+    try:
+        # 1. Check user total bookings (Limit 10)
+        user_bookings = db.collection('moth_bookings').where(f'uids.{uid}', 'in', ['confirmed', 'standby']).get()
+        if len(user_bookings) >= 10:
+            return {'error': 'Has alcanzado el límite de 10 días.'}
+
+        # 2. Check daily limit
+        doc_ref = db.collection('moth_bookings').document(date_str)
+        doc = doc_ref.get()
+        data = doc.to_dict() if doc.exists else {'uids': {}}
+        
+        uids = data.get('uids', {})
+        if uid in uids:
+            return {'error': 'Ya estás registrado para este día.'}
+
+        confirmed = [k for k, v in uids.items() if v == 'confirmed']
+        standby = [k for k, v in uids.items() if v == 'standby']
+
+        status = 'confirmed'
+        if len(confirmed) >= 6:
+            if len(standby) >= 1:
+                return {'error': 'Este día está completo (6 plazas + 1 reserva).'}
+            status = 'standby'
+
+        # 3. Save
+        uids[uid] = status
+        doc_ref.set({'uids': uids}, merge=True)
+        return {'success': True, 'status': status}
+    except Exception as e:
+        print(f"Error booking moth day: {e}")
+        return {'error': str(e)}
+
+def get_user_names(uids_list):
+    """Fetches names for a list of UIDs."""
+    if not db or not uids_list: return {}
+    try:
+        # Firestore 'in' query limit is 30. We only need up to 7 (6+1).
+        users_ref = db.collection('users').where(firestore.FieldPath.document_id(), 'in', uids_list)
+        docs = users_ref.stream()
+        return {d.id: d.to_dict().get('display_name', d.to_dict().get('email', 'Usuario')) for d in docs}
+    except Exception as e:
+        print(f"Error getting user names: {e}")
+        return {}

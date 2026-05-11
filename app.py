@@ -682,6 +682,93 @@ def ls_foiling_academy_on_water():
         return render_template('ls_foiling_academy_on_water-es.html')
     return render_template('ls_foiling_academy_on_water.html')
 
+@app.route('/foiling-academy/on-water/moth')
+def ls_foiling_academy_moth_course():
+    lang = request.args.get('lang', 'en')
+    # For now, we only have the Spanish version of the premium landing
+    if lang == 'es':
+        return render_template('ls_foiling_academy_moth_course-es.html')
+    return render_template('ls_foiling_academy_moth_course-es.html') # Fallback to ES
+
+@app.route('/foiling-academy/on-water/moth/booking')
+def ls_foiling_academy_moth_booking():
+    lang = request.args.get('lang', 'en')
+    if lang == 'es':
+        return render_template('ls_foiling_academy_moth_booking-es.html')
+    return render_template('ls_foiling_academy_moth_booking-es.html')
+
+@app.route('/api/moth/calendar')
+def api_moth_calendar():
+    import json
+    auth_header = request.headers.get('Authorization')
+    is_pro = False
+    if auth_header:
+        user = verify_token(auth_header)
+        if not isinstance(user, str): # if success
+            from services.firebase_service import is_user_pro
+            is_pro = is_user_pro(user['uid'])
+
+    try:
+        # 1. Load Fixed Events
+        json_path = os.path.join(app.static_folder, 'moth_calendar.json')
+        with open(json_path, 'r', encoding='utf-8') as f:
+            fixed_events = json.load(f)
+        
+        # 2. Get Dynamic Occupancy from Firestore
+        from services.firebase_service import get_moth_bookings, get_user_names
+        bookings = get_moth_bookings() 
+        
+        # 3. Convert bookings to occupancy events
+        occupancy_events = []
+        for date_str, data in bookings.items():
+            uids_map = data.get('uids', {})
+            confirmed_uids = [k for k, v in uids_map.items() if v == 'confirmed']
+            standby_uids = [k for k, v in uids_map.items() if v == 'standby']
+            
+            names = {}
+            if is_pro:
+                all_uids = list(uids_map.keys())
+                names = get_user_names(all_uids)
+
+            occupancy_events.append({
+                'title': f'{len(confirmed_uids)}/6',
+                'start': date_str,
+                'display': 'background',
+                'backgroundColor': 'rgba(56, 189, 248, 0.2)' if len(confirmed_uids) < 6 else 'rgba(245, 158, 11, 0.2)',
+                'confirmed_count': len(confirmed_uids),
+                'standby_count': len(standby_uids),
+                'attendees': [{'name': names.get(uid, 'Alumno'), 'status': uids_map[uid]} for uid in uids_map] if is_pro else [],
+                'type': 'occupancy'
+            })
+            
+            occupancy_events.append({
+                'title': f'👥 {len(confirmed_uids)}/6' + (f' (+{len(standby_uids)})' if len(standby_uids) > 0 else ''),
+                'start': date_str,
+                'type': 'occupancy_label',
+                'color': 'transparent',
+                'textColor': '#fff'
+            })
+            
+        return flask.jsonify(fixed_events + occupancy_events)
+    except Exception as e:
+        print(f"Calendar API Error: {e}")
+        return {'error': str(e)}, 500
+
+@app.route('/api/moth/book', methods=['POST'])
+def api_moth_book():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return {'error': 'Inicia sesión para reservar.'}, 401
+    user = verify_token(auth_header)
+    if not user: return {'error': 'Sesión inválida.'}, 401
+    
+    data = request.json
+    date_str = data.get('date')
+    if not date_str: return {'error': 'Fecha no proporcionada.'}, 400
+    
+    from services.firebase_service import book_moth_day
+    result = book_moth_day(user['uid'], date_str)
+    return flask.jsonify(result)
+
 @app.route('/api/foiling-academy/interest', methods=['POST'])
 def api_foiling_interest():
     try:

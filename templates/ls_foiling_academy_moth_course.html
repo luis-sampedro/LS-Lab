@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Moth Course - Flight Guaranteed! - LSFA{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --lsfa-accent: #38bdf8;
+        --lsfa-highlight: #f59e0b;
+        --lsfa-dark: #0f172a;
+    }
+
+    .moth-hero {
+        height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+        border-bottom: 4px solid var(--lsfa-accent);
+    }
+
+    .moth-hero h1 {
+        font-size: clamp(2.5rem, 8vw, 5.5rem);
+        color: #fff;
+        margin-bottom: 1rem;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .moth-hero span {
+        color: var(--lsfa-accent);
+        text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    }
+
+    .moth-hero p {
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 300;
+        max-width: 800px;
+        margin: 0 auto 2.5rem;
+        line-height: 1.4;
+    }
+
+    .all-inclusive-badge {
+        display: inline-block;
+        background: rgba(56, 189, 248, 0.2);
+        border: 1px solid var(--lsfa-accent);
+        color: var(--lsfa-accent);
+        padding: 0.5rem 1.2rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        margin-bottom: 1.5rem;
+        letter-spacing: 1px;
+    }
+
+    .guarantee-section {
+        background: var(--lsfa-dark);
+        padding: 6rem 2rem;
+        text-align: center;
+    }
+
+    .guarantee-box {
+        max-width: 950px;
+        margin: 0 auto;
+        background: linear-gradient(145deg, rgba(56, 189, 248, 0.1), rgba(15, 23, 42, 0.2));
+        padding: 4rem;
+        border-radius: 3rem;
+        border: 2px solid rgba(56, 189, 248, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .guarantee-box::before {
+        content: 'GUARANTEE';
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        font-size: 8rem;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.03);
+        z-index: 0;
+    }
+
+    .guarantee-box h2 {
+        font-size: 3.5rem;
+        color: #fff;
+        margin-bottom: 1.5rem;
+        z-index: 1;
+        position: relative;
+    }
+
+    .guarantee-box .highlight-text {
+        font-size: 5rem;
+        font-weight: 900;
+        color: var(--lsfa-accent);
+        display: block;
+        margin-bottom: 1rem;
+        z-index: 1;
+        position: relative;
+    }
+
+    .method-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 5rem auto;
+        max-width: 1200px;
+    }
+
+    .method-step {
+        padding: 3rem;
+        background: #1e293b;
+        border-radius: 2rem;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: transform 0.3s ease;
+    }
+
+    .method-step:hover {
+        transform: translateY(-10px);
+        border-color: var(--lsfa-accent);
+    }
+
+    .method-step .step-num {
+        font-size: 4rem;
+        font-weight: 900;
+        color: rgba(56, 189, 248, 0.2);
+        line-height: 1;
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    .method-step h3 {
+        font-size: 1.8rem;
+        color: #fff;
+        margin-bottom: 1rem;
+    }
+
+    .lsfa-online-section {
+        background: #000;
+        padding: 8rem 2rem;
+        text-align: center;
+    }
+
+    .lsfa-content {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4rem;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+        text-align: left;
+    }
+
+    .lsfa-text {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .lsfa-text h2 {
+        font-size: 3rem;
+        color: #fff;
+        margin-bottom: 2rem;
+    }
+
+    .lsfa-text p {
+        color: #94a3b8;
+        font-size: 1.2rem;
+        line-height: 1.8;
+        margin-bottom: 2rem;
+    }
+
+    .lsfa-features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .lsfa-feature-item {
+        background: #111;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        border-left: 4px solid var(--lsfa-accent);
+    }
+
+    .lsfa-feature-item h4 {
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+
+    .lsfa-feature-item p {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+
+    .cta-card {
+        max-width: 700px;
+        margin: 0 auto;
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        padding: 4rem;
+        border-radius: 3rem;
+        border: 2px solid var(--lsfa-accent);
+        box-shadow: 0 0 60px rgba(56, 189, 248, 0.4);
+    }
+</style>
+
+<div class="hero moth-hero video-hero">
+    <!-- Smart Mirror Video Background -->
+    <div class="video-bg-container">
+        <!-- Blurred Layer -->
+        <video autoplay muted loop playsinline class="video-bg-blur">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+        <!-- Sharp Main Layer -->
+        <video autoplay muted loop playsinline class="video-bg-main" poster="{{ url_for('static', filename='moth-plan-bg.jpg') }}">
+            <source src="{{ url_for('static', filename='videos/lsfa-hero-bg.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+    
+    <!-- Dark Gradient Overlay -->
+    <div class="hero-video-overlay"></div>
+
+    <div class="hero-overlay" style="z-index: 10; flex-direction: column; text-align: center; justify-content: center; align-items: center; width: 100%;">
+        <p style="letter-spacing: 3px; font-weight: 700; color: var(--lsfa-accent); margin-bottom: 0.5rem;">LS FOILING ACADEMY MOTH COURSE</p>
+        <h1 style="margin-bottom: 1.5rem;">FLIGHT <span>GUARANTEED</span></h1>
+        <p>Full International Moth training. Change the way you sail in just 1 day.</p>
+        <a href="#metodo" class="btn primary" style="font-size: 1.2rem; padding: 1.2rem 4rem;">Discover the Method</a>
+    </div>
+</div>
+
+<div class="guarantee-section" id="metodo">
+    <div class="guarantee-box">
+        <h2>LS Commitment</h2>
+        <span class="highlight-text">YOU FLY FOR SURE</span>
+        <p style="font-size: 1.4rem; color: #cbd5f5; font-weight: 400; line-height: 1.6;">
+            Our intensive course is designed for you to take off in your first session. Just hop on the pre-prepared boat and, thanks to the prior theory, you'll know how to fly.
+            If after the theory and water practice you don't achieve your first stable flight...
+            <br><br>
+            <strong style="color: #fff; font-size: 1.8rem;">WE GIVE YOU THE NEXT SESSION FOR FREE!</strong>
+            <br>
+            <span style="display: block; font-size: 0.9rem; color: #64748b; margin-top: 1.5rem; font-style: italic;">
+                *More than 10 students have already achieved their first stable flight in 1 day using this method.
+            </span>
+        </p>
+    </div>
+
+    <div class="method-grid">
+        <div class="method-step">
+            <span class="step-num">01</span>
+            <h3>Weather Analysis</h3>
+            <p>We start by evaluating the conditions. The Moth requires the perfect wind window for safe and efficient learning. If the date changes due to weather, there is no extra cost!</p>
+        </div>
+        <div class="method-step">
+            <span class="step-num">02</span>
+            <h3>Theory at "The Whiteboard"</h3>
+            <p>Mastery of all boat controls, the foil system, and flight dynamics. You'll understand the HOW and WHY before getting on the boat and know how to apply it to other boats.</p>
+        </div>
+        <div class="method-step">
+            <span class="step-num">03</span>
+            <h3>Water Action</h3>
+            <p>Practical session with direct RIB chase, radio-coaching, and 4K recording for later analysis.</p>
+        </div>
+    </div>
+</div>
+
+<div class="lsfa-online-section">
+    <div class="lsfa-content">
+        <div class="lsfa-text">
+            <h2>FULL Access to LSFA <span>Online</span></h2>
+            <p>Your training doesn't end on the water. By enrolling, you unlock the academy's digital ecosystem to keep improving from home.</p>
+            <div class="lsfa-features">
+                <div class="lsfa-feature-item" style="cursor: pointer;" onclick="window.location.href='/foiling-academy/catalog?lang=en'">
+                    <h4>Course Catalog</h4>
+                    <p>Access all technical training: trim, maneuvers, and maintenance.
+                        <br>
+                        <span style="color: var(--lsfa-accent); font-weight: 700; text-decoration: underline;">Explore Catalog</span>
+                    </p>
+                </div>
+                <div class="lsfa-feature-item">
+                    <h4>Video Debriefing</h4>
+                    <p>Share with your friends and analyze your recorded sessions with professional-level technical commentary.</p>
+                </div>
+                <div class="lsfa-feature-item">
+                    <h4>LS Lab Metrics</h4>
+                    <p>Access to your sailing data, top speeds, and flight angles.</p>
+                </div>
+                <div class="lsfa-feature-item">
+                    <h4>Pro Community</h4>
+                    <p>Question resolution and networking with other academy sailors. 
+                        <br>
+                        <a href="https://chat.whatsapp.com/JYOYc88MVpv97DUYAE9TK7" style="color: var(--lsfa-accent); font-weight: 700; text-decoration: underline;">Join the WhatsApp community</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div style="flex: 1; text-align: center; position: relative;">
+            <div style="background: var(--lsfa-accent); width: 200px; height: 200px; border-radius: 50%; filter: blur(100px); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; opacity: 0.3;"></div>
+            <img src="{{ url_for('static', filename='images/luis-on-boat.jpg') }}" alt="LSFA Training"
+                style="max-width: 100%; border-radius: 2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); position: relative; z-index: 1; border: 1px solid rgba(255,255,255,0.1);">
+        </div>
+    </div>
+</div>
+
+<div class="section" style="padding: 100px 20px;">
+    <div class="cta-card">
+        <h3 style="font-size: 2.5rem; color: #fff; margin-bottom: 0.5rem;">Intensive Course (1 Day)</h3>
+        <p style="color: var(--lsfa-accent); font-weight: 700; margin-bottom: 2rem;">THEORY + WATER + LSFA ONLINE</p>
+
+        <div style="margin-bottom: 2.5rem; text-align: center;">
+            <p style="text-decoration: line-through; color: #64748b; font-size: 1.2rem; margin-bottom: 0;">300€ / person</p>
+            <div style="font-size: 4rem; font-weight: 900; color: #fff; line-height: 1;">60€<small style="font-size: 1.5rem;">pp</small></div>
+            <p style="color: var(--lsfa-accent); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; margin-top: 0.5rem; letter-spacing: 1px;">Group Price Hack</p>
+            <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">*When renting the boat in a group of 5 people.</p>
+        </div>
+
+        <div style="font-size: 1.2rem; color: #cbd5f5; margin-bottom: 2rem; text-align: left; padding: 0 2rem;">
+            <ul class="list">
+                <li>Personalized technical session (Weather + Ground + Water).</li>
+                <li>Support boat and radio-coaching included.</li>
+                <li>Video recording and analysis included.</li>
+                <li><strong>Guarantee:</strong> If you don't fly, you repeat for free.</li>
+            </ul>
+        </div>
+
+        <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--lsfa-accent); border-radius: 1rem; padding: 1.5rem; margin-bottom: 2.5rem; text-align: center;">
+            <p style="color: #fff; margin-bottom: 0.5rem; font-weight: 700;">✨ ALL-INCLUSIVE PRICE</p>
+            <p style="font-size: 0.9rem; color: var(--lsfa-accent); margin-bottom: 0;">Boat Rental · Insurance · Fuel</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">I take care of all management and maintenance costs.</p>
+        </div>
+
+        <a href="{{ url_for('ls_foiling_academy_moth_booking', lang='en') }}" class="btn primary btn-full"
+            style="font-size: 1.3rem; padding: 1.5rem;">Check Availability and Book</a>
+        <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #64748b;">*Priority for RFGV Technicians, Galician Selection, and LSPRO members (C).</p>
+    </div>
+</div>
+
+<footer class="footer">
+    © 2026 Luis Sampedro Foiling Academy
+</footer>
+{% endblock %}

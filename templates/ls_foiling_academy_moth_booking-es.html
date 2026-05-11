@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Reservar Plaza - Moth Course - LSFA{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --lsfa-accent: #38bdf8;
+        --lsfa-highlight: #f59e0b;
+        --calendar-bg: #172a45;
+    }
+
+    /* Calendar Styling */
+    #calendar-container {
+        background: var(--calendar-bg);
+        padding: 2rem;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        margin: 3rem 0;
+    }
+
+    .fc {
+        --fc-border-color: rgba(148, 163, 184, 0.2);
+        color: #fff;
+    }
+
+    .fc-toolbar-title {
+        font-family: 'Outfit';
+        font-size: 1.5rem !important;
+    }
+
+    .fc-button-primary {
+        background-color: var(--lsfa-accent) !important;
+        border-color: var(--lsfa-accent) !important;
+    }
+
+    .fc-daygrid-day-number {
+        color: #fff;
+        padding: 10px !important;
+        text-decoration: none !important;
+    }
+
+    .fc-col-header-cell-cushion {
+        color: var(--lsfa-accent);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        text-decoration: none !important;
+    }
+
+    .fc-event {
+        border: none !important;
+        padding: 2px 5px;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .event-training {
+        background-color: #4DB6FF !important;
+    }
+
+    .event-regatta {
+        background-color: #FF6B6B !important;
+    }
+
+    /* Visual Occupancy Dots */
+    .occupancy-indicator {
+        display: flex;
+        gap: 2px;
+        margin-top: 4px;
+        justify-content: center;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .dot.confirmed {
+        background: var(--lsfa-accent);
+        border-color: var(--lsfa-accent);
+    }
+
+    .dot.standby {
+        background: var(--lsfa-highlight);
+        border-color: var(--lsfa-highlight);
+    }
+
+    /* Modal Styling */
+    .booking-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .modal-content {
+        background: #0f172a;
+        padding: 2.5rem;
+        border-radius: 1.5rem;
+        max-width: 500px;
+        width: 100%;
+        border: 1px solid var(--lsfa-accent);
+        text-align: center;
+        box-shadow: 0 0 50px rgba(56, 189, 248, 0.2);
+    }
+
+    .attendees-list {
+        text-align: left;
+        margin: 1.5rem 0;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .attendee-item {
+        font-size: 0.9rem;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+    }
+</style>
+
+<main class="section" style="max-width: 1100px; margin: 2rem auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('ls_foiling_academy_moth_course', lang='es') }}" style="color: var(--lsfa-accent); text-decoration: none; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-left"></i> Volver a la información del curso
+        </a>
+    </div>
+
+    <h1 style="text-align: center; margin-bottom: 1rem;">📅 Reserva tu Sesión</h1>
+
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+        <div
+            style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--lsfa-accent); padding: 1.5rem; border-radius: 1.5rem; text-align: center;">
+            <p
+                style="color: var(--lsfa-accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.8rem; letter-spacing: 1px;">
+                Precio del Curso (300€)</p>
+            <div style="font-size: 0.9rem; color: #fff; text-align: left; display: inline-block;">
+                <div
+                    style="display: flex; justify-content: space-between; gap: 2rem; border-bottom: 1px solid rgba(56,189,248,0.2); padding: 4px 0;">
+                    <span>Individual (1 pers)</span> <strong>300€</strong>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; gap: 2rem; border-bottom: 1px solid rgba(56,189,248,0.2); padding: 4px 0;">
+                    <span>Grupo de 3</span> <strong>100€/pp</strong>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; gap: 2rem; border-bottom: 1px solid rgba(56,189,248,0.2); padding: 4px 0;">
+                    <span>Grupo de 4</span> <strong>75€/pp</strong>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; gap: 2rem; padding: 4px 0; color: var(--lsfa-accent);">
+                    <span>Grupo de 5</span> <strong>60€/pp</strong>
+                </div>
+            </div>
+        </div>
+        <div
+            style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 1.5rem; text-align: center;">
+            <p
+                style="color: #fff; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px;">
+                Todo Incluido</p>
+            <p style="font-size: 1rem; color: #cbd5f5; margin-bottom: 0;">Barco + Seguro + Gasolina</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Sin costes ocultos ni fianza.</p>
+        </div>
+        <div
+            style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 1.5rem; text-align: center;">
+            <p
+                style="color: #fff; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px;">
+                Garantía LS</p>
+            <p style="font-size: 1rem; color: #cbd5f5; margin-bottom: 0;">Vuelo Asegurado</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Si no vuelas, la siguiente sesión es
+                gratis.</p>
+        </div>
+    </div>
+
+    <p style="text-align: center; color: #94a3b8; max-width: 700px; margin: 0 auto 3rem;">
+        Selecciona un día disponible (indicado por los puntos 👥) para solicitar tu plaza. <br>
+        Recuerda que tienes un máximo de 3 días a la vez para pre-reservar.
+    </p>
+
+    <div
+        style="background: rgba(15, 23, 42, 0.6); border: 1px dashed var(--lsfa-accent); padding: 2rem; border-radius: 1.5rem; text-align: center; margin-bottom: 3rem;">
+        <h4 style="color: #fff; margin-bottom: 1rem;">🏁 Paso Final: Registro y Pago</h4>
+        <p style="color: #cbd5f5; margin-bottom: 1.5rem;">Una vez solicitada tu plaza en este calendario, deberás
+            formalizar la inscripción y el pago en la plataforma oficial de la RFGV (Escora).</p>
+        <a href="https://escora.rfgvela.es/activities" target="_blank" class="btn secondary">
+            Ir a Escora para Pago Final <i class="fas fa-external-link-alt"
+                style="margin-left: 8px; font-size: 0.8rem;"></i>
+        </a>
+    </div>
+
+    <div id="calendar-container">
+        <div id='calendar'></div>
+    </div>
+</main>
+
+<!-- Booking Modal -->
+<div id="booking-modal" class="booking-modal">
+    <div class="modal-content">
+        <h2 id="modal-date-title">Detalles del Día</h2>
+        <p id="modal-date-info">Día: <span id="selected-date-text"></span></p>
+
+        <div id="pro-attendees-section" style="display: none;">
+            <h4 style="color: var(--lsfa-accent);">👥 Inscritos (Solo LS Pro)</h4>
+            <div id="attendees-list" class="attendees-list"></div>
+        </div>
+
+        <div id="modal-status-msg" style="margin-bottom: 1.5rem; display: none;"></div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button class="btn secondary small-btn" onclick="closeModal()">Cerrar</button>
+            <button id="confirm-booking-btn" class="btn primary small-btn">Reservar mi plaza</button>
+        </div>
+    </div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script>
+    let selectedDate = null;
+    let calendar = null;
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        var calendarEl = document.getElementById('calendar');
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            initialDate: '2026-06-01',
+            validRange: { start: '2026-06-01', end: '2026-10-31' },
+            locale: 'es',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,listWeek'
+            },
+            events: async function (fetchInfo, successCallback, failureCallback) {
+                let url = '/api/moth/calendar';
+                let headers = {};
+                if (window.firebaseUser) {
+                    const token = await window.firebaseUser.getIdToken();
+                    headers['Authorization'] = token;
+                }
+                try {
+                    const response = await fetch(url, { headers });
+                    const data = await response.json();
+                    successCallback(data);
+                } catch (e) { failureCallback(e); }
+            },
+            eventContent: function (arg) {
+                if (arg.event.extendedProps.type === 'occupancy_label') {
+                    let conf = arg.event.extendedProps.confirmed_count || 0;
+                    let dots = '';
+                    for (let i = 0; i < 6; i++) {
+                        dots += `<div class="dot ${i < conf ? 'confirmed' : ''}"></div>`;
+                    }
+                    if ((arg.event.extendedProps.standby_count || 0) > 0) dots += `<div class="dot standby"></div>`;
+                    return {
+                        html: `<div class="event-occupancy-label">
+                        <div style="font-size: 0.8rem; text-align:center;">👥 ${conf}/6</div>
+                        <div class="occupancy-indicator">${dots}</div>
+                       </div>`
+                    };
+                }
+                return null;
+            },
+            dateClick: function (info) {
+                openBookingModal(info.dateStr, []);
+            },
+            eventClick: function (info) {
+                if (info.event.extendedProps.type === 'occupancy_label' || info.event.display === 'background') {
+                    openBookingModal(info.event.startStr, info.event.extendedProps.attendees || []);
+                }
+            }
+        });
+        calendar.render();
+    });
+
+    function openBookingModal(dateStr, attendees) {
+        selectedDate = dateStr;
+        document.getElementById('selected-date-text').innerText = dateStr;
+        document.getElementById('booking-modal').style.display = 'flex';
+        document.getElementById('modal-status-msg').style.display = 'none';
+        const proSection = document.getElementById('pro-attendees-section');
+        const listDiv = document.getElementById('attendees-list');
+        if (attendees && attendees.length > 0) {
+            proSection.style.display = 'block';
+            listDiv.innerHTML = attendees.map(a => `
+            <div class="attendee-item">
+                <span>${a.name}</span>
+                <span style="color: ${a.status === 'confirmed' ? '#34d399' : '#f59e0b'}; font-size: 0.7rem;">${a.status.toUpperCase()}</span>
+            </div>
+        `).join('');
+        } else { proSection.style.display = 'none'; }
+    }
+
+    function closeModal() { document.getElementById('booking-modal').style.display = 'none'; }
+
+    async function confirmBooking() {
+        const btn = document.getElementById('confirm-booking-btn');
+        const msgDiv = document.getElementById('modal-status-msg');
+        if (!window.firebaseUser) {
+            msgDiv.innerText = "Inicia sesión para reservar.";
+            msgDiv.style.color = "#f87171";
+            msgDiv.style.display = "block";
+            setTimeout(() => window.location.href = "{{ url_for('login', lang='es') }}?next=" + encodeURIComponent(window.location.href), 1000);
+            return;
+        }
+        btn.disabled = true;
+        try {
+            const token = await window.firebaseUser.getIdToken();
+            const response = await fetch('/api/moth/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ date: selectedDate })
+            });
+            const result = await response.json();
+            if (result.success) {
+                msgDiv.innerText = "¡Reserva realizada!";
+                msgDiv.style.color = "#34d399";
+                msgDiv.style.display = "block";
+                calendar.refetchEvents();
+                setTimeout(closeModal, 1500);
+            } else {
+                msgDiv.innerText = result.error;
+                msgDiv.style.color = "#f87171";
+                msgDiv.style.display = "block";
+            }
+        } catch (e) { msgDiv.innerText = "Error."; msgDiv.style.display = "block"; }
+        finally { btn.disabled = false; }
+    }
+    document.getElementById('confirm-booking-btn').addEventListener('click', confirmBooking);
+</script>
+{% endblock %}
