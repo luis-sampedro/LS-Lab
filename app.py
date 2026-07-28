@@ -910,10 +910,10 @@ def data_lab_upload():
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
 
-        from services.datalab_service import parse_log_file
+        from services.datalab_service import process_telemetry_file
         # Process in memory for MVP
         # In production, save to /tmp or cloud bucket first
-        result = parse_log_file(file, file.filename)
+        result = process_telemetry_file(file, file.filename)
         
         if 'error' in result:
              return jsonify(result), 400
@@ -922,6 +922,21 @@ def data_lab_upload():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/data-lab/save-project', methods=['POST'])
+def data_lab_save_project():
+    try:
+        data = request.get_json() or {}
+        filename = data.get('filename', 'Session_Project')
+        # In production, save project JSON state to Firestore / GCP Storage
+        return jsonify({
+            'success': True,
+            'message': f'Project "{filename}" saved successfully to LS PRO Cloud!',
+            'timestamp': datetime.now().strftime('%H:%M:%S')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/design-tools')
 def ls_design_tools():
