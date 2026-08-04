@@ -18,6 +18,8 @@ let globalHeuristicTwd = 0;
 let forecastTwd = 0;
 let activeSegments = [];
 let selectedSegmentId = null;
+let activeSublegs = [];
+let selectedSublegId = null;
 let activeTab = 'upload';
 let polarTargets = null;
 let reportImages = [];
@@ -36,7 +38,90 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthHandler();
     setupKeyboardShortcuts();
     setupPopoverDismiss();
+    initExcelRowResizers();
 });
+
+window.applyLayoutPreset = function(preset) {
+    const mapSec = document.getElementById('mapSection');
+    const chartSec = document.getElementById('chartSection');
+    const container = document.getElementById('shared-visualizer');
+    if (!container || !mapSec || !chartSec) return;
+    
+    if (preset === 'equal') {
+        mapSec.style.height = '33vh';
+        chartSec.style.height = '33vh';
+    } else if (preset === 'map') {
+        mapSec.style.height = '50vh';
+        chartSec.style.height = '20vh';
+    } else if (preset === 'chart') {
+        mapSec.style.height = '22vh';
+        chartSec.style.height = '48vh';
+    }
+    
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (timeChart) timeChart.resize();
+    }, 50);
+};
+
+window.initExcelRowResizers = function() {
+    const mapSec = document.getElementById('mapSection');
+    const chartSec = document.getElementById('chartSection');
+    const resizer1 = document.getElementById('resizerMapChart');
+    const resizer2 = document.getElementById('resizerChartTimeline');
+
+    if (!resizer1 || !resizer2 || !mapSec || !chartSec) return;
+
+    let isDragging1 = false;
+    let isDragging2 = false;
+    let startY = 0;
+    let startMapH = 0;
+    let startChartH = 0;
+
+    resizer1.addEventListener('mousedown', (e) => {
+        isDragging1 = true;
+        startY = e.clientY;
+        startMapH = mapSec.offsetHeight;
+        startChartH = chartSec.offsetHeight;
+        document.body.style.cursor = 'row-resize';
+        e.preventDefault();
+    });
+
+    resizer2.addEventListener('mousedown', (e) => {
+        isDragging2 = true;
+        startY = e.clientY;
+        startChartH = chartSec.offsetHeight;
+        document.body.style.cursor = 'row-resize';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging1) {
+            const dy = e.clientY - startY;
+            const newMapH = Math.max(100, startMapH + dy);
+            const newChartH = Math.max(80, startChartH - dy);
+            mapSec.style.height = `${newMapH}px`;
+            chartSec.style.height = `${newChartH}px`;
+            if (map) map.invalidateSize();
+            if (timeChart) timeChart.resize();
+        } else if (isDragging2) {
+            const dy = e.clientY - startY;
+            const newChartH = Math.max(80, startChartH + dy);
+            chartSec.style.height = `${newChartH}px`;
+            if (timeChart) timeChart.resize();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging1 || isDragging2) {
+            isDragging1 = false;
+            isDragging2 = false;
+            document.body.style.cursor = '';
+            if (map) map.invalidateSize();
+            if (timeChart) timeChart.resize();
+        }
+    });
+};
 
 function initMap() {
     map = L.map('map').setView([42.2328, -8.7226], 13);
@@ -45,6 +130,15 @@ function initMap() {
         subdomains: 'abcd',
         maxZoom: 20
     }).addTo(map);
+
+    map.on('click', function(e) {
+        if (typeof isPickingMarkMode !== 'undefined' && isPickingMarkMode) {
+            const typeSelect = document.getElementById('raceMarkTypeSelect');
+            const type = typeSelect ? typeSelect.value : 'windward';
+            setRaceMark(type, e.latlng.lat, e.latlng.lng);
+            togglePickMarkMode();
+        }
+    });
 }
 
 const scrubberPlugin = {
@@ -79,14 +173,21 @@ function initChart() {
         data: {
             labels: [],
             datasets: [
-                { id: 'sog', label: 'SOG', data: [], borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', fill: true, tension: 0.3, pointRadius: 0, yAxisID: 'y' },
-                { id: 'cog', label: 'COG', data: [], borderColor: '#f59e0b', tension: 0.3, pointRadius: 0, yAxisID: 'y1', hidden: true },
-                { id: 'heel', label: 'Heel', data: [], borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
-                { id: 'pitch', label: 'Pitch', data: [], borderColor: '#ec4899', tension: 0.3, pointRadius: 0, yAxisID: 'y', hidden: true },
-                { id: 'tws', label: 'TWS', data: [], borderColor: '#10b981', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
-                { id: 'twd', label: 'TWD', data: [], borderColor: '#8b5cf6', borderDash: [5, 5], tension: 0.3, pointRadius: 0, yAxisID: 'y1', hidden: true },
-                { id: 'twa', label: 'TWA', data: [], borderColor: '#10b981', borderDash: [5, 5], tension: 0.3, pointRadius: 0, yAxisID: 'y1', hidden: true },
-                { id: 'sog-cmp', label: 'SOG (Compared)', data: [], borderColor: '#f97316', borderDash: [2, 2], tension: 0.3, pointRadius: 0, yAxisID: 'y', hidden: true }
+                { id: 'sog', label: 'SOG', data: [], borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', fill: true, tension: 0.3, pointRadius: 0, yAxisID: 'y-sog' },
+                { id: 'cog', label: 'COG', data: [], borderColor: '#f59e0b', tension: 0.3, pointRadius: 0, yAxisID: 'y-cog', hidden: true },
+                { id: 'hdg', label: 'HDG', data: [], borderColor: '#fbbf24', tension: 0.3, pointRadius: 0, yAxisID: 'y-cog' },
+                { id: 'heel', label: 'Heel', data: [], borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'y-heel', hidden: true },
+                { id: 'pitch', label: 'Pitch', data: [], borderColor: '#ec4899', tension: 0.3, pointRadius: 0, yAxisID: 'y-pitch', hidden: true },
+                { id: 'rot', label: 'ROT', data: [], borderColor: '#f43f5e', tension: 0.3, pointRadius: 0, yAxisID: 'y-heel', hidden: true },
+                { id: 'tws', label: 'TWS', data: [], borderColor: '#10b981', tension: 0.3, pointRadius: 0, yAxisID: 'y-sog', hidden: true },
+                { id: 'twd', label: 'TWD', data: [], borderColor: '#8b5cf6', borderDash: [5, 5], tension: 0.3, pointRadius: 0, yAxisID: 'y-cog', hidden: true },
+                { id: 'twa', label: 'TWA', data: [], borderColor: '#06b6d4', borderDash: [5, 5], tension: 0.3, pointRadius: 0, yAxisID: 'y-cog', hidden: true },
+                { id: 'vmg', label: 'VMG', data: [], borderColor: '#34d399', tension: 0.3, pointRadius: 0, yAxisID: 'y-sog', hidden: true },
+                { id: 'vmc', label: 'VMC', data: [], borderColor: '#a78bfa', tension: 0.3, pointRadius: 0, yAxisID: 'y-sog', hidden: true },
+                { id: 'leeway', label: 'Leeway', data: [], borderColor: '#e879f9', tension: 0.3, pointRadius: 0, yAxisID: 'y-heel', hidden: true },
+                { id: 'cspd', label: 'CSPD', data: [], borderColor: '#60a5fa', tension: 0.3, pointRadius: 0, yAxisID: 'y-sog', hidden: true },
+                { id: 'cdir', label: 'CDIR', data: [], borderColor: '#38bdf8', borderDash: [3, 3], tension: 0.3, pointRadius: 0, yAxisID: 'y-cog', hidden: true },
+                { id: 'sog-cmp', label: 'SOG (Compared)', data: [], borderColor: '#f97316', borderDash: [2, 2], tension: 0.3, pointRadius: 0, yAxisID: 'y-sog', hidden: true }
             ]
         },
         options: {
@@ -94,6 +195,20 @@ function initChart() {
             maintainAspectRatio: false,
             animation: false,
             interaction: { mode: 'index', intersect: false },
+            onClick: function(e, activeEls, chart) {
+                if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return;
+                const xValue = chart.scales.x.getValueForPixel(e.x);
+                // Find closest index for elapsed time
+                let low = 0, high = sessionData.elapsed.length - 1;
+                while (low < high) {
+                    let mid = Math.floor((low + high) / 2);
+                    if (sessionData.elapsed[mid] < xValue) low = mid + 1;
+                    else high = mid;
+                }
+                playbackIndex = low;
+                updateScrubberPosition();
+                updateFrame(playbackIndex);
+            },
             scales: {
                 x: { 
                     type: 'linear',
@@ -107,12 +222,37 @@ function initChart() {
                         }
                     }
                 },
-                y: { display: true, position: 'left', grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                y1: { display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#94a3b8' } }
+                'y-sog': { display: true, position: 'left', grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                'y-cog': { display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#94a3b8' } },
+                'y-heel': { display: false, position: 'right' },
+                'y-pitch': { display: false, position: 'right' }
             },
             plugins: {
                 legend: { display: false },
-                tooltip: { mode: 'index', intersect: false }
+                tooltip: { mode: 'index', intersect: false },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                        onPan: function() {
+                            if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+                            if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
+                        }
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x',
+                        onZoom: function() {
+                            if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+                            if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
+                        }
+                    }
+                }
             }
         }
     });
@@ -369,7 +509,6 @@ function setupPopoverDismiss() {
     document.addEventListener('click', (e) => {
         const tzPop = document.getElementById('tzPopover');
         const startPop = document.getElementById('startPopover');
-        const filterPop = document.getElementById('filterPopover');
         
         if (tzPop && tzPop.style.display === 'flex') {
             if (!e.target.closest('#tzPopover') && !e.target.closest('[onclick*="tzPopover"]')) {
@@ -379,11 +518,6 @@ function setupPopoverDismiss() {
         if (startPop && startPop.style.display === 'flex') {
             if (!e.target.closest('#startPopover') && !e.target.closest('[onclick*="startPopover"]')) {
                 startPop.style.display = 'none';
-            }
-        }
-        if (filterPop && filterPop.style.display === 'flex') {
-            if (!e.target.closest('#filterPopover') && !e.target.closest('[onclick*="filterPopover"]')) {
-                filterPop.style.display = 'none';
             }
         }
     });
@@ -413,15 +547,8 @@ function setupEventListeners() {
     const playBtn = document.getElementById('playBtn');
     if (playBtn) playBtn.addEventListener('click', togglePlay);
 
-    const slider = document.getElementById('timeSlider');
-    if (slider) {
-        slider.addEventListener('input', (e) => {
-            const targetElapsed = parseFloat(e.target.value);
-            playbackIndex = findNearestIndex(targetElapsed);
-            updateFrame(playbackIndex);
-        });
-    }
-
+    initScrubber();
+    
     function findNearestIndex(targetTime) {
         if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return 0;
         let low = 0, high = sessionData.elapsed.length - 1;
@@ -432,6 +559,115 @@ function setupEventListeners() {
         }
         return low;
     }
+}
+
+window.getChartViewportDomain = function() {
+    if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) {
+        return { viewMin: 0, viewMax: 100, viewDuration: 100 };
+    }
+    const totalElapsed = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
+    let viewMin = 0;
+    let viewMax = totalElapsed;
+
+    if (typeof timeChart !== 'undefined' && timeChart && timeChart.options && timeChart.options.scales && timeChart.options.scales.x) {
+        const scaleMin = timeChart.options.scales.x.min;
+        const scaleMax = timeChart.options.scales.x.max;
+        if (scaleMin !== undefined && scaleMin !== null && !isNaN(scaleMin)) viewMin = Math.max(0, scaleMin);
+        if (scaleMax !== undefined && scaleMax !== null && !isNaN(scaleMax)) viewMax = Math.min(totalElapsed, scaleMax);
+    }
+    
+    if (viewMax <= viewMin) {
+        viewMin = 0;
+        viewMax = totalElapsed;
+    }
+    const viewDuration = Math.max(0.1, viewMax - viewMin);
+    return { viewMin, viewMax, viewDuration };
+};
+
+window.updateScrubberPosition = function() {
+    if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return;
+    const scrubber = document.getElementById('timelineScrubber');
+    if (!scrubber) return;
+    const { viewMin, viewMax, viewDuration } = getChartViewportDomain();
+    const current = sessionData.elapsed[playbackIndex] || 0;
+    
+    if (current < viewMin || current > viewMax) {
+        scrubber.style.display = 'none';
+    } else {
+        scrubber.style.display = 'block';
+        const pct = ((current - viewMin) / viewDuration) * 100;
+        scrubber.style.left = `${pct}%`;
+    }
+};
+
+function initScrubber() {
+    const container = document.getElementById('timelineContainer');
+    if (!container) return;
+    
+    let isDragging = false;
+    
+    function handleScrub(e) {
+        if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return;
+        const rect = container.getBoundingClientRect();
+        let clientX = e.clientX;
+        if (e.touches && e.touches.length > 0) clientX = e.touches[0].clientX;
+        
+        let pct = (clientX - rect.left) / rect.width;
+        pct = Math.max(0, Math.min(1, pct));
+        
+        const { viewMin, viewMax, viewDuration } = getChartViewportDomain();
+        const targetTime = viewMin + (pct * viewDuration);
+        
+        // Find nearest index
+        let low = 0, high = sessionData.elapsed.length - 1;
+        while (low < high) {
+            let mid = Math.floor((low + high) / 2);
+            if (sessionData.elapsed[mid] < targetTime) low = mid + 1;
+            else high = mid;
+        }
+        playbackIndex = low;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
+    
+    container.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        handleScrub(e);
+        document.body.style.userSelect = 'none';
+    });
+    
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) handleScrub(e);
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        document.body.style.userSelect = '';
+    });
+    
+    container.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        handleScrub(e);
+    }, {passive: true});
+    
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging) {
+            e.preventDefault(); // Prevent scrolling while scrubbing
+            handleScrub(e);
+        }
+    }, {passive: false});
+    
+    window.addEventListener('touchend', () => {
+        isDragging = false;
+    });
+
+    container.addEventListener('wheel', (e) => {
+        if (!timeChart || !sessionData) return;
+        if (e.target.closest('#autoDetectPopover') || e.target.closest('#filterPopover')) return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 1 : -1;
+        chartZoom(delta);
+    }, { passive: false });
 }
 
 // Global handleUpload
@@ -731,32 +967,117 @@ function loadSessionToVisuals() {
         boatMarker.setLatLng(sessionData.track[playbackIndex]);
     });
 
-    // Initialize as a SINGLE SESSION LEG (Instagram Reels / CapCut default state)
-    resetToSingleSessionLeg();
-
+window.refreshChartData = function() {
+    if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return;
+    
     const elapsed = sessionData.elapsed;
     const totalDuration = elapsed[elapsed.length - 1] || elapsed.length;
-    
+    const m = sessionData.metrics || {};
+    const count = elapsed.length;
+
     timeChart.options.scales.x.max = totalDuration;
     timeChart.data.labels = elapsed;
-    timeChart.data.datasets[0].data = sessionData.metrics.sog.map((v, idx) => ({ x: elapsed[idx], y: v || 0 }));
-    timeChart.data.datasets[1].data = sessionData.metrics.cog.map((v, idx) => ({ x: elapsed[idx], y: v || 0 }));
-    timeChart.data.datasets[2].data = sessionData.metrics.heel.map((v, idx) => ({ x: elapsed[idx], y: v || 0 }));
-    timeChart.data.datasets[3].data = (sessionData.metrics.pitch || new Array(elapsed.length).fill(0)).map((v, idx) => ({ x: elapsed[idx], y: v || 0 }));
-    timeChart.data.datasets[4].data = (sessionData.metrics.tws || new Array(elapsed.length).fill(10)).map((v, idx) => ({ x: elapsed[idx], y: v || 10 }));
-    timeChart.data.datasets[5].data = (sessionData.metrics.twd || new Array(elapsed.length).fill(215)).map((v, idx) => ({ x: elapsed[idx], y: v || 215 }));
-    timeChart.data.datasets[6].data = (sessionData.metrics.twa || new Array(elapsed.length).fill(0)).map((v, idx) => ({ x: elapsed[idx], y: v || 0 }));
-    timeChart.update();
 
-    playbackIndex = 0;
-    if (document.getElementById('timeSlider')) {
-        document.getElementById('timeSlider').max = totalDuration;
-        document.getElementById('timeSlider').value = 0;
+    const sogs = m.sog || new Array(count).fill(0);
+    const cogs = m.cog || new Array(count).fill(0);
+    const hdgs = m.hdt || cogs;
+    const heels = m.heel || new Array(count).fill(0);
+    const pitches = m.pitch || new Array(count).fill(0);
+    const twss = m.tws || new Array(count).fill(10);
+    const twds = m.twd || new Array(count).fill(sessionData.calibratedTwd || 215);
+    const twas = m.twa || new Array(count).fill(0);
+
+    const setDatasetData = (id, dataArr) => {
+        const ds = timeChart.data.datasets.find(d => d.id === id);
+        if (ds) {
+            ds.data = dataArr.map((v, idx) => ({ x: elapsed[idx], y: v !== undefined && v !== null && !isNaN(v) ? v : 0 }));
+        }
+    };
+
+    setDatasetData('sog', sogs);
+    setDatasetData('cog', cogs);
+    setDatasetData('hdg', hdgs);
+    setDatasetData('heel', heels);
+    setDatasetData('pitch', pitches);
+    setDatasetData('tws', twss);
+    setDatasetData('twd', twds);
+    setDatasetData('twa', twas);
+
+    // Derived telemetry series calculation
+    const rots = new Array(count).fill(0);
+    const vmgs = new Array(count).fill(0);
+    const vmcs = new Array(count).fill(0);
+    const leeways = new Array(count).fill(0);
+    const cspds = new Array(count).fill(0);
+    const cdirs = new Array(count).fill(0);
+
+    for (let i = 0; i < count; i++) {
+        const sog = sogs[i] || 0;
+        const cog = cogs[i] || 0;
+        const hdg = hdgs[i] !== undefined ? hdgs[i] : cog;
+        const twa = twas[i] || 0;
+
+        // ROT
+        if (i > 0) {
+            const dt = (elapsed[i] - elapsed[i-1]) || 1;
+            const prevHdg = hdgs[i-1] !== undefined ? hdgs[i-1] : (cogs[i-1] || 0);
+            let diffHdg = hdg - prevHdg;
+            while (diffHdg > 180) diffHdg -= 360;
+            while (diffHdg < -180) diffHdg += 360;
+            rots[i] = diffHdg / dt;
+        }
+
+        // VMG
+        vmgs[i] = sog * Math.cos(twa * Math.PI / 180);
+
+        // VMC
+        if (sessionData.track && sessionData.track[i] && typeof getActiveTargetMarkInfo === 'function') {
+            const tInfo = getActiveTargetMarkInfo(i, sessionData.track[i], sog, cog, twa);
+            if (tInfo) vmcs[i] = tInfo.vmc;
+        }
+
+        // Leeway
+        let lway = hdg - cog;
+        while (lway > 180) lway -= 360;
+        while (lway < -180) lway += 360;
+        leeways[i] = lway;
+
+        // CSPD (Current Speed) & CDIR (Current Direction / Set)
+        const cogRad = cog * Math.PI / 180;
+        const hdgRad = hdg * Math.PI / 180;
+        const vg_x = sog * Math.sin(cogRad);
+        const vg_y = sog * Math.cos(cogRad);
+        const vw_x = sog * Math.sin(hdgRad);
+        const vw_y = sog * Math.cos(hdgRad);
+        const vc_x = vg_x - vw_x;
+        const vc_y = vg_y - vw_y;
+        cspds[i] = Math.sqrt(vc_x * vc_x + vc_y * vc_y);
+        let cd = Math.atan2(vc_x, vc_y) * 180 / Math.PI;
+        if (cd < 0) cd += 360;
+        cdirs[i] = cd;
     }
+
+    setDatasetData('rot', rots);
+    setDatasetData('vmg', vmgs);
+    setDatasetData('vmc', vmcs);
+    setDatasetData('leeway', leeways);
+    setDatasetData('cspd', cspds);
+    setDatasetData('cdir', cdirs);
+
+    timeChart.update();
+    
     if (document.getElementById('totalTimeDisplay')) {
         document.getElementById('totalTimeDisplay').innerText = formatTimecode(totalDuration);
     }
-    
+};
+
+    // Initialize as a SINGLE SESSION LEG (Instagram Reels / CapCut default state)
+    resetToSingleSessionLeg();
+
+    refreshChartData();
+
+    playbackIndex = 0;
+    updateScrubberPosition();
     updateFrame(0);
 }
 
@@ -865,11 +1186,66 @@ window.resetToSingleSessionLeg = function() {
         color: 'rgba(2, 132, 199, 0.45)',
         twd: sessionData.calibratedTwd
     }];
+    activeSublegs = [];
     selectedSegmentId = 'leg_single_session';
+    selectedSublegId = null;
     recalculateAllLegsTwd();
     renderSegmentRibbon();
     updateReelsInspectorPill();
     autoFitVisualsToRemainingClips();
+};
+
+window.splitSegmentAtPlayhead = function() {
+    if (!sessionData) return;
+    const idx = playbackIndex;
+    let splitOccurred = false;
+    let newSegs = [];
+
+    let raceCount = 1;
+    activeSegments.forEach(s => {
+        if (s.label.startsWith("Race ")) {
+            let num = parseInt(s.label.replace("Race ", ""), 10);
+            if (!isNaN(num) && num >= raceCount) {
+                raceCount = num + 1;
+            }
+        }
+    });
+
+    activeSegments.forEach(s => {
+        if (idx > s.startIdx && idx < s.endIdx) {
+            splitOccurred = true;
+            const idA = 'leg_' + Date.now() + '_pre';
+            const idB = 'leg_' + Date.now() + '_race';
+            
+            newSegs.push({
+                ...s,
+                id: idA,
+                endIdx: idx,
+                type: 'pre-start',
+                label: `Pre-Start ${raceCount}`
+            });
+            newSegs.push({
+                ...s,
+                id: idB,
+                startIdx: idx,
+                type: 'race',
+                label: `Race ${raceCount}`
+            });
+            selectedSegmentId = idB;
+        } else {
+            newSegs.push(s);
+        }
+    });
+
+    if (splitOccurred) {
+        activeSegments = newSegs;
+        recalculateAllLegsTwd();
+        renderSegmentRibbon();
+        updateReelsInspectorPill();
+    } else {
+        const isEs = window.location.href.includes('lang=es');
+        alert(isEs ? "El cabezal debe estar dentro de un tramo para marcar la salida." : "Playhead must be inside a segment to mark a new start.");
+    }
 };
 
 window.splitClipAtScrubber = function() {
@@ -956,7 +1332,6 @@ window.changeSelectedClipType = function(typeVal) {
 
 window.deleteSelectedClip = function() {
     let segIdToDelete = selectedSegmentId;
-    
     if (!segIdToDelete && sessionData) {
         const seg = activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
         if (seg) segIdToDelete = seg.id;
@@ -968,16 +1343,428 @@ window.deleteSelectedClip = function() {
         return;
     }
 
+    // Simply remove the leg clip label definition, leaving telemetry data intact!
     activeSegments = activeSegments.filter(s => s.id !== segIdToDelete);
     if (selectedSegmentId === segIdToDelete) selectedSegmentId = null;
 
     recalculateAllLegsTwd();
     renderSegmentRibbon();
-    updateReelsInspectorPill();
-    
-    // AUTOZOOM & AUTOFIT MAP AND CHART TO REMAINING LEGS
-    autoFitVisualsToRemainingClips();
+    updateScrubberPosition();
+    updateFrame(playbackIndex);
 };
+
+window.eraseSelectedLegData = function() {
+    let segIdToDelete = selectedSegmentId;
+    if (!segIdToDelete && sessionData) {
+        const seg = activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+        if (seg) segIdToDelete = seg.id;
+    }
+
+    const isEs = window.location.href.includes('lang=es');
+    if (!segIdToDelete) {
+        alert(isEs ? "Selecciona un tramo en la línea de tiempo primero." : "Please select a leg clip first.");
+        return;
+    }
+
+    const seg = activeSegments.find(s => s.id === segIdToDelete);
+    if (!seg) return;
+
+    const startSec = sessionData.elapsed && sessionData.elapsed[seg.startIdx] !== undefined ? formatTimecode(sessionData.elapsed[seg.startIdx]) : '00:00';
+    const endSec = sessionData.elapsed && sessionData.elapsed[seg.endIdx] !== undefined ? formatTimecode(sessionData.elapsed[seg.endIdx]) : '00:00';
+
+    const confirmMsg = isEs
+        ? `⚠️ ATENCIÓN (Paso 1 de 2): ¿Estás seguro de que deseas BORRAR PERMANENTEMENTE los datos de telemetría del tramo "${seg.label}" (${startSec} - ${endSec})?\n\nEsta acción eliminará físicamente los puntos de datos y no se puede deshacer.`
+        : `⚠️ WARNING (Step 1 of 2): Are you sure you want to PERMANENTLY ERASE telemetry data for leg "${seg.label}" (${startSec} - ${endSec})?\n\nThis will physically wipe data points from the session and cannot be undone.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    const finalConfirmMsg = isEs
+        ? `⚠️ CONFIRMACIÓN FINAL (Paso 2 de 2): Haz clic en Aceptar para CONFIRMAR el borrado definitivo de los datos de este tramo.`
+        : `⚠️ FINAL CONFIRMATION (Step 2 of 2): Click OK to CONFIRM permanent deletion of telemetry data for this leg.`;
+
+    if (confirm(finalConfirmMsg)) {
+        deleteDataRange(seg.startIdx, seg.endIdx);
+        if (selectedSegmentId === segIdToDelete) selectedSegmentId = null;
+
+        recalculateAllLegsTwd();
+        renderSegmentRibbon();
+        renderSublegRibbon();
+        refreshChartData();
+        autoFitVisualsToRemainingClips();
+        updateScrubberPosition();
+        if (typeof setupMap === 'function') setupMap();
+        updateFrame(playbackIndex);
+        alert(isEs ? "Datos de telemetría del tramo eliminados." : "Leg telemetry data points erased.");
+    }
+};
+
+window.eraseSelectedSublegData = function() {
+    const isEs = window.location.href.includes('lang=es');
+    let idsToDelete = [...(window.selectedSublegIds || [])];
+    
+    if (idsToDelete.length === 0 && selectedSublegId) {
+        idsToDelete = [selectedSublegId];
+    }
+    
+    if (idsToDelete.length === 0 && sessionData && activeSublegs.length > 0) {
+        const seg = activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+        if (seg) idsToDelete = [seg.id];
+    }
+
+    if (idsToDelete.length === 0 || !activeSublegs || activeSublegs.length === 0) {
+        alert(isEs ? "No hay subtramos seleccionados para borrar sus datos." : "No sublegs selected to erase data.");
+        return;
+    }
+
+    const count = idsToDelete.length;
+    const confirmMsg = isEs
+        ? `⚠️ ATENCIÓN (Paso 1 de 2): ¿Estás seguro de que deseas BORRAR PERMANENTEMENTE la telemetría de ${count} subtramo(s) seleccionado(s)?\n\nEsta acción eliminará físicamente los puntos de datos y no se puede deshacer.`
+        : `⚠️ WARNING (Step 1 of 2): Are you sure you want to PERMANENTLY ERASE telemetry data for ${count} selected subleg(s)?\n\nThis will physically wipe data points from the session and cannot be undone.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    const finalConfirmMsg = isEs
+        ? `⚠️ CONFIRMACIÓN FINAL (Paso 2 de 2): Haz clic en Aceptar para CONFIRMAR el borrado definitivo de la telemetría de los subtramos.`
+        : `⚠️ FINAL CONFIRMATION (Step 2 of 2): Click OK to CONFIRM permanent deletion of subleg telemetry data.`;
+
+    if (confirm(finalConfirmMsg)) {
+        let targetSublegs = activeSublegs.filter(s => idsToDelete.includes(s.id));
+        // Sort descending by startIdx (right-to-left) to avoid index shift bugs
+        targetSublegs.sort((a, b) => b.startIdx - a.startIdx);
+
+        targetSublegs.forEach(sub => {
+            deleteDataRange(sub.startIdx, sub.endIdx);
+        });
+
+        window.selectedSublegIds = [];
+        selectedSublegId = null;
+        const sel = document.getElementById('sublegMultiSelector');
+        if (sel) sel.value = '';
+
+        recalculateAllLegsTwd();
+        renderSegmentRibbon();
+        renderSublegRibbon();
+        refreshChartData();
+        autoFitVisualsToRemainingClips();
+        updateScrubberPosition();
+        if (typeof setupMap === 'function') setupMap();
+        updateFrame(playbackIndex);
+        alert(isEs ? "Datos de telemetría de subtramo(s) eliminados." : "Subleg telemetry data points erased.");
+    }
+};
+
+window.goToSelectedLegStart = function() {
+    if (!sessionData) return;
+    let seg = activeSegments.find(s => s.id === selectedSegmentId);
+    if (!seg) {
+        seg = activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    }
+    if (seg) {
+        playbackIndex = seg.startIdx;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
+};
+
+window.goToSelectedLegEnd = function() {
+    if (!sessionData) return;
+    let seg = activeSegments.find(s => s.id === selectedSegmentId);
+    if (!seg) {
+        seg = activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    }
+    if (seg) {
+        playbackIndex = seg.endIdx;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
+};
+
+window.goToSelectedSublegStart = function() {
+    if (!sessionData) return;
+    let sub = activeSublegs.find(s => s.id === selectedSublegId);
+    if (!sub && window.selectedSublegIds && window.selectedSublegIds.length > 0) {
+        sub = activeSublegs.find(s => s.id === window.selectedSublegIds[0]);
+    }
+    if (!sub) {
+        sub = activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    }
+    if (sub) {
+        playbackIndex = sub.startIdx;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
+};
+
+window.goToSelectedSublegEnd = function() {
+    if (!sessionData) return;
+    let sub = activeSublegs.find(s => s.id === selectedSublegId);
+    if (!sub && window.selectedSublegIds && window.selectedSublegIds.length > 0) {
+        sub = activeSublegs.find(s => s.id === window.selectedSublegIds[window.selectedSublegIds.length - 1]);
+    }
+    if (!sub) {
+        sub = activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    }
+    if (sub) {
+        playbackIndex = sub.endIdx;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
+};
+
+window.createSublegAtPlayhead = function() {
+    if (!sessionData) return;
+    const idx = playbackIndex;
+    
+    // Find the main leg that contains the playhead
+    const mainSeg = activeSegments.find(s => idx >= s.startIdx && idx <= s.endIdx);
+    if (!mainSeg) {
+        const isEs = window.location.href.includes('lang=es');
+        alert(isEs ? "El cabezal debe estar dentro de un tramo principal." : "Playhead must be inside a main segment to create a subleg.");
+        return;
+    }
+    
+    // Default duration: up to 150 points (15s at 10Hz) or end of main segment
+    const endIdx = Math.min(idx + 150, mainSeg.endIdx);
+    
+    // Check if it overlaps with an existing subleg
+    const overlap = activeSublegs.find(s => (idx >= s.startIdx && idx <= s.endIdx) || (endIdx >= s.startIdx && endIdx <= s.endIdx) || (idx <= s.startIdx && endIdx >= s.endIdx));
+    if (overlap) {
+        const isEs = window.location.href.includes('lang=es');
+        alert(isEs ? "El nuevo subtramo se solapa con uno existente." : "New subleg overlaps with an existing one.");
+        return;
+    }
+
+    const id = 'subleg_' + Date.now();
+    activeSublegs.push({
+        id: id,
+        startIdx: idx,
+        endIdx: endIdx,
+        label: 'Subleg',
+        type: 'subleg',
+        color: '#f59e0b'
+    });
+    
+    activeSublegs.sort((a, b) => a.startIdx - b.startIdx);
+    selectedSublegId = id;
+    renderSublegRibbon();
+};
+
+window.splitSublegAtScrubber = function() {
+    if (!sessionData) return;
+    const idx = playbackIndex;
+    let splitOccurred = false;
+    let newSegs = [];
+
+    activeSublegs.forEach(s => {
+        if (idx > s.startIdx && idx < s.endIdx) {
+            splitOccurred = true;
+            const idA = 'subleg_' + Date.now() + '_A';
+            const idB = 'subleg_' + Date.now() + '_B';
+            
+            newSegs.push({
+                ...s,
+                id: idA,
+                endIdx: idx,
+                label: `${s.label} (A)`
+            });
+            newSegs.push({
+                ...s,
+                id: idB,
+                startIdx: idx,
+                label: `${s.label} (B)`
+            });
+            selectedSublegId = idB;
+        } else {
+            newSegs.push(s);
+        }
+    });
+
+    if (splitOccurred) {
+        activeSublegs = newSegs;
+        renderSublegRibbon();
+    } else {
+        const isEs = window.location.href.includes('lang=es');
+        alert(isEs ? "Mueve la barra de reproducción sobre un subtramo para cortarlo." : "Move the playhead inside a subleg to split it.");
+    }
+};
+
+window.promptRenameSubleg = function() {
+    const seg = activeSublegs.find(s => s.id === selectedSublegId) || 
+                activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    if (!seg) return;
+    const isEs = window.location.href.includes('lang=es');
+    const newTitle = prompt(
+        isEs ? "Introduce el nuevo nombre para este subtramo:" : "Enter new title for this subleg:",
+        seg.label
+    );
+    if (newTitle && newTitle.trim() !== '') {
+        seg.label = newTitle.trim();
+        renderSublegRibbon();
+    }
+};
+
+window.changeSelectedSublegType = function(typeVal) {
+    const seg = activeSublegs.find(s => s.id === selectedSublegId) || 
+                activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    if (!seg) return;
+    
+    seg.type = typeVal;
+    if (typeVal === 'upwind') {
+        seg.color = '#38bdf8';
+    } else if (typeVal === 'downwind') {
+        seg.color = '#ec4899';
+    } else if (typeVal === 'reach') {
+        seg.color = '#10b981';
+    } else if (typeVal === 'hidden' || typeVal === 'subleg') {
+        seg.color = '#f59e0b';
+    }
+
+    renderSublegRibbon();
+};
+
+window.selectedSublegIds = [];
+
+window.selectSublegsByName = function(filterVal) {
+    if (!filterVal || !activeSublegs || activeSublegs.length === 0) return;
+    
+    if (filterVal === 'deselect') {
+        window.selectedSublegIds = [];
+        selectedSublegId = null;
+    } else if (filterVal === 'all') {
+        window.selectedSublegIds = activeSublegs.map(s => s.id);
+        selectedSublegId = window.selectedSublegIds[0] || null;
+    } else {
+        const matching = activeSublegs.filter(s => {
+            const mode = (s.mode || '').toLowerCase();
+            const label = (s.label || '').toLowerCase();
+            const type = (s.type || '').toLowerCase();
+            const val = filterVal.toLowerCase();
+            return mode.includes(val) || label.includes(val) || type.includes(val);
+        });
+        window.selectedSublegIds = matching.map(s => s.id);
+        selectedSublegId = window.selectedSublegIds[0] || null;
+    }
+    renderSublegRibbon();
+};
+
+window.deleteSelectedSubleg = function() {
+    const isEs = window.location.href.includes('lang=es');
+    let idsToDelete = [...(window.selectedSublegIds || [])];
+    
+    if (idsToDelete.length === 0 && selectedSublegId) {
+        idsToDelete = [selectedSublegId];
+    }
+    
+    if (idsToDelete.length === 0 && sessionData && activeSublegs.length > 0) {
+        const seg = activeSublegs.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+        if (seg) idsToDelete = [seg.id];
+    }
+
+    // Output 1: No subleg detected or selected
+    if (idsToDelete.length === 0 || !activeSublegs || activeSublegs.length === 0) {
+        alert(isEs ? "No hay subtramos detectados ni seleccionados." : "No subleg detected or selected.");
+        return;
+    }
+
+    const countToDelete = idsToDelete.length;
+    activeSublegs = activeSublegs.filter(s => !idsToDelete.includes(s.id));
+    window.selectedSublegIds = [];
+    selectedSublegId = null;
+    
+    const sel = document.getElementById('sublegMultiSelector');
+    if (sel) sel.value = '';
+
+    renderSublegRibbon();
+
+    // Output 2 & Output 3
+    if (countToDelete === 1) {
+        alert(isEs ? "Subtramo eliminado." : "Subleg deleted.");
+    } else {
+        alert(isEs ? `Todos los ${countToDelete} subtramos seleccionados han sido eliminados.` : `All ${countToDelete} selected sublegs deleted.`);
+    }
+};
+
+function renderSublegRibbon() {
+    const ribbon = document.getElementById('sublegRibbon');
+    if(!ribbon) return;
+    ribbon.innerHTML = '';
+    if (!sessionData || activeSublegs.length === 0) return;
+    
+    const { viewMin, viewMax, viewDuration } = getChartViewportDomain();
+    const frag = document.createDocumentFragment();
+
+    activeSublegs.forEach((seg) => {
+        const segStartSec = sessionData.elapsed[seg.startIdx] || 0;
+        const segEndSec = sessionData.elapsed[seg.endIdx] || 0;
+
+        if (segEndSec < viewMin || segStartSec > viewMax) return;
+
+        const startPct = Math.max(0, ((segStartSec - viewMin) / viewDuration) * 100);
+        const endPct = Math.min(100, ((segEndSec - viewMin) / viewDuration) * 100);
+        const widthPct = Math.max(0.2, endPct - startPct);
+
+        let div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.left = `${startPct}%`;
+        div.style.width = `${widthPct}%`;
+        div.style.height = '100%';
+        div.style.backgroundColor = seg.color;
+        
+        const isSelected = (selectedSublegId === seg.id || (window.selectedSublegIds && window.selectedSublegIds.includes(seg.id)));
+        if (isSelected) {
+            div.style.border = '2px solid #38bdf8';
+            div.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.9)';
+            div.style.zIndex = '10';
+        } else {
+            div.style.borderRight = '1px solid #1e293b';
+        }
+
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.justifyContent = 'center';
+        div.style.fontSize = '0.7rem';
+        div.style.fontWeight = '700';
+        div.style.color = 'white';
+        div.style.textAlign = 'center';
+        div.style.overflow = 'hidden';
+        div.style.whiteSpace = 'nowrap';
+        div.style.cursor = 'pointer';
+        div.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)';
+        div.innerText = seg.label;
+        
+        div.onclick = (e) => {
+            e.stopPropagation();
+            if (e.shiftKey) {
+                if (window.selectedSublegIds.includes(seg.id)) {
+                    window.selectedSublegIds = window.selectedSublegIds.filter(id => id !== seg.id);
+                } else {
+                    window.selectedSublegIds.push(seg.id);
+                }
+            } else {
+                window.selectedSublegIds = [seg.id];
+                selectedSublegId = seg.id;
+            }
+            playbackIndex = seg.startIdx;
+            updateScrubberPosition();
+            if (timeChart) {
+                timeChart.options.scales.x.min = sessionData.elapsed[seg.startIdx];
+                timeChart.options.scales.x.max = sessionData.elapsed[seg.endIdx];
+                timeChart.update('none');
+            }
+            if (map && sessionData.track) {
+                const segTrack = sessionData.track.slice(seg.startIdx, seg.endIdx + 1);
+                if (segTrack.length > 0) {
+                    map.fitBounds(L.polyline(segTrack).getBounds(), { padding: [30, 30] });
+                }
+            }
+            renderSublegRibbon();
+            renderSegmentRibbon();
+            updateFrame(playbackIndex);
+        };
+        frag.appendChild(div);
+    });
+    ribbon.appendChild(frag);
+}
 
 window.autoDetectLegsClips = function() {
     autoDetectLegs(false);
@@ -990,161 +1777,281 @@ function getSelectedOrActiveClip() {
 }
 
 function updateReelsInspectorPill() {
-    const titleEl = document.getElementById('clipInspectorTitle');
-    const durEl = document.getElementById('clipInspectorDuration');
-    const speedEl = document.getElementById('clipInspectorSpeed');
-    const twaEl = document.getElementById('clipInspectorTwa');
-    const twdEl = document.getElementById('clipInspectorTwd');
-    if (!titleEl || !sessionData) return;
+    // Deprecated: UI element removed. Keeping stub to prevent errors from existing calls.
+}
 
-    const seg = getSelectedOrActiveClip();
-    if (!seg) {
-        titleEl.innerText = "--";
-        if(durEl) durEl.innerText = "";
+window.toggleAutoDetectPopover = function() {
+    const pop = document.getElementById('autoDetectPopover');
+    if (pop) pop.style.display = (pop.style.display === 'flex' ? 'none' : 'flex');
+};
+
+// Upwind/Downwind Leg & Subleg Autodetection Engine
+window.autoDetectLegs = function(silent = false) {
+    if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog) return;
+    
+    const m = sessionData.metrics;
+    const sogs = m.sog;
+    const twas = m.twa || [];
+    const heels = m.heel || [];
+    const pitches = m.pitch || [];
+    
+    // Boat Profile
+    const boatTypeSelect = document.getElementById('newBoatType');
+    const boatType = boatTypeSelect ? boatTypeSelect.value : 'moth';
+    const isFoiler = (boatType === 'moth' || boatType === 'waszp' || boatType === 'dinghy' || boatType === '');
+    
+    // Configurable Auto-Detect Thresholds
+    const ashoreMaxSpeed = parseFloat(document.getElementById('autoAshoreSpeed')?.value || 0.3);
+    const capsizeMinSpeed = parseFloat(document.getElementById('autoCapsizeMinSpeed')?.value || 0.3);
+    const capsizeMaxSpeed = parseFloat(document.getElementById('autoCapsizeMaxSpeed')?.value || 3.0);
+    const capsizeMinHeel = parseFloat(document.getElementById('autoCapsizeMinHeel')?.value || 45);
+    const flightSpeedThreshold = isFoiler 
+        ? parseFloat(document.getElementById('autoFlightSpeed')?.value || 10.0) 
+        : 999.0;
+    const isLandCheckEnabled = document.getElementById('autoLandCheck') ? document.getElementById('autoLandCheck').checked : true;
+    
+    // Land Heuristic: check launch/dock origin position
+    let startLat = (sessionData.track && sessionData.track.length > 0) ? sessionData.track[0][0] : null;
+    let startLng = (sessionData.track && sessionData.track.length > 0) ? sessionData.track[0][1] : null;
+
+    let tempChunks = [];
+    let curChunk = null;
+    
+    for (let i = 0; i < sogs.length; i++) {
+        const sog = sogs[i] || 0;
+        const heel = Math.abs(heels[i] || 0);
+        const pitch = Math.abs(pitches[i] || 0);
+        const twa = twas[i] || 0;
+        const absTwa = Math.abs(twa);
+        
+        let mode = '', label = '', color = '';
+        
+        const pos = sessionData.track ? sessionData.track[i] : null;
+        let isNearShore = false;
+        if (isLandCheckEnabled && pos && startLat !== null && typeof calculateDistanceNM === 'function') {
+            const distNM = calculateDistanceNM(pos[0], pos[1], startLat, startLng);
+            if (distNM < 0.15) isNearShore = true; // within ~250m of launch/dock point
+        }
+
+        if (sog <= ashoreMaxSpeed) {
+            if (isNearShore || heel > 25 || pitch > 15) {
+                mode = 'ashore'; label = '🏠 Ashore / Static'; color = '#475569';
+            } else {
+                mode = 'floating'; label = '⚓ Stationary / Floating'; color = '#334155';
+            }
+        } else if (sog > capsizeMinSpeed && sog <= capsizeMaxSpeed && heel >= capsizeMinHeel) {
+            mode = 'capsize'; label = '🏊 Capsized'; color = '#dc2626';
+        } else {
+            const tackStr = twa >= 0 ? 'Stbd' : 'Port';
+            const isUpwind = absTwa < 85;
+            const isDownwind = absTwa > 105;
+            
+            if (isFoiler) {
+                const isFlying = sog >= flightSpeedThreshold;
+                if (isFlying) {
+                    if (isUpwind) { mode = 'upwind_fly'; label = `⛵ Upwind Flying (${tackStr})`; color = 'rgba(56, 189, 248, 0.85)'; }
+                    else if (isDownwind) { mode = 'downwind_fly'; label = `🚀 Downwind Flying (${tackStr})`; color = 'rgba(236, 72, 153, 0.85)'; }
+                    else { mode = 'reach_fly'; label = `💨 Reach Flying (${tackStr})`; color = 'rgba(168, 85, 247, 0.85)'; }
+                } else {
+                    if (isUpwind) { mode = 'upwind_low'; label = `⛵ Upwind Low-Ride (${tackStr})`; color = 'rgba(2, 132, 199, 0.75)'; }
+                    else if (isDownwind) { mode = 'downwind_low'; label = `🚀 Downwind Low-Ride (${tackStr})`; color = 'rgba(190, 24, 93, 0.75)'; }
+                    else { mode = 'reach_low'; label = `💨 Reach Low-Ride (${tackStr})`; color = 'rgba(126, 34, 206, 0.75)'; }
+                }
+            } else {
+                if (isUpwind) { mode = 'upwind'; label = `⛵ Upwind (${tackStr})`; color = 'rgba(56, 189, 248, 0.85)'; }
+                else if (isDownwind) { mode = 'downwind'; label = `🚀 Downwind (${tackStr})`; color = 'rgba(236, 72, 153, 0.85)'; }
+                else { mode = 'reach'; label = `💨 Reach (${tackStr})`; color = 'rgba(168, 85, 247, 0.85)'; }
+            }
+        }
+        
+        if (!curChunk) {
+            curChunk = { mode, label, color, startIdx: i, endIdx: i };
+        } else if (curChunk.mode === mode) {
+            curChunk.endIdx = i;
+        } else {
+            if (curChunk.endIdx - curChunk.startIdx >= 3) {
+                tempChunks.push(curChunk);
+            }
+            curChunk = { mode, label, color, startIdx: i, endIdx: i };
+        }
+    }
+    if (curChunk && curChunk.endIdx - curChunk.startIdx >= 3) {
+        tempChunks.push(curChunk);
+    }
+    
+    let finalSublegs = [];
+    let tackCount = 0, gybeCount = 0, bearAwayCount = 0, roundingCount = 0;
+    
+    for (let c = 0; c < tempChunks.length; c++) {
+        const chunk = tempChunks[c];
+        
+        if (c > 0) {
+            const prev = tempChunks[c-1];
+            const isPrevUp = prev.mode.includes('upwind');
+            const isPrevDown = prev.mode.includes('downwind');
+            const isCurUp = chunk.mode.includes('upwind');
+            const isCurDown = chunk.mode.includes('downwind');
+            
+            if (isPrevUp && isCurUp && prev.label !== chunk.label) {
+                tackCount++;
+                const mStart = Math.max(0, chunk.startIdx - 4);
+                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
+                finalSublegs.push({
+                    id: 'sub_tack_' + tackCount + '_' + Date.now(),
+                    startIdx: mStart,
+                    endIdx: mEnd,
+                    type: 'maneuver',
+                    label: `🔄 Tack #${tackCount}`,
+                    color: '#f59e0b'
+                });
+            } else if (isPrevDown && isCurDown && prev.label !== chunk.label) {
+                gybeCount++;
+                const mStart = Math.max(0, chunk.startIdx - 4);
+                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
+                finalSublegs.push({
+                    id: 'sub_gybe_' + gybeCount + '_' + Date.now(),
+                    startIdx: mStart,
+                    endIdx: mEnd,
+                    type: 'maneuver',
+                    label: `🌪️ Gybe #${gybeCount}`,
+                    color: '#10b981'
+                });
+            } else if (isPrevUp && isCurDown) {
+                bearAwayCount++;
+                const mStart = Math.max(0, chunk.startIdx - 4);
+                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
+                finalSublegs.push({
+                    id: 'sub_bear_' + bearAwayCount + '_' + Date.now(),
+                    startIdx: mStart,
+                    endIdx: mEnd,
+                    type: 'maneuver',
+                    label: `💨 Bear Away #${bearAwayCount}`,
+                    color: '#a855f7'
+                });
+            } else if (isPrevDown && isCurUp) {
+                roundingCount++;
+                const mStart = Math.max(0, chunk.startIdx - 4);
+                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
+                finalSublegs.push({
+                    id: 'sub_round_' + roundingCount + '_' + Date.now(),
+                    startIdx: mStart,
+                    endIdx: mEnd,
+                    type: 'maneuver',
+                    label: `🏁 Mark Rounding #${roundingCount}`,
+                    color: '#06b6d4'
+                });
+            }
+        }
+        
+        finalSublegs.push({
+            id: 'sub_' + c + '_' + Date.now(),
+            startIdx: chunk.startIdx,
+            endIdx: chunk.endIdx,
+            type: 'subleg',
+            label: chunk.label,
+            color: chunk.color
+        });
+    }
+    
+    activeSublegs = finalSublegs;
+    if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
+    
+    renderSublegRibbon();
+    
+    if (!silent) {
+        const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+        alert(isEs 
+            ? `Autodetectados ${activeSublegs.length} subtramos (${tackCount} Viradas, ${gybeCount} Trasluchadas, ${bearAwayCount} Arribadas)` 
+            : `Auto-detected ${activeSublegs.length} sublegs (${tackCount} Tacks, ${gybeCount} Gybes, ${bearAwayCount} Bear-Aways)`);
+    }
+};
+
+window.createLegFromSelectedSubleg = function() {
+    if (!sessionData || !activeSublegs || activeSublegs.length === 0) return;
+    
+    const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+
+    let targetSublegs = [];
+    if (window.selectedSublegIds && window.selectedSublegIds.length > 0) {
+        targetSublegs = activeSublegs.filter(s => window.selectedSublegIds.includes(s.id));
+    } else if (selectedSublegId) {
+        const sub = activeSublegs.find(s => s.id === selectedSublegId);
+        if (sub) targetSublegs.push(sub);
+    }
+
+    if (targetSublegs.length === 0) {
+        alert(isEs ? "Selecciona primero un subtramo" : "Please select a subleg first");
         return;
     }
 
-    const startSec = sessionData.elapsed[seg.startIdx] || 0;
-    const endSec = sessionData.elapsed[seg.endIdx] || 0;
-    const durSec = Math.max(0, endSec - startSec);
-    const durMin = Math.floor(durSec / 60);
+    let createdCount = 0;
 
-    titleEl.innerText = seg.label;
-    if (durEl) durEl.innerText = `(${formatTimecode(startSec)} - ${formatTimecode(endSec)} • ${durMin}m ${Math.round(durSec % 60)}s)`;
+    targetSublegs.forEach(sub => {
+        const subStart = sub.startIdx;
+        const subEnd = sub.endIdx;
+        if (subStart >= subEnd) return;
 
-    let sogs = sessionData.metrics.sog.slice(seg.startIdx, seg.endIdx + 1);
-    let twas = sessionData.metrics.twa ? sessionData.metrics.twa.slice(seg.startIdx, seg.endIdx + 1) : [];
-    
-    let avgSog = sogs.length > 0 ? (sogs.reduce((a,b)=>a+b, 0) / sogs.length) : 0;
-    let avgTwa = twas.length > 0 ? (twas.reduce((a,b)=>a+Math.abs(b), 0) / twas.length) : 0;
-    let legTwd = seg.twd || sessionData.calibratedTwd;
+        const cleanLabel = sub.label.replace(/^[^\w\s]+/, '').trim();
+        const subType = sub.type || (sub.mode === 'ashore' || sub.mode === 'capsized' ? 'hidden' : 'leg');
 
-    if (speedEl) speedEl.innerText = `Avg SOG: ${avgSog.toFixed(1)} kn`;
-    if (twaEl) twaEl.innerText = `Avg TWA: ${Math.round(avgTwa)}°`;
-    if (twdEl) twdEl.innerText = `Leg TWD: ${Math.round(legTwd)}°`;
-}
+        const newLeg = {
+            id: 'leg_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            startIdx: subStart,
+            endIdx: subEnd,
+            type: subType,
+            label: cleanLabel,
+            color: sub.color || '#38bdf8'
+        };
 
-// Upwind/Downwind Leg Autodetection with per-leg TWD solver
-window.autoDetectLegs = function(silent = false) {
-    if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog || !sessionData.metrics.twa) return;
-    
-    const sogs = sessionData.metrics.sog;
-    const twas = sessionData.metrics.twa;
-    const thresholdInput = document.getElementById('nonSailingSpeedThreshold');
-    const threshold = parseFloat(thresholdInput ? thresholdInput.value : 1.0) || 1.0;
-    
-    let legs = [];
-    let currentLegType = null;
-    let startIdx = 0;
-    
-    const MIN_LEG_POINTS = 30;
-    let upwindCount = 0;
-    let downwindCount = 0;
-
-    for (let i = 0; i < sogs.length; i++) {
-        if (sogs[i] < threshold) {
-            if (currentLegType !== null) {
-                if (i - startIdx >= MIN_LEG_POINTS) {
-                    const idStr = 'leg_' + Date.now() + '_' + legs.length;
-                    if (currentLegType === 'upwind') {
-                        upwindCount++;
-                        legs.push({
-                            id: idStr,
-                            startIdx: startIdx,
-                            endIdx: i,
-                            type: 'leg',
-                            label: `⛵ Upwind Leg ${upwindCount}`,
-                            color: 'rgba(56, 189, 248, 0.45)'
-                        });
-                    } else {
-                        downwindCount++;
-                        legs.push({
-                            id: idStr,
-                            startIdx: startIdx,
-                            endIdx: i,
-                            type: 'leg',
-                            label: `🚀 Downwind Leg ${downwindCount}`,
-                            color: 'rgba(236, 72, 153, 0.45)'
-                        });
-                    }
-                }
-                currentLegType = null;
-            }
-            continue;
-        }
-
-        const absTwa = Math.abs(twas[i] || 0);
-        const legType = absTwa < 90 ? 'upwind' : 'downwind';
-
-        if (currentLegType === null) {
-            currentLegType = legType;
-            startIdx = i;
-        } else if (currentLegType !== legType) {
-            if (i - startIdx >= MIN_LEG_POINTS) {
-                const idStr = 'leg_' + Date.now() + '_' + legs.length;
-                if (currentLegType === 'upwind') {
-                    upwindCount++;
-                    legs.push({
-                        id: idStr,
-                        startIdx: startIdx,
-                        endIdx: i,
-                        type: 'leg',
-                        label: `⛵ Upwind Leg ${upwindCount}`,
-                        color: 'rgba(56, 189, 248, 0.45)'
+        // Carve newLeg out of activeSegments
+        let nextSegments = [];
+        activeSegments.forEach(seg => {
+            if (seg.endIdx < subStart || seg.startIdx > subEnd) {
+                // No overlap, keep original segment
+                nextSegments.push(seg);
+            } else {
+                // Overlap: split parent leg into pre and/or post segments around subleg
+                if (seg.startIdx < subStart) {
+                    nextSegments.push({
+                        id: seg.id + '_pre',
+                        startIdx: seg.startIdx,
+                        endIdx: subStart - 1,
+                        type: seg.type,
+                        label: seg.label,
+                        color: seg.color
                     });
-                } else {
-                    downwindCount++;
-                    legs.push({
-                        id: idStr,
-                        startIdx: startIdx,
-                        endIdx: i,
-                        type: 'leg',
-                        label: `🚀 Downwind Leg ${downwindCount}`,
-                        color: 'rgba(236, 72, 153, 0.45)'
+                }
+                if (seg.endIdx > subEnd) {
+                    nextSegments.push({
+                        id: seg.id + '_post',
+                        startIdx: subEnd + 1,
+                        endIdx: seg.endIdx,
+                        type: seg.type,
+                        label: seg.label,
+                        color: seg.color
                     });
                 }
             }
-            currentLegType = legType;
-            startIdx = i;
-        }
-    }
+        });
 
-    if (currentLegType !== null && sogs.length - startIdx >= MIN_LEG_POINTS) {
-        const idStr = 'leg_' + Date.now() + '_' + legs.length;
-        if (currentLegType === 'upwind') {
-            upwindCount++;
-            legs.push({
-                id: idStr,
-                startIdx: startIdx,
-                endIdx: sogs.length - 1,
-                type: 'leg',
-                label: `⛵ Upwind Leg ${upwindCount}`,
-                color: 'rgba(56, 189, 248, 0.45)'
-            });
-        } else {
-            downwindCount++;
-            legs.push({
-                id: idStr,
-                startIdx: startIdx,
-                endIdx: sogs.length - 1,
-                type: 'leg',
-                label: `🚀 Downwind Leg ${downwindCount}`,
-                color: 'rgba(236, 72, 153, 0.45)'
-            });
-        }
-    }
+        nextSegments.push(newLeg);
+        nextSegments.sort((a, b) => a.startIdx - b.startIdx);
+        activeSegments = nextSegments;
+        selectedSegmentId = newLeg.id;
+        createdCount++;
+    });
 
-    const hiddenSegs = activeSegments.filter(s => s.type === 'hidden');
-    activeSegments = [...hiddenSegs, ...legs];
-    if (activeSegments.length > 0) selectedSegmentId = activeSegments[0].id;
-    
-    recalculateAllLegsTwd();
     renderSegmentRibbon();
-    updateReelsInspectorPill();
-    
-    if (!silent) {
-        const isEs = window.location.href.includes('lang=es');
-        alert(isEs ? `Detectados ${legs.length} tramos (Ceñida / Empopada)` : `Detected ${legs.length} legs (Upwind / Downwind)`);
+
+    if (createdCount === 1) {
+        const cleanLabel = targetSublegs[0].label.replace(/^[^\w\s]+/, '').trim();
+        alert(isEs 
+            ? `Creado tramo principal "${cleanLabel}" dividiendo el tramo original.` 
+            : `Created main leg clip "${cleanLabel}" by splitting parent leg.`);
+    } else {
+        alert(isEs 
+            ? `Creados ${createdCount} tramos principales desde subtramo(s).` 
+            : `Created ${createdCount} main leg clips by splitting parent legs.`);
     }
 };
 
@@ -1152,110 +2059,176 @@ window.clearSegments = function() {
     resetToSingleSessionLeg();
 };
 
-window.updateNonSailingFilter = function() {
+window.applyDataFilters = function() {
     if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog) return;
-    
-    const filterCheckbox = document.getElementById('enableNonSailingFilter');
-    const isFilterEnabled = filterCheckbox ? filterCheckbox.checked : true;
-    
-    const thresholdInput = document.getElementById('nonSailingSpeedThreshold');
-    const threshold = parseFloat(thresholdInput ? thresholdInput.value : 1.0) || 1.0;
-    
-    const hiddenLegCheckbox = document.getElementById('actAsHiddenLeg');
-    const actAsHiddenLeg = hiddenLegCheckbox ? hiddenLegCheckbox.checked : true;
 
-    // Foiling filter
+    const lowSpeedCheckbox = document.getElementById('enableNonSailingFilter');
+    const lowSpeedEnabled = lowSpeedCheckbox ? lowSpeedCheckbox.checked : false;
+    const lowSpeedThresh = parseFloat(document.getElementById('nonSailingSpeedThreshold')?.value || 1.0);
+
     const foilingCheckbox = document.getElementById('enableFoilingFilter');
-    const isFoilingEnabled = foilingCheckbox ? foilingCheckbox.checked : false;
-    const foilingInput = document.getElementById('foilingSpeedThreshold');
-    const foilingThreshold = parseFloat(foilingInput ? foilingInput.value : 8.0) || 8.0;
+    const foilingEnabled = foilingCheckbox ? foilingCheckbox.checked : false;
+    const foilingThresh = parseFloat(document.getElementById('foilingSpeedThreshold')?.value || 8.0);
 
-    const sogs = sessionData.metrics.sog;
+    if (!lowSpeedEnabled && !foilingEnabled) return;
 
-    activeSegments = activeSegments.filter(s => s.type !== 'hidden');
+    let sogs = sessionData.metrics.sog;
+    
+    let isLow = new Array(sogs.length).fill(false);
+    for (let i = 0; i < sogs.length; i++) {
+        const v = sogs[i];
+        if ((lowSpeedEnabled && v < lowSpeedThresh) || (foilingEnabled && v < foilingThresh)) {
+            isLow[i] = true;
+        }
+    }
 
-    let hiddenCount = 0;
-
-    // Combined filter: a point is hidden if it fails either active filter
-    const shouldHide = (sogVal) => {
-        if (isFilterEnabled && sogVal < threshold) return true;
-        if (isFoilingEnabled && sogVal < foilingThreshold) return true;
-        return false;
-    };
-
-    const effectiveThreshold = isFoilingEnabled ? Math.max(threshold, foilingThreshold) : threshold;
-
-    if ((isFilterEnabled || isFoilingEnabled) && actAsHiddenLeg) {
-        let rawBlocks = [];
-        let inHidden = false;
-        let startIdx = 0;
+    let newSegments = [];
+    activeSegments.forEach(seg => {
+        let currentType = isLow[seg.startIdx];
+        let subStart = seg.startIdx;
         
-        for (let i = 0; i < sogs.length; i++) {
-            if (shouldHide(sogs[i])) {
-                hiddenCount++;
-                if (!inHidden) {
-                    inHidden = true;
-                    startIdx = i;
+        for (let i = seg.startIdx; i <= seg.endIdx; i++) {
+            if (isLow[i] !== currentType) {
+                if (subStart <= i - 1) {
+                    newSegments.push({
+                        id: 'seg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        label: currentType ? 'Low Speed Leg' : seg.label,
+                        type: currentType ? 'hidden' : seg.type,
+                        startIdx: subStart,
+                        endIdx: i - 1,
+                        color: currentType ? 'rgba(71, 85, 105, 0.4)' : seg.color,
+                        twd: seg.twd
+                    });
                 }
-            } else if (!shouldHide(sogs[i]) && inHidden) {
-                inHidden = false;
-                rawBlocks.push([startIdx, i]);
+                subStart = i;
+                currentType = isLow[i];
             }
         }
-        if (inHidden) {
-            rawBlocks.push([startIdx, sogs.length - 1]);
+        if (subStart <= seg.endIdx) {
+            newSegments.push({
+                id: 'seg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                label: currentType ? 'Low Speed Leg' : seg.label,
+                type: currentType ? 'hidden' : seg.type,
+                startIdx: subStart,
+                endIdx: seg.endIdx,
+                color: currentType ? 'rgba(71, 85, 105, 0.4)' : seg.color,
+                twd: seg.twd
+            });
         }
+    });
 
-        let mergedBlocks = [];
-        rawBlocks.forEach(b => {
-            if (mergedBlocks.length === 0) {
-                mergedBlocks.push([b[0], b[1]]);
-            } else {
-                let prev = mergedBlocks[mergedBlocks.length - 1];
-                if (b[0] - prev[1] < 15) {
-                    prev[1] = b[1];
-                } else {
-                    mergedBlocks.push([b[0], b[1]]);
-                }
-            }
-        });
+    activeSegments = newSegments;
 
-        const isEs = window.location.href.includes('lang=es');
-        mergedBlocks.forEach((b, idx) => {
-            if (b[1] - b[0] >= 20) {
-                activeSegments.push({
-                    id: 'hidden_' + idx,
-                    startIdx: b[0],
-                    endIdx: b[1],
-                    type: 'hidden',
-                    label: isEs ? `🙈 Oculto (<${effectiveThreshold}kn)` : `🙈 Hidden (<${effectiveThreshold}kn)`,
-                    color: 'rgba(100, 116, 139, 0.45)'
-                });
-            }
-        });
-
-    } else if (isFilterEnabled || isFoilingEnabled) {
-        hiddenCount = sogs.filter(s => shouldHide(s)).length;
-    }
-
+    recalculateAllLegsTwd();
     renderSegmentRibbon();
+    refreshChartData();
+    autoFitVisualsToRemainingClips();
+    updateScrubberPosition();
+    setupMap();
+    updateFrame(playbackIndex);
 
-    // Update badge text — just show active filter count
-    let activeFilters = 0;
-    if (isFilterEnabled) activeFilters++;
-    if (isFoilingEnabled) activeFilters++;
-
-    const isEs = window.location.href.includes('lang=es');
-    const badge = document.getElementById('activeSailingBadge');
-    if (badge) {
-        if (activeFilters === 0) {
-            badge.innerText = isEs ? 'Filtros' : 'Filters';
-        } else {
-            badge.innerText = isEs ? `Filtros (${activeFilters})` : `Filters (${activeFilters})`;
-        }
-        badge.style.color = activeFilters > 0 ? '#38bdf8' : '#94a3b8';
-    }
+    const popover = document.getElementById('filterPopover');
+    if (popover) popover.style.display = 'none';
 };
+
+window.updateNonSailingFilter = function() {
+    applyDataFilters();
+};
+
+function deleteDataRange(startIdx, endIdx) {
+    const numItems = endIdx - startIdx + 1;
+    if (numItems <= 0) return;
+
+    // 1. Splice metrics
+    for (let key in sessionData.metrics) {
+        if (Array.isArray(sessionData.metrics[key])) {
+            sessionData.metrics[key].splice(startIdx, numItems);
+        }
+    }
+    
+    // 2. Splice track
+    if (Array.isArray(sessionData.track)) {
+        sessionData.track.splice(startIdx, numItems);
+    }
+    
+    // 3. Splice raw timestamps if they exist
+    if (Array.isArray(sessionData.time)) {
+        sessionData.time.splice(startIdx, numItems);
+    }
+
+    // 4. Adjust elapsed times
+    const timeToSubtract = (sessionData.elapsed[endIdx] || 0) - (sessionData.elapsed[startIdx] || 0);
+    sessionData.elapsed.splice(startIdx, numItems);
+    for (let i = startIdx; i < sessionData.elapsed.length; i++) {
+        sessionData.elapsed[i] = Math.max(0, sessionData.elapsed[i] - timeToSubtract);
+    }
+
+    // 5. Update activeSegments
+    let newSegments = [];
+    activeSegments.forEach(seg => {
+        if (seg.endIdx < startIdx) {
+            newSegments.push(seg);
+        } else if (seg.startIdx > endIdx) {
+            seg.startIdx -= numItems;
+            seg.endIdx -= numItems;
+            newSegments.push(seg);
+        } else {
+            // Overlapping
+            if (seg.startIdx < startIdx && seg.endIdx > endIdx) {
+                seg.endIdx -= numItems;
+                newSegments.push(seg);
+            } else if (seg.startIdx >= startIdx && seg.endIdx <= endIdx) {
+                if (selectedSegmentId === seg.id) selectedSegmentId = null;
+            } else if (seg.startIdx < startIdx) {
+                seg.endIdx = startIdx - 1;
+                newSegments.push(seg);
+            } else {
+                seg.startIdx = startIdx;
+                seg.endIdx -= numItems;
+                newSegments.push(seg);
+            }
+        }
+    });
+    activeSegments = newSegments;
+
+    // 5.5 Update activeSublegs
+    let newSublegs = [];
+    activeSublegs.forEach(seg => {
+        if (seg.endIdx < startIdx) {
+            newSublegs.push(seg);
+        } else if (seg.startIdx > endIdx) {
+            seg.startIdx -= numItems;
+            seg.endIdx -= numItems;
+            newSublegs.push(seg);
+        } else {
+            // Overlapping
+            if (seg.startIdx < startIdx && seg.endIdx > endIdx) {
+                seg.endIdx -= numItems;
+                newSublegs.push(seg);
+            } else if (seg.startIdx >= startIdx && seg.endIdx <= endIdx) {
+                if (selectedSublegId === seg.id) selectedSublegId = null;
+            } else if (seg.startIdx < startIdx) {
+                seg.endIdx = startIdx - 1;
+                newSublegs.push(seg);
+            } else {
+                seg.startIdx = startIdx;
+                seg.endIdx -= numItems;
+                newSublegs.push(seg);
+            }
+        }
+    });
+    activeSublegs = newSublegs;
+
+    // Fix playbackIndex
+    if (playbackIndex > endIdx) {
+        playbackIndex -= numItems;
+    } else if (playbackIndex >= startIdx) {
+        playbackIndex = startIdx;
+    }
+    if (playbackIndex >= sessionData.elapsed.length) {
+        playbackIndex = Math.max(0, sessionData.elapsed.length - 1);
+    }
+}
 
 function findNearestTrackPoint(latlng) {
     let minDist = Infinity;
@@ -1297,9 +2270,7 @@ window.stepFrame = function(seconds) {
         else high = mid;
     }
     playbackIndex = low;
-    if (document.getElementById('timeSlider')) {
-        document.getElementById('timeSlider').value = sessionData.elapsed[playbackIndex];
-    }
+    updateScrubberPosition();
     updateFrame(playbackIndex);
 };
 
@@ -1313,10 +2284,255 @@ function animate() {
         return;
     }
     updateFrame(playbackIndex);
-    if (document.getElementById('timeSlider')) {
-        document.getElementById('timeSlider').value = sessionData.elapsed[playbackIndex];
-    }
+    updateScrubberPosition();
     animationId = requestAnimationFrame(animate);
+}
+
+// Racecourse marks state
+let raceMarks = {};
+let raceMarkMarkers = {};
+let startLinePolyline = null;
+let isPickingMarkMode = false;
+
+window.placeMarkAtBoat = function() {
+    if (!sessionData || !sessionData.track || playbackIndex < 0 || playbackIndex >= sessionData.track.length) {
+        alert("Please load a telemetry session first.");
+        return;
+    }
+    const pos = sessionData.track[playbackIndex];
+    const typeSelect = document.getElementById('raceMarkTypeSelect');
+    const type = typeSelect ? typeSelect.value : 'windward';
+    setRaceMark(type, pos[0], pos[1]);
+};
+
+window.togglePickMarkMode = function() {
+    isPickingMarkMode = !isPickingMarkMode;
+    const btn = document.getElementById('btnPickMarkMap');
+    if (btn) {
+        if (isPickingMarkMode) {
+            btn.style.background = '#eab308';
+            btn.style.color = '#020617';
+            btn.innerText = '🎯 Click Map...';
+            if (map) map.getContainer().style.cursor = 'crosshair';
+        } else {
+            btn.style.background = '#475569';
+            btn.style.color = 'white';
+            btn.innerText = '🖱 Map';
+            if (map) map.getContainer().style.cursor = '';
+        }
+    }
+};
+
+window.clearAllMarks = function() {
+    for (let key in raceMarkMarkers) {
+        if (raceMarkMarkers[key] && map) {
+            map.removeLayer(raceMarkMarkers[key]);
+        }
+    }
+    raceMarks = {};
+    raceMarkMarkers = {};
+    if (startLinePolyline && map) {
+        map.removeLayer(startLinePolyline);
+        startLinePolyline = null;
+    }
+    if (isPickingMarkMode) togglePickMarkMode();
+    if (typeof updateFrame === 'function' && sessionData) updateFrame(playbackIndex);
+};
+
+function setRaceMark(type, lat, lng) {
+    raceMarks[type] = [lat, lng];
+
+    if (raceMarkMarkers[type] && map) {
+        map.removeLayer(raceMarkMarkers[type]);
+    }
+
+    const markLabels = {
+        windward: 'W',
+        offset: 'Off',
+        offset2: 'Off2',
+        leeward: 'L',
+        gate1: 'G1',
+        gate2: 'G2',
+        pin: 'Pin',
+        finish1: 'F1',
+        finish2: 'F2',
+        rc: 'RC'
+    };
+
+    const label = markLabels[type] || type.toUpperCase();
+    const color = (type === 'rc' || type === 'pin') ? '#38bdf8' : (type === 'windward' ? '#f59e0b' : '#ec4899');
+
+    const icon = L.divIcon({
+        className: 'custom-race-mark-icon',
+        html: `<div style="background: ${color}; color: #020617; font-weight: bold; font-size: 0.75rem; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${label}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+
+    if (map) {
+        const marker = L.marker([lat, lng], { icon: icon, draggable: true }).addTo(map);
+        marker.on('dragend', function(e) {
+            const newPos = e.target.getLatLng();
+            raceMarks[type] = [newPos.lat, newPos.lng];
+            redrawRacecourseOverlays();
+        });
+        raceMarkMarkers[type] = marker;
+    }
+
+    redrawRacecourseOverlays();
+}
+
+function redrawRacecourseOverlays() {
+    if (startLinePolyline && map) {
+        map.removeLayer(startLinePolyline);
+        startLinePolyline = null;
+    }
+
+    if (raceMarks['rc'] && raceMarks['pin'] && map) {
+        startLinePolyline = L.polyline([raceMarks['rc'], raceMarks['pin']], {
+            color: '#38bdf8',
+            weight: 3,
+            dashArray: '5, 5'
+        }).addTo(map);
+    }
+
+    if (typeof updateFrame === 'function' && sessionData) {
+        updateFrame(playbackIndex);
+    }
+}
+
+function calculateBearing(lat1, lon1, lat2, lon2) {
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    const θ = Math.atan2(y, x);
+    return (θ * 180 / Math.PI + 360) % 360;
+}
+
+function calculateDistanceNM(lat1, lon1, lat2, lon2) {
+    const R = 3440.065;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function getActiveTargetMarkInfo(idx, pos, sog, cog, twa) {
+    if (!pos || Object.keys(raceMarks).length === 0) return null;
+
+    let targetType = null;
+    let targetPos = null;
+
+    const absTwa = Math.abs(twa);
+    const isUpwind = absTwa < 90;
+
+    if (isUpwind) {
+        if (raceMarks['windward']) {
+            targetType = 'Windward';
+            targetPos = raceMarks['windward'];
+        } else if (raceMarks['offset']) {
+            targetType = 'Offset';
+            targetPos = raceMarks['offset'];
+        }
+    } else {
+        if (raceMarks['leeward']) {
+            targetType = 'Leeward';
+            targetPos = raceMarks['leeward'];
+        } else if (raceMarks['gate1']) {
+            targetType = 'Gate 1';
+            targetPos = raceMarks['gate1'];
+        } else if (raceMarks['finish1']) {
+            targetType = 'Finish 1';
+            targetPos = raceMarks['finish1'];
+        }
+    }
+
+    if (!targetPos) {
+        const firstKey = Object.keys(raceMarks)[0];
+        targetType = firstKey.toUpperCase();
+        targetPos = raceMarks[firstKey];
+    }
+
+    const brgToMark = calculateBearing(pos[0], pos[1], targetPos[0], targetPos[1]);
+    const distNM = calculateDistanceNM(pos[0], pos[1], targetPos[0], targetPos[1]);
+    const vmc = sog * Math.cos((brgToMark - cog) * Math.PI / 180);
+    const distStr = distNM < 1.0 ? `${Math.round(distNM * 1852)}m` : `${distNM.toFixed(2)}nm`;
+
+    return {
+        name: targetType,
+        pos: targetPos,
+        brg: brgToMark,
+        distStr: distStr,
+        vmc: vmc,
+        isUpwind: isUpwind
+    };
+}
+
+function updateRacecourseTelemetryDisplay(idx, pos) {
+    let topBrgStr = '--°';
+    let lineBiasStr = '--';
+    let lineLenStr = '--';
+    let legTypeStr = '--';
+    let targetMarkStr = '--';
+    let distMarkStr = '--';
+
+    const twd = sessionData && sessionData.metrics && sessionData.metrics.twd ? (sessionData.metrics.twd[idx] || sessionData.calibratedTwd || 215) : 215;
+    const sog = sessionData && sessionData.metrics && sessionData.metrics.sog ? (sessionData.metrics.sog[idx] || 0) : 0;
+    const cog = sessionData && sessionData.metrics && sessionData.metrics.cog ? (sessionData.metrics.cog[idx] || 0) : 0;
+    const twa = sessionData && sessionData.metrics && sessionData.metrics.twa ? (sessionData.metrics.twa[idx] || 0) : 0;
+
+    if (raceMarks['windward']) {
+        const refPos = raceMarks['rc'] || pos;
+        if (refPos) {
+            const brg = calculateBearing(refPos[0], refPos[1], raceMarks['windward'][0], raceMarks['windward'][1]);
+            topBrgStr = `${Math.round(brg)}°`;
+        }
+    }
+
+    if (raceMarks['rc'] && raceMarks['pin']) {
+        const rc = raceMarks['rc'];
+        const pin = raceMarks['pin'];
+        const lenNM = calculateDistanceNM(rc[0], rc[1], pin[0], pin[1]);
+        const lenMeters = lenNM * 1852;
+        lineLenStr = lenMeters < 1000 ? `${Math.round(lenMeters)}m` : `${lenNM.toFixed(2)}nm`;
+
+        const lineBrg = calculateBearing(rc[0], rc[1], pin[0], pin[1]);
+        const perpBrg = (lineBrg + 90) % 360;
+        let biasAngle = twd - perpBrg;
+        while (biasAngle > 180) biasAngle -= 360;
+        while (biasAngle < -180) biasAngle += 360;
+
+        if (Math.abs(biasAngle) < 2) {
+            lineBiasStr = 'EVEN';
+        } else if (biasAngle > 0) {
+            lineBiasStr = `PIN +${Math.round(biasAngle)}°`;
+        } else {
+            lineBiasStr = `RC +${Math.round(Math.abs(biasAngle))}°`;
+        }
+    }
+
+    const targetInfo = getActiveTargetMarkInfo(idx, pos, sog, cog, twa);
+    if (targetInfo) {
+        legTypeStr = targetInfo.isUpwind ? 'UPWIND' : 'DOWNWIND';
+        targetMarkStr = targetInfo.name;
+        distMarkStr = targetInfo.distStr;
+    }
+
+    if (document.getElementById('val-top-brg')) document.getElementById('val-top-brg').innerText = topBrgStr;
+    if (document.getElementById('val-line-bias')) document.getElementById('val-line-bias').innerText = lineBiasStr;
+    if (document.getElementById('val-line-len')) document.getElementById('val-line-len').innerText = lineLenStr;
+    if (document.getElementById('val-leg-type')) document.getElementById('val-leg-type').innerText = legTypeStr;
+    if (document.getElementById('val-target-mark')) document.getElementById('val-target-mark').innerText = targetMarkStr;
+    if (document.getElementById('val-dist-mark')) document.getElementById('val-dist-mark').innerText = distMarkStr;
 }
 
 function updateFrame(idx) {
@@ -1329,14 +2545,66 @@ function updateFrame(idx) {
 
     const m = sessionData.metrics;
     if (m) {
-        if (document.getElementById('val-sog')) document.getElementById('val-sog').innerText = (m.sog[idx] || 0).toFixed(1);
-        if (document.getElementById('val-cog')) document.getElementById('val-cog').innerText = Math.round(m.cog[idx] || 0) + '°';
-        if (document.getElementById('val-heel')) document.getElementById('val-heel').innerText = (m.heel[idx] || 0).toFixed(1) + '°';
-        if (document.getElementById('val-pitch')) document.getElementById('val-pitch').innerText = m.pitch ? (m.pitch[idx] || 0).toFixed(1) + '°' : "0.0°";
+        // Group 1: Raw Telemetry (Read from file)
+        const sog = m.sog ? (m.sog[idx] || 0) : 0;
+        const cog = m.cog ? (m.cog[idx] || 0) : 0;
+        const hdg = (m.hdt && m.hdt[idx] !== undefined) ? m.hdt[idx] : cog;
+        const heel = m.heel ? (m.heel[idx] || 0) : 0;
+        const pitch = m.pitch ? (m.pitch[idx] || 0) : 0;
         
-        if (document.getElementById('val-tws')) document.getElementById('val-tws').innerText = m.tws ? (m.tws[idx] || 0).toFixed(1) : "--";
-        if (document.getElementById('val-twd')) document.getElementById('val-twd').innerText = Math.round(m.twd[idx] || 0) + '°';
-        if (document.getElementById('val-twa')) document.getElementById('val-twa').innerText = Math.round(m.twa[idx] || 0) + '°';
+        let rot = 0;
+        if (idx > 0 && sessionData.elapsed) {
+            const dt = (sessionData.elapsed[idx] - sessionData.elapsed[idx-1]) || 1;
+            const prevHdg = (m.hdt && m.hdt[idx-1] !== undefined) ? m.hdt[idx-1] : (m.cog ? m.cog[idx-1] : 0);
+            let diffHdg = hdg - prevHdg;
+            while (diffHdg > 180) diffHdg -= 360;
+            while (diffHdg < -180) diffHdg += 360;
+            rot = diffHdg / dt;
+        }
+
+        if (document.getElementById('val-sog')) document.getElementById('val-sog').innerText = sog.toFixed(1);
+        if (document.getElementById('val-cog')) document.getElementById('val-cog').innerText = Math.round(cog) + '°';
+        if (document.getElementById('val-hdg')) document.getElementById('val-hdg').innerText = Math.round(hdg) + '°';
+        if (document.getElementById('val-heel')) document.getElementById('val-heel').innerText = heel.toFixed(1) + '°';
+        if (document.getElementById('val-pitch')) document.getElementById('val-pitch').innerText = pitch.toFixed(1) + '°';
+        if (document.getElementById('val-rot')) document.getElementById('val-rot').innerText = (rot >= 0 ? '+' : '') + rot.toFixed(1);
+
+        // Group 2: Derived Telemetry
+        const twa = m.twa ? (m.twa[idx] || 0) : 0;
+        const twd = m.twd ? (m.twd[idx] || sessionData.calibratedTwd || 215) : 215;
+        const vmg = sog * Math.cos(twa * Math.PI / 180);
+        
+        let leeway = hdg - cog;
+        while (leeway > 180) leeway -= 360;
+        while (leeway < -180) leeway += 360;
+
+        // Current calculation (Set & Drift vector difference)
+        const cogRad = cog * Math.PI / 180;
+        const hdgRad = hdg * Math.PI / 180;
+        const vg_x = sog * Math.sin(cogRad);
+        const vg_y = sog * Math.cos(cogRad);
+        const vw_x = sog * Math.sin(hdgRad);
+        const vw_y = sog * Math.cos(hdgRad);
+        const vc_x = vg_x - vw_x;
+        const vc_y = vg_y - vw_y;
+        const currentSpeed = Math.sqrt(vc_x * vc_x + vc_y * vc_y);
+        let currentDir = Math.atan2(vc_x, vc_y) * 180 / Math.PI;
+        if (currentDir < 0) currentDir += 360;
+
+        let vmc = 0;
+        const targetInfo = getActiveTargetMarkInfo(idx, pos, sog, cog, twa);
+        if (targetInfo) {
+            vmc = targetInfo.vmc;
+        }
+
+        if (document.getElementById('val-vmg')) document.getElementById('val-vmg').innerText = vmg.toFixed(1);
+        if (document.getElementById('val-vmc')) document.getElementById('val-vmc').innerText = vmc.toFixed(1);
+        if (document.getElementById('val-twa')) document.getElementById('val-twa').innerText = Math.round(twa) + '°';
+        if (document.getElementById('val-twd')) document.getElementById('val-twd').innerText = Math.round(twd) + '°';
+        if (document.getElementById('val-leeway')) document.getElementById('val-leeway').innerText = leeway.toFixed(1) + '°';
+        if (document.getElementById('val-current')) document.getElementById('val-current').innerText = `${currentSpeed.toFixed(1)}k@${Math.round(currentDir)}°`;
+
+        updateRacecourseTelemetryDisplay(idx, pos);
     }
 
     const currentElapsed = sessionData.elapsed[idx] || 0;
@@ -1349,7 +2617,11 @@ function updateFrame(idx) {
         document.getElementById('localGpsTimeDisplay').innerText = localGpsTimeStr;
     }
 
-    updateReelsInspectorPill();
+    const currentSeg = activeSegments.find(s => idx >= s.startIdx && idx <= s.endIdx);
+    if (currentSeg && currentSeg.id !== selectedSegmentId) {
+        selectedSegmentId = currentSeg.id;
+        renderSegmentRibbon();
+    }
 
     if (timeChart) {
         timeChart.update('none');
@@ -1367,6 +2639,26 @@ window.updateTelemetryWindCustomization = function() {
     } else {
         customInput.style.display = 'none';
         onWindCalibrated(sessionData.calibratedTwd, false);
+    }
+};
+
+window.autoDetectWindTwd = function() {
+    if (!sessionData) return;
+    let detectedTwd = null;
+    
+    if (raceMarks.windward && raceMarks.rc) {
+        detectedTwd = calculateBearing(raceMarks.rc.lat, raceMarks.rc.lng, raceMarks.windward.lat, raceMarks.windward.lng);
+    } else if (typeof estimateTwdFromTrack === 'function') {
+        detectedTwd = estimateTwdFromTrack();
+    }
+    
+    if (detectedTwd !== null && !isNaN(detectedTwd)) {
+        detectedTwd = Math.round((detectedTwd + 360) % 360);
+        document.getElementById('telemetryWindSource').value = 'calibrated';
+        document.getElementById('telemetryCustomTwd').style.display = 'none';
+        onWindCalibrated(detectedTwd, false);
+        const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+        alert(isEs ? `Viento autodetectado: ${detectedTwd}°` : `Auto-detected Wind (TWD): ${detectedTwd}°`);
     }
 };
 
@@ -1609,9 +2901,7 @@ function selectManeuverRow(m) {
     document.getElementById('maneuver-trim-bar').style.display = 'flex';
     
     playbackIndex = m.index;
-    if (document.getElementById('timeSlider')) {
-        document.getElementById('timeSlider').value = sessionData.elapsed[playbackIndex];
-    }
+    updateScrubberPosition();
     updateFrame(playbackIndex);
     
     zoomSelectedManeuverTrack();
@@ -1712,16 +3002,23 @@ function renderSegmentRibbon() {
     ribbon.innerHTML = '';
     if (!sessionData || activeSegments.length === 0) return;
     
-    const totalTime = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
+    const { viewMin, viewMax, viewDuration } = getChartViewportDomain();
     const frag = document.createDocumentFragment();
 
     activeSegments.forEach((seg) => {
-        const startPct = ((sessionData.elapsed[seg.startIdx] || 0) / totalTime) * 100;
-        const endPct = ((sessionData.elapsed[seg.endIdx] || 0) / totalTime) * 100;
+        const segStartSec = sessionData.elapsed[seg.startIdx] || 0;
+        const segEndSec = sessionData.elapsed[seg.endIdx] || 0;
+
+        if (segEndSec < viewMin || segStartSec > viewMax) return;
+
+        const startPct = Math.max(0, ((segStartSec - viewMin) / viewDuration) * 100);
+        const endPct = Math.min(100, ((segEndSec - viewMin) / viewDuration) * 100);
+        const widthPct = Math.max(0.2, endPct - startPct);
+
         let div = document.createElement('div');
         div.style.position = 'absolute';
         div.style.left = `${startPct}%`;
-        div.style.width = `${Math.max(0.5, endPct - startPct)}%`;
+        div.style.width = `${widthPct}%`;
         div.style.height = '100%';
         div.style.backgroundColor = seg.color;
         
@@ -1734,15 +3031,17 @@ function renderSegmentRibbon() {
             div.style.borderRight = '2px solid #0f172a';
         }
 
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.justifyContent = 'center';
         div.style.fontSize = '0.75rem';
-        div.style.fontWeight = '600';
+        div.style.fontWeight = '700';
         div.style.color = 'white';
         div.style.textAlign = 'center';
         div.style.overflow = 'hidden';
         div.style.whiteSpace = 'nowrap';
         div.style.cursor = 'pointer';
-        div.style.lineHeight = '32px';
-        div.style.textShadow = '0 1px 3px rgba(0,0,0,0.6)';
+        div.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)';
         div.innerText = seg.label;
         div.title = `${seg.label} (TWD: ${Math.round(seg.twd || sessionData.calibratedTwd)}°)`;
         
@@ -1750,9 +3049,7 @@ function renderSegmentRibbon() {
             e.stopPropagation();
             selectedSegmentId = seg.id;
             playbackIndex = seg.startIdx;
-            if(document.getElementById('timeSlider')) {
-                document.getElementById('timeSlider').value = sessionData.elapsed[playbackIndex];
-            }
+            updateScrubberPosition();
             if (timeChart) {
                 timeChart.options.scales.x.min = sessionData.elapsed[seg.startIdx];
                 timeChart.options.scales.x.max = sessionData.elapsed[seg.endIdx];
@@ -1770,6 +3067,10 @@ function renderSegmentRibbon() {
         frag.appendChild(div);
     });
     ribbon.appendChild(frag);
+    
+    if (typeof renderSublegRibbon === 'function') {
+        renderSublegRibbon();
+    }
 }
 
 window.loadCompareSession = async function() {
@@ -1829,8 +3130,11 @@ function overlayCompareSession(data) {
         return { x: elapsed[idx], y: cmpSogs[closestIdx] || 0 };
     });
 
-    timeChart.data.datasets[7].data = cmpDataMapped;
-    timeChart.data.datasets[7].hidden = false;
+    const cmpDs = timeChart.data.datasets.find(d => d.id === 'sog-cmp');
+    if (cmpDs) {
+        cmpDs.data = cmpDataMapped;
+        cmpDs.hidden = false;
+    }
     timeChart.update();
 
     const avg1 = sessionData.metrics.sog.reduce((a,b)=>a+b,0)/sessionData.metrics.sog.length;
@@ -1853,7 +3157,8 @@ window.clearCompareSession = function() {
     if (compareTrackPolyline) map.removeLayer(compareTrackPolyline);
     if (compareBoatMarker) map.removeLayer(compareBoatMarker);
     compareSessionData = null;
-    timeChart.data.datasets[7].hidden = true;
+    const cmpDs = timeChart.data.datasets.find(d => d.id === 'sog-cmp');
+    if (cmpDs) cmpDs.hidden = true;
     timeChart.update();
     document.getElementById('compare-stats-card').style.display = 'none';
 };
@@ -2039,24 +3344,39 @@ window.toggleVariable = toggleVariable;
 
 function chartZoom(delta) {
     if (!timeChart || !sessionData) return;
-    const scale = timeChart.options.scales.x;
-    const totalElapsed = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
-    const currentMin = scale.min !== undefined ? scale.min : 0;
-    const currentMax = scale.max !== undefined ? scale.max : totalElapsed;
-    const range = currentMax - currentMin;
-    const center = (currentMin + currentMax) / 2;
-    const newRange = delta > 0 ? range * 0.7 : range * 1.3;
-    scale.min = Math.max(0, center - newRange / 2);
-    scale.max = Math.min(totalElapsed, center + newRange / 2);
-    timeChart.update();
+    if (timeChart.zoom) {
+        // Use chartjs-plugin-zoom API
+        const zoomLevel = delta > 0 ? 1.3 : 0.7;
+        timeChart.zoom(zoomLevel);
+    } else {
+        // Fallback manual zoom
+        const scale = timeChart.options.scales.x;
+        const totalElapsed = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
+        const currentMin = scale.min !== undefined ? scale.min : 0;
+        const currentMax = scale.max !== undefined ? scale.max : totalElapsed;
+        const range = currentMax - currentMin;
+        const center = (currentMin + currentMax) / 2;
+        const newRange = delta > 0 ? range * 0.7 : range * 1.3;
+        scale.min = Math.max(0, center - newRange / 2);
+        scale.max = Math.min(totalElapsed, center + newRange / 2);
+        timeChart.update();
+    }
+    if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
 }
 window.chartZoom = chartZoom;
 
 function resetChartZoom() {
     if (!timeChart || !sessionData) return;
-    timeChart.options.scales.x.min = 0;
-    timeChart.options.scales.x.max = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
-    timeChart.update();
+    if (timeChart.resetZoom) {
+        timeChart.resetZoom();
+    } else {
+        timeChart.options.scales.x.min = 0;
+        timeChart.options.scales.x.max = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
+        timeChart.update();
+    }
+    if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
 }
 window.resetChartZoom = resetChartZoom;
 
@@ -2075,6 +3395,7 @@ window.saveProjectToCloud = async function() {
             calibratedTwd: sessionData.calibratedTwd,
             track_count: sessionData.track ? sessionData.track.length : 0,
             activeSegments: activeSegments,
+            activeSublegs: activeSublegs,
             savedAt: new Date().toISOString()
         };
 
