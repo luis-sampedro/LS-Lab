@@ -15,6 +15,7 @@ from flask import send_file, abort, send_from_directory
 # Initialize Flask App
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev_key_for_local_testing')
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024  # 64MB upload support for high-res sail scan photos
 
 from services.firebase_service import verify_token, initialize_firebase
 
@@ -235,13 +236,201 @@ def api_trace_leech():
 @app.route('/sail-scan')
 def sail_scan_overview():
     lang = request.args.get('lang', 'en')
-    if lang == 'es':
-        return render_template('sail_scan_overview-es.html')
-    return render_template('sail_scan_overview.html')
+    boat_id = request.args.get('boat_id', '')
+    sail_id = request.args.get('sail_id', '')
+    scan_type = request.args.get('type', 'foot')
+    template = 'sail_scan-es.html' if lang == 'es' else 'sail_scan.html'
+    return render_template(template, boat_id=boat_id, sail_id=sail_id, scan_type=scan_type)
+
+@app.route('/api/sail-scan/autodetect', methods=['POST'])
+def api_sail_scan_autodetect():
+    try:
+        data = request.json or {}
+        image_data = data.get('image')
+        sail_color = data.get('sail_color', 'auto')
+        stripe_color = data.get('stripe_color', 'auto')
+        num_stripes = int(data.get('num_stripes', 3))
+        sensitivity = float(data.get('sensitivity', 1.0))
+        
+        if not image_data:
+            return {'error': 'No image provided'}, 400
+            
+        if ',' in image_data:
+            _, encoded = image_data.split(',', 1)
+        else:
+            encoded = image_data
+            
+        image_bytes = base64.b64decode(encoded)
+        from processor import autodetect_foot_stripes
+        result = autodetect_foot_stripes(image_bytes, sail_color, stripe_color, num_stripes, sensitivity)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Autodetect API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/trace', methods=['POST'])
+def api_sail_scan_trace():
+    try:
+        data = request.json or {}
+        image_data = data.get('image')
+        p1 = data.get('p1')
+        p2 = data.get('p2')
+        mode = data.get('mode', 'stripe') # 'stripe' or 'leech'
+        
+        if not image_data or not p1 or not p2:
+            return jsonify({'error': 'Missing required coordinates or image'}), 400
+            
+        if ',' in image_data:
+            _, encoded = image_data.split(',', 1)
+        else:
+            encoded = image_data
+            
+        image_bytes = base64.b64decode(encoded)
+        
+        if mode == 'leech':
+            from processor import trace_leech_path, calculate_leech_metrics
+            path_points = trace_leech_path(image_bytes, p1, p2)
+            metrics = calculate_leech_metrics(path_points, p1, p2)
+        else:
+            from processor import trace_stripe_path, calculate_interactive_geometry
+            path_points = trace_stripe_path(image_bytes, p1, p2)
+            metrics = calculate_interactive_geometry(path_points, p1, p2)
+            
+        return jsonify({
+            'success': True,
+            'path': path_points.tolist() if hasattr(path_points, 'tolist') else path_points,
+            'metrics': metrics
+        })
+    except Exception as e:
+        print(f"Sail Scan Trace Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/snap-stripe', methods=['POST'])
+def api_sail_scan_snap_stripe():
+    try:
+        data = request.json or {}
+        image_data = data.get('image')
+        click_pt = data.get('click_point')
+        sail_color = data.get('sail_color', 'auto')
+        stripe_color = data.get('stripe_color', 'auto')
+        sensitivity = float(data.get('sensitivity', 1.0))
+        
+        if not image_data or not click_pt:
+            return jsonify({'error': 'Missing image or click point'}), 400
+            
+        if ',' in image_data:
+            _, encoded = image_data.split(',', 1)
+        else:
+            encoded = image_data
+            
+        image_bytes = base64.b64decode(encoded)
+        from processor import snap_stripe_at_point
+        res = snap_stripe_at_point(image_bytes, click_pt, sail_color, stripe_color, sensitivity)
+        return jsonify(res)
+    except Exception as e:
+        print(f"Snap Stripe API Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/save-analysis', methods=['POST'])
+def api_sail_scan_save_analysis():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({'error': 'No token provided'}), 401
+        user = verify_token(auth_header)
+        if not user: return jsonify({'error': 'Invalid token'}), 401
+        uid = user['uid']
+        
+        data = request.json or {}
+        boat_id = data.get('boat_id')
+        sail_id = data.get('sail_id')
+        analysis_data = data.get('analysis_data', {})
+        sail_specs = data.get('sail_specs', {})
+        
+        if not boat_id or not sail_id:
+            return jsonify({'error': 'Boat and Sail IDs are required to save to database'}), 400
+            
+        from services.firebase_service import create_analysis, update_sail
+        
+        # 1. Update sail specs (dimensions, sail number, label photo, etc.)
+        if sail_specs:
+            update_sail(uid, boat_id, sail_id, extra_data=sail_specs)
+            
+        # 2. Save Analysis
+        aid = create_analysis(uid, boat_id, sail_id, full_payload=analysis_data)
+        
+        return jsonify({
+            'success': True,
+            'analysis_id': aid,
+            'boat_id': boat_id,
+            'sail_id': sail_id,
+            'message': 'Analysis and sail specs saved successfully!'
+        })
+    except Exception as e:
+        print(f"Save Analysis Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/save-project', methods=['POST'])
+def api_sail_scan_save_project():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({'error': 'No token provided'}), 401
+        user = verify_token(auth_header)
+        if not user: return jsonify({'error': 'Invalid token'}), 401
+        uid = user['uid']
+        
+        data = request.json or {}
+        project_name = data.get('name', 'Sail_Scan_Project')
+        
+        from services.firebase_service import save_sailscan_project
+        pid = save_sailscan_project(uid, data)
+        
+        return jsonify({
+            'success': True,
+            'project_id': pid,
+            'name': project_name,
+            'message': f'Project "{project_name}" saved to LS PRO Cloud!'
+        })
+    except Exception as e:
+        print(f"Save Project Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/projects', methods=['GET'])
+def api_sail_scan_projects():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({'error': 'No token provided'}), 401
+        user = verify_token(auth_header)
+        if not user: return jsonify({'error': 'Invalid token'}), 401
+        uid = user['uid']
+        
+        from services.firebase_service import get_user_sailscan_projects
+        projects = get_user_sailscan_projects(uid)
+        return jsonify(projects)
+    except Exception as e:
+        print(f"Get Projects Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sail-scan/projects/<project_id>', methods=['GET'])
+def api_sail_scan_project_item(project_id):
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header: return jsonify({'error': 'No token provided'}), 401
+        user = verify_token(auth_header)
+        if not user: return jsonify({'error': 'Invalid token'}), 401
+        uid = user['uid']
+        
+        from services.firebase_service import get_sailscan_project
+        proj = get_sailscan_project(uid, project_id)
+        if proj: return jsonify(proj)
+        return jsonify({'error': 'Project not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trace', methods=['POST'])
 def api_trace():
-    # Existing Foot Trace
+    # Existing Foot Trace (legacy compatibility)
     try:
         data = request.json
         image_data = data.get('image') # Base64 string

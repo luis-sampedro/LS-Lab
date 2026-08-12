@@ -216,34 +216,91 @@ def get_sail(uid, boat_id, sail_id):
         print(f"Error getting sail: {e}")
         return None
 
-def update_sail(uid, boat_id, sail_id, code, description):
+def update_sail(uid, boat_id, sail_id, code=None, description=None, extra_data=None):
     if not db: return False
     try:
-        db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails').document(sail_id).update({
-            'code': code,
-            'description': description
-        })
+        update_dict = {}
+        if isinstance(code, dict) and description is None and extra_data is None:
+            update_dict = code
+        else:
+            if code is not None: update_dict['code'] = code
+            if description is not None: update_dict['description'] = description
+            if isinstance(extra_data, dict):
+                update_dict.update(extra_data)
+        
+        if update_dict:
+            db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails').document(sail_id).set(update_dict, merge=True)
         return True
     except Exception as e:
         print(f"Error updating sail: {e}")
         return False
 
 
-def create_analysis(uid, boat_id, sail_id, date_str, metrics, path, snapshot=None):
+def create_analysis(uid, boat_id, sail_id, date_str=None, metrics=None, path=None, snapshot=None, full_payload=None):
     if not db: return None
     try:
         analyses_ref = db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails').document(sail_id).collection('analyses')
-        _, doc_ref = analyses_ref.add({
-            'date': date_str,
-            'metrics': metrics,
-            'path': path, # List of points
-            'snapshot': snapshot, # Base64 Image
-            'created_at': firestore.SERVER_TIMESTAMP
-        })
+        
+        doc_data = {}
+        if isinstance(full_payload, dict):
+            doc_data = full_payload
+        else:
+            doc_data = {
+                'date': date_str,
+                'metrics': metrics or {},
+                'path': path or [],
+                'snapshot': snapshot
+            }
+            
+        doc_data['created_at'] = firestore.SERVER_TIMESTAMP
+        _, doc_ref = analyses_ref.add(doc_data)
         return doc_ref.id
     except Exception as e:
         print(f"Error creating analysis: {e}")
         raise e
+
+def save_sailscan_project(uid, project_data):
+    """Saves complete LS-PRO Sail Scan project workspace."""
+    if not db: return None
+    try:
+        project_id = project_data.get('id')
+        projects_ref = db.collection('users').document(uid).collection('sailscan_projects')
+        
+        project_data['updated_at'] = firestore.SERVER_TIMESTAMP
+        
+        if project_id:
+            projects_ref.document(project_id).set(project_data, merge=True)
+            return project_id
+        else:
+            project_data['created_at'] = firestore.SERVER_TIMESTAMP
+            _, doc_ref = projects_ref.add(project_data)
+            return doc_ref.id
+    except Exception as e:
+        print(f"Error saving sail scan project: {e}")
+        raise e
+
+def get_sailscan_project(uid, project_id):
+    """Fetches a saved LS-PRO Sail Scan project."""
+    if not db: return None
+    try:
+        doc = db.collection('users').document(uid).collection('sailscan_projects').document(project_id).get()
+        if doc.exists:
+            return {'id': doc.id, **doc.to_dict()}
+        return None
+    except Exception as e:
+        print(f"Error getting sail scan project: {e}")
+        return None
+
+def get_user_sailscan_projects(uid):
+    """Lists saved LS-PRO Sail Scan projects for a user."""
+    if not db: return []
+    try:
+        docs = db.collection('users').document(uid).collection('sailscan_projects').order_by('created_at', direction=firestore.Query.DESCENDING).stream()
+        return [{'id': d.id, **d.to_dict()} for d in docs]
+    except Exception as e:
+        print(f"Error listing sail scan projects: {e}")
+        return []
+
 
 def get_sail_analyses(uid, boat_id, sail_id):
     if not db: return []
