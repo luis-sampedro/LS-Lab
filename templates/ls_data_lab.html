@@ -364,6 +364,13 @@
                         <button onclick="stepFrame(1)" style="background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid #334155; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">+1s ►</button>
                         <button onclick="stepFrame(5)" style="background: rgba(30, 41, 59, 0.8); color: #cbd5e1; border: 1px solid #334155; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">+5s ⏭</button>
                         
+                        <div style="display: flex; align-items: center; gap: 2px; background: rgba(30, 41, 59, 0.9); padding: 2px; border-radius: 6px; border: 1px solid #334155; margin-left: 2px;">
+                            <button id="speedBtn1" onclick="setPlaybackSpeed(1)" style="background: #0284c7; color: #ffffff; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;" title="1x Actual Speed (Real-Time)">1x</button>
+                            <button id="speedBtn2" onclick="setPlaybackSpeed(2)" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;" title="2x Speed">2x</button>
+                            <button id="speedBtn5" onclick="setPlaybackSpeed(5)" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;" title="5x Speed">5x</button>
+                            <button id="speedBtn10" onclick="setPlaybackSpeed(10)" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;" title="10x Speed">10x</button>
+                        </div>
+                        
                         <div style="margin-left: 8px; font-family: monospace; font-size: 0.85rem; color: #38bdf8; background: #020617; padding: 4px 10px; border-radius: 4px; border: 1px solid #334155; display: flex; align-items: center; gap: 8px;">
                             <span>⏱ <span id="timeDisplay">00:00:00</span> / <span id="totalTimeDisplay">00:00:00</span></span>
                             <span style="color: #475569;">|</span>
@@ -454,33 +461,65 @@
                             <button onclick="goToSelectedLegEnd()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Go to End of Selected Leg">⏭️</button>
 
                             <div style="width: 1px; height: 20px; background: #334155; margin: 0 4px;"></div>
-                            <div style="position: relative; display: inline-block;">
+                            <div style="position: relative; display: inline-block; z-index: 9999;">
                                 <div style="display: flex; align-items: center;">
                                     <button onclick="autoDetectLegsClips()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 0 8px; height: 32px; border-radius: 6px 0 0 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Auto-detect sublegs (Upwind, Downwind, Tacks, Gybes)">⚡ Auto-Detect</button>
                                     <button onclick="toggleAutoDetectPopover()" style="background: #1e293b; color: #94a3b8; border: 1px solid #0284c7; border-left: none; width: 24px; height: 32px; border-radius: 0 6px 6px 0; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Configure Auto-Detect Thresholds">⚙️</button>
                                 </div>
-                                <div id="autoDetectPopover" style="display: none; position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 9999; flex-direction: column; gap: 10px; min-width: 260px; box-shadow: 0 -8px 24px rgba(0,0,0,0.6);">
+                                <div id="autoDetectPopover" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 9999; flex-direction: column; gap: 10px; min-width: 300px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
                                     <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚡ Auto-Detect Thresholds</span>
-                                    
+
+                                    <!-- ── Ashore detection ── -->
+                                    <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Ashore Detection</div>
+
                                     <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span>🏠 Ashore Max Speed:</span>
+                                            <span>🏠 Max Speed (ashore):</span>
                                             <div style="display: flex; align-items: center; gap: 4px;">
-                                                <input type="number" id="autoAshoreSpeed" value="0.3" min="0" max="2" step="0.1" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                                <input type="number" id="autoAshoreSpeed" value="1.5" min="0" max="5" step="0.1" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
                                                 <span style="font-size: 0.65rem; color: #64748b;">kn</span>
                                             </div>
                                         </div>
-                                        
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>⚓ Dock Radius:</span>
+                                            <div style="display: flex; align-items: center; gap: 4px;">
+                                                <input type="number" id="autoDockRadius" value="300" min="50" max="1000" step="50" style="width: 55px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                                <span style="font-size: 0.65rem; color: #64748b;">m</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ── Leg detection ── -->
+                                    <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Leg Detection</div>
+                                    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>⏱️ Min Leg Duration:</span>
+                                            <div style="display: flex; align-items: center; gap: 4px;">
+                                                <input type="number" id="autoMinLegMin" value="5" min="1" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                                <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>🔄 Min Tack / Gybe Angle:</span>
+                                            <div style="display: flex; align-items: center; gap: 4px;">
+                                                <input type="number" id="autoTackMinAngle" value="70" min="30" max="150" step="5" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                                <span style="font-size: 0.65rem; color: #64748b;">°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ── Capsize / Foiler ── -->
+                                    <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Capsize &amp; Foiler</div>
+                                    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
                                             <span>🏊 Capsize Speed Range:</span>
                                             <div style="display: flex; align-items: center; gap: 2px;">
                                                 <input type="number" id="autoCapsizeMinSpeed" value="0.3" min="0" max="2" step="0.1" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
-                                                <span>-</span>
+                                                <span>–</span>
                                                 <input type="number" id="autoCapsizeMaxSpeed" value="3.0" min="1" max="5" step="0.5" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
                                                 <span style="font-size: 0.65rem; color: #64748b;">kn</span>
                                             </div>
                                         </div>
-                                        
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
                                             <span>🏊 Capsize Min Heel:</span>
                                             <div style="display: flex; align-items: center; gap: 4px;">
@@ -488,7 +527,6 @@
                                                 <span style="font-size: 0.65rem; color: #64748b;">°</span>
                                             </div>
                                         </div>
-
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
                                             <span>🛩️ Flight Speed (Foiler):</span>
                                             <div style="display: flex; align-items: center; gap: 4px;">
@@ -496,15 +534,10 @@
                                                 <span style="font-size: 0.65rem; color: #64748b;">kn</span>
                                             </div>
                                         </div>
-
-                                        <label style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 0.7rem; color: #94a3b8; cursor: pointer;">
-                                            <input type="checkbox" id="autoLandCheck" checked style="accent-color: #38bdf8;">
-                                            <span>🌍 Land vs Water Shore Heuristic</span>
-                                        </label>
                                     </div>
                                     
                                     <button onclick="autoDetectLegs(false); toggleAutoDetectPopover();" style="width: 100%; background: #0284c7; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">
-                                        Apply & Re-Detect
+                                        Apply &amp; Re-Detect
                                     </button>
                                 </div>
                             </div>
@@ -839,45 +872,77 @@
             </div>
         </div>
 
-        <!-- PANEL 6: Industry PDF Report Builder with Images & Sails -->
-        <div id="panel-report" class="wizard-panel" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; overflow-y: auto; flex-direction: column;">
-            <h3 style="color: #f8fafc; font-size: 1.4rem; margin-bottom: 0.5rem;">Step 6: Industry Sailing Performance Report</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">Configure report modules, sail setup, photos, and export to PDF.</p>
+        <!-- PANEL 6: Industry PDF Report Builder (Overleaf 50/50 Split View) -->
+        <div id="panel-report" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; padding: 1rem 1.5rem; flex-direction: column; overflow: hidden;">
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="color: #f8fafc; font-size: 1.3rem; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                        <span>Step 6: Industry Sailing Performance Report</span>
+                        <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">Overleaf Split View</span>
+                    </h3>
+                    <p style="color: #94a3b8; font-size: 0.8rem; margin: 2px 0 0 0;">Configure modules &amp; notes on the left — live A4 PDF document preview on the right.</p>
+                </div>
+                <button onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                    <span>🖨️</span> Export / Print PDF Report
+                </button>
+            </div>
 
-            <div style="display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; flex: 1; min-height: 0; height: 100%; overflow: hidden;">
                 
-                <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; height: fit-content;">
-                    <h4 style="color: #38bdf8; margin: 0 0 1rem 0;">1. Module Selection</h4>
-                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 1.25rem;">
-                        <label><input type="checkbox" id="rep-inc-summary" checked onchange="buildReportPreview()"> Session Summary</label>
-                        <label><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()"> Upwind/Downwind Stats</label>
-                        <label><input type="checkbox" id="rep-inc-flight" checked onchange="buildReportPreview()"> Foiling Flight Stats</label>
-                        <label><input type="checkbox" id="rep-inc-maneuvers" checked onchange="buildReportPreview()"> Maneuver Log Table</label>
-                        <label><input type="checkbox" id="rep-inc-polars" checked onchange="buildReportPreview()"> Target Polar Speeds</label>
+                <!-- Left Column: Editor Controls -->
+                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">1. Module Selection</h4>
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-summary" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Session Summary</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Upwind/Downwind Stats</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-flight" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Foiling Flight Stats</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-maneuvers" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Maneuver Log Table</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-polars" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Target Polar Speeds</label>
+                        </div>
                     </div>
 
-                    <h4 style="color: #38bdf8; margin: 0 0 0.8rem 0;">2. Sail Setup & Equipment</h4>
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem;">
-                        <input type="text" id="rep-sail-main" placeholder="Mainsail (e.g. M1-4)" onchange="buildReportPreview()" style="background: #0f172a; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
-                        <input type="text" id="rep-sail-jib" placeholder="Jib (e.g. J1-6)" onchange="buildReportPreview()" style="background: #0f172a; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
-                        <input type="text" id="rep-sail-kite" placeholder="Kite / Code 0 (e.g. A1.5)" onchange="buildReportPreview()" style="background: #0f172a; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">2. Sail Setup &amp; Equipment</h4>
+                        <div style="display: flex; flex-direction: column; gap: 8px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
+                            <div>
+                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Mainsail</label>
+                                <input type="text" id="rep-sail-main" placeholder="Mainsail (e.g. M1-4)" onchange="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Jib / Genoa</label>
+                                <input type="text" id="rep-sail-jib" placeholder="Jib (e.g. J1-6)" onchange="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Kite / Code 0</label>
+                                <input type="text" id="rep-sail-kite" placeholder="Kite / Code 0 (e.g. A1.5)" onchange="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                            </div>
+                        </div>
                     </div>
 
-                    <h4 style="color: #38bdf8; margin: 0 0 0.8rem 0;">3. Image Attachments</h4>
-                    <div style="margin-bottom: 1.25rem;">
-                        <label style="display:block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Attach Photo (Sail shape, mast squash...)</label>
-                        <input type="file" id="repImageFile" accept="image/*" onchange="handleReportImageUpload(event)" style="font-size: 0.75rem; color: white; width: 100%;">
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">3. Image Attachments</h4>
+                        <div style="background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
+                            <label style="display:block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">Attach Photo (Sail shape, mast squash...)</label>
+                            <input type="file" id="repImageFile" accept="image/*" onchange="handleReportImageUpload(event)" style="font-size: 0.75rem; color: white; width: 100%;">
+                        </div>
                     </div>
 
-                    <h4 style="color: #38bdf8; margin: 0 0 0.8rem 0;">4. Learning Points</h4>
-                    <textarea id="rep-learning-points" rows="3" placeholder="Enter key learning points (Upwind mode, crew weight, handling...)" onchange="buildReportPreview()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 6px; border-radius: 4px; color: white; font-size: 0.8rem; margin-bottom: 1.25rem;"></textarea>
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">4. Learning Points</h4>
+                        <textarea id="rep-learning-points" rows="4" placeholder="Enter key learning points (Upwind mode, crew weight, handling...)" onchange="buildReportPreview()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: white; font-size: 0.8rem; resize: vertical;"></textarea>
+                    </div>
 
-                    <button onclick="window.print()" style="width: 100%; background: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                    <button onclick="window.print()" style="width: 100%; background: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         🖨️ Export / Print PDF Report
                     </button>
                 </div>
 
-                <div class="card" style="background: white; color: #0f172a; border-radius: 8px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" id="print-report-sheet">
+                <!-- Right Column: Live PDF Document Sheet Preview -->
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                    <div class="card" style="background: white; color: #0f172a; border-radius: 4px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.6); width: 100%; max-width: 800px; min-height: 1000px;" id="print-report-sheet">
+                    </div>
                 </div>
             </div>
         </div>

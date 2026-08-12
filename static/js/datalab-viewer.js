@@ -12,7 +12,8 @@ let maneuverTrackHighlight = null;
 let timeChart = null;
 let isPlaying = false;
 let playbackIndex = 0;
-let playbackSpeed = 5;
+let playbackSpeed = 1;
+let lastAnimTime = null;
 let animationId = null;
 let globalHeuristicTwd = 0;
 let forecastTwd = 0;
@@ -1793,182 +1794,302 @@ window.autoDetectLegs = function(silent = false) {
     const sogs = m.sog;
     const twas = m.twa || [];
     const heels = m.heel || [];
-    const pitches = m.pitch || [];
-    
+    const hdgs = m.hdg || m.cog || [];
+    const n = sogs.length;
+    if (n < 10) return;
+
     // Boat Profile
     const boatTypeSelect = document.getElementById('newBoatType');
     const boatType = boatTypeSelect ? boatTypeSelect.value : 'moth';
     const isFoiler = (boatType === 'moth' || boatType === 'waszp' || boatType === 'dinghy' || boatType === '');
-    
-    // Configurable Auto-Detect Thresholds
-    const ashoreMaxSpeed = parseFloat(document.getElementById('autoAshoreSpeed')?.value || 0.3);
-    const capsizeMinSpeed = parseFloat(document.getElementById('autoCapsizeMinSpeed')?.value || 0.3);
-    const capsizeMaxSpeed = parseFloat(document.getElementById('autoCapsizeMaxSpeed')?.value || 3.0);
-    const capsizeMinHeel = parseFloat(document.getElementById('autoCapsizeMinHeel')?.value || 45);
-    const flightSpeedThreshold = isFoiler 
-        ? parseFloat(document.getElementById('autoFlightSpeed')?.value || 10.0) 
+
+    // Configurable thresholds — read from UI (with sensible defaults)
+    const ashoreMaxSpeed   = parseFloat(document.getElementById('autoAshoreSpeed')?.value      || 1.5);
+    const capsizeMinSpeed  = parseFloat(document.getElementById('autoCapsizeMinSpeed')?.value  || 0.3);
+    const capsizeMaxSpeed  = parseFloat(document.getElementById('autoCapsizeMaxSpeed')?.value  || 3.0);
+    const capsizeMinHeel   = parseFloat(document.getElementById('autoCapsizeMinHeel')?.value   || 45);
+    const flightSpeedThreshold = isFoiler
+        ? parseFloat(document.getElementById('autoFlightSpeed')?.value || 10.0)
         : 999.0;
-    const isLandCheckEnabled = document.getElementById('autoLandCheck') ? document.getElementById('autoLandCheck').checked : true;
-    
-    // Land Heuristic: check launch/dock origin position
-    let startLat = (sessionData.track && sessionData.track.length > 0) ? sessionData.track[0][0] : null;
-    let startLng = (sessionData.track && sessionData.track.length > 0) ? sessionData.track[0][1] : null;
 
-    let tempChunks = [];
-    let curChunk = null;
-    
-    for (let i = 0; i < sogs.length; i++) {
+    // Minimum leg duration (samples ≈ seconds at 1Hz)
+    // Sailing legs (upwind/downwind/reach) need a longer minimum than ashore blocks.
+    const minLegMinutes   = parseFloat(document.getElementById('autoMinLegMin')?.value   || 5);   // UI: minutes
+    const MIN_SAILING_LEG = Math.round(minLegMinutes * 60);                                       // → samples
+    const MIN_CHUNK_ASHORE = 45;   // ashore blocks can be short (pre/post-session)
+
+    // Minimum heading change to call something a tack or gybe (degrees)
+    const tackMinAngle = parseFloat(document.getElementById('autoTackMinAngle')?.value || 70);
+
+    // Dock proximity radius (converted from metres to NM)
+    const dockRadiusM  = parseFloat(document.getElementById('autoDockRadius')?.value || 300);
+    const DOCK_RADIUS_NM = dockRadiusM / 1852;
+
+    // ── A: Rolling circular std of HDG (ashore = stable heading) ────────────
+    const HDG_WIN      = 30;   // samples each side
+    const HDG_STD_MAX  = 20;   // °  — below this = heading stable = ashore candidate
+    const hdgStd = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+        const lo = Math.max(0, i - HDG_WIN);
+        const hi = Math.min(n - 1, i + HDG_WIN);
+        const len = hi - lo + 1;
+        let sx = 0, sy = 0;
+        for (let j = lo; j <= hi; j++) {
+            const r = (hdgs[j] || 0) * Math.PI / 180;
+            sx += Math.cos(r); sy += Math.sin(r);
+        }
+        const R = Math.sqrt(sx * sx + sy * sy) / len;
+        hdgStd[i] = Math.sqrt(-2 * Math.log(Math.max(R, 1e-9))) * 180 / Math.PI;
+    }
+
+    // ── B: Rolling circular mean of TWA (smoothed tack assignment) ──────────
+    // TWA oscillates wildly sample-to-sample. Use a 60-s window circular mean
+    // so the "dominant tack" drives classification, not individual noisy points.
+    const TWA_WIN = 30;
+    const smoothTwa = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+        const lo = Math.max(0, i - TWA_WIN);
+        const hi = Math.min(n - 1, i + TWA_WIN);
+        let sx = 0, sy = 0;
+        for (let j = lo; j <= hi; j++) {
+            const r = (twas[j] || 0) * Math.PI / 180;
+            sx += Math.cos(r); sy += Math.sin(r);
+        }
+        smoothTwa[i] = Math.atan2(sy, sx) * 180 / Math.PI; // –180…+180
+    }
+
+    // ── C: Auto-detect dock/port reference point ─────────────────────────────
+    // Use the centroid of the first cluster of low-SOG track positions.
+    // This is far more robust than track[0] which may have GPS startup drift.
+    let dockLat = null, dockLng = null;
+    const DOCK_SAMPLE_SOG = 2.0;   // kn — max SOG to be considered a dock sample
+    const DOCK_SAMPLE_MAX = 60;    // how many samples to average for dock centroid
+    // DOCK_RADIUS_NM is now read from UI (autoDockRadius input, converted above)
+    if (sessionData.track && sessionData.track.length > 0) {
+        let dockSamples = [];
+        for (let i = 0; i < Math.min(n, 600); i++) {
+            if ((sogs[i] || 0) < DOCK_SAMPLE_SOG && sessionData.track[i]) {
+                dockSamples.push(sessionData.track[i]);
+                if (dockSamples.length >= DOCK_SAMPLE_MAX) break;
+            }
+        }
+        if (dockSamples.length > 0) {
+            dockLat = dockSamples.reduce((s, p) => s + p[0], 0) / dockSamples.length;
+            dockLng = dockSamples.reduce((s, p) => s + p[1], 0) / dockSamples.length;
+        } else if (sessionData.track[0]) {
+            dockLat = sessionData.track[0][0];
+            dockLng = sessionData.track[0][1];
+        }
+    }
+    const hasDock = dockLat !== null && typeof calculateDistanceNM === 'function';
+
+    // ── D: Raw ashore mask — two independent signals OR-ed ───────────────────
+    //   Signal 1 (Telemetry):  low SOG + stable HDG (heading barely moves)
+    //   Signal 2 (Position):   near dock + low SOG  (GPS cluster at port)
+    // Either signal alone is sufficient to vote ashore.
+    const rawIsAshore = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
         const sog = sogs[i] || 0;
-        const heel = Math.abs(heels[i] || 0);
-        const pitch = Math.abs(pitches[i] || 0);
-        const twa = twas[i] || 0;
-        const absTwa = Math.abs(twa);
-        
-        let mode = '', label = '', color = '';
-        
-        const pos = sessionData.track ? sessionData.track[i] : null;
-        let isNearShore = false;
-        if (isLandCheckEnabled && pos && startLat !== null && typeof calculateDistanceNM === 'function') {
-            const distNM = calculateDistanceNM(pos[0], pos[1], startLat, startLng);
-            if (distNM < 0.15) isNearShore = true; // within ~250m of launch/dock point
+        // Signal 1: telemetry — very low speed AND stable heading
+        const telemetryAshore = sog <= ashoreMaxSpeed && hdgStd[i] < HDG_STD_MAX;
+        // Signal 2: position — within dock radius AND not moving fast
+        let positionAshore = false;
+        if (hasDock && sessionData.track && sessionData.track[i]) {
+            const distNM = calculateDistanceNM(
+                sessionData.track[i][0], sessionData.track[i][1], dockLat, dockLng
+            );
+            positionAshore = distNM < DOCK_RADIUS_NM && sog <= ashoreMaxSpeed * 2.5;
         }
+        rawIsAshore[i] = (telemetryAshore || positionAshore) ? 1 : 0;
+    }
 
-        if (sog <= ashoreMaxSpeed) {
-            if (isNearShore || heel > 25 || pitch > 15) {
-                mode = 'ashore'; label = '🏠 Ashore / Static'; color = '#475569';
-            } else {
-                mode = 'floating'; label = '⚓ Stationary / Floating'; color = '#334155';
-            }
+    // ── E: Smooth ashore mask — require 60 % majority in a 60-sample window ─
+    const ASH_WIN = 30;
+    const smoothIsAshore = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+        const lo = Math.max(0, i - ASH_WIN);
+        const hi = Math.min(n - 1, i + ASH_WIN);
+        let cnt = 0;
+        for (let j = lo; j <= hi; j++) cnt += rawIsAshore[j];
+        smoothIsAshore[i] = (cnt / (hi - lo + 1) >= 0.60) ? 1 : 0;
+    }
+
+    // ── E: Enforce ashore→sailing→ashore — single sailing block ─────────────
+    let firstSailing = -1, lastSailing = -1;
+    for (let i = 0; i < n; i++)     { if (!smoothIsAshore[i]) { firstSailing = i; break; } }
+    for (let i = n - 1; i >= 0; i--) { if (!smoothIsAshore[i]) { lastSailing  = i; break; } }
+
+    const finalIsAshore = new Uint8Array(n);
+    if (firstSailing < 0) {
+        finalIsAshore.fill(1);  // entire session ashore — edge case
+    } else {
+        for (let i = 0; i < firstSailing; i++) finalIsAshore[i] = 1;
+        // interior of sailing block: never force to ashore, even if slow
+        for (let i = firstSailing; i <= lastSailing; i++) finalIsAshore[i] = 0;
+        for (let i = lastSailing + 1; i < n; i++) finalIsAshore[i] = 1;
+    }
+
+    // ── F: Per-sample mode using smoothed TWA ───────────────────────────────
+    const rawMode = new Array(n);
+    for (let i = 0; i < n; i++) {
+        const sog  = sogs[i] || 0;
+        const heel = Math.abs(heels[i] || 0);
+        const stwa = smoothTwa[i];      // smoothed TWA (–180…+180)
+        const absStwa = Math.abs(stwa);
+        // Convention in this data: TWA is computed as (HDG − TWD), so
+        // positive TWA means wind is coming from the LEFT (port) side of the boat.
+        // Positive TWA → Port tack.  Negative TWA → Starboard tack.
+        const tackStr = stwa >= 0 ? 'Port' : 'Stbd';
+        const isUpwind   = absStwa < 85;
+        const isDownwind = absStwa > 105;
+
+        if (finalIsAshore[i]) {
+            rawMode[i] = { m: 'ashore', label: '🏠 Ashore / Static', color: '#475569' };
         } else if (sog > capsizeMinSpeed && sog <= capsizeMaxSpeed && heel >= capsizeMinHeel) {
-            mode = 'capsize'; label = '🏊 Capsized'; color = '#dc2626';
-        } else {
-            const tackStr = twa >= 0 ? 'Stbd' : 'Port';
-            const isUpwind = absTwa < 85;
-            const isDownwind = absTwa > 105;
-            
-            if (isFoiler) {
-                const isFlying = sog >= flightSpeedThreshold;
-                if (isFlying) {
-                    if (isUpwind) { mode = 'upwind_fly'; label = `⛵ Upwind Flying (${tackStr})`; color = 'rgba(56, 189, 248, 0.85)'; }
-                    else if (isDownwind) { mode = 'downwind_fly'; label = `🚀 Downwind Flying (${tackStr})`; color = 'rgba(236, 72, 153, 0.85)'; }
-                    else { mode = 'reach_fly'; label = `💨 Reach Flying (${tackStr})`; color = 'rgba(168, 85, 247, 0.85)'; }
-                } else {
-                    if (isUpwind) { mode = 'upwind_low'; label = `⛵ Upwind Low-Ride (${tackStr})`; color = 'rgba(2, 132, 199, 0.75)'; }
-                    else if (isDownwind) { mode = 'downwind_low'; label = `🚀 Downwind Low-Ride (${tackStr})`; color = 'rgba(190, 24, 93, 0.75)'; }
-                    else { mode = 'reach_low'; label = `💨 Reach Low-Ride (${tackStr})`; color = 'rgba(126, 34, 206, 0.75)'; }
-                }
+            rawMode[i] = { m: 'capsize', label: '🏊 Capsized', color: '#dc2626' };
+        } else if (isFoiler) {
+            const fly = sog >= flightSpeedThreshold;
+            if (fly) {
+                if (isUpwind)        rawMode[i] = { m: 'upwind_fly',   label: `⛵ Upwind Flying (${tackStr})`,   color: 'rgba(56,189,248,0.85)' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_fly', label: `🚀 Downwind Flying (${tackStr})`, color: 'rgba(236,72,153,0.85)' };
+                else                 rawMode[i] = { m: 'reach_fly',    label: `💨 Reach Flying (${tackStr})`,    color: 'rgba(168,85,247,0.85)' };
             } else {
-                if (isUpwind) { mode = 'upwind'; label = `⛵ Upwind (${tackStr})`; color = 'rgba(56, 189, 248, 0.85)'; }
-                else if (isDownwind) { mode = 'downwind'; label = `🚀 Downwind (${tackStr})`; color = 'rgba(236, 72, 153, 0.85)'; }
-                else { mode = 'reach'; label = `💨 Reach (${tackStr})`; color = 'rgba(168, 85, 247, 0.85)'; }
+                if (isUpwind)        rawMode[i] = { m: 'upwind_low',   label: `⛵ Upwind Low-Ride (${tackStr})`,   color: 'rgba(2,132,199,0.75)' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_low', label: `🚀 Downwind Low-Ride (${tackStr})`, color: 'rgba(190,24,93,0.75)' };
+                else                 rawMode[i] = { m: 'reach_low',    label: `💨 Reach Low-Ride (${tackStr})`,    color: 'rgba(126,34,206,0.75)' };
             }
-        }
-        
-        if (!curChunk) {
-            curChunk = { mode, label, color, startIdx: i, endIdx: i };
-        } else if (curChunk.mode === mode) {
-            curChunk.endIdx = i;
         } else {
-            if (curChunk.endIdx - curChunk.startIdx >= 3) {
-                tempChunks.push(curChunk);
-            }
-            curChunk = { mode, label, color, startIdx: i, endIdx: i };
+            if (isUpwind)        rawMode[i] = { m: 'upwind',   label: `⛵ Upwind (${tackStr})`,   color: 'rgba(56,189,248,0.85)' };
+            else if (isDownwind) rawMode[i] = { m: 'downwind', label: `🚀 Downwind (${tackStr})`, color: 'rgba(236,72,153,0.85)' };
+            else                 rawMode[i] = { m: 'reach',    label: `💨 Reach (${tackStr})`,    color: 'rgba(168,85,247,0.85)' };
         }
     }
-    if (curChunk && curChunk.endIdx - curChunk.startIdx >= 3) {
-        tempChunks.push(curChunk);
+
+    // ── G: Build raw chunks ──────────────────────────────────────────────────
+    let chunks = [];
+    let cur = null;
+    for (let i = 0; i < n; i++) {
+        const rm = rawMode[i];
+        if (!cur) {
+            cur = { m: rm.m, label: rm.label, color: rm.color, startIdx: i, endIdx: i };
+        } else if (cur.m === rm.m) {
+            cur.endIdx = i;
+        } else {
+            chunks.push(cur);
+            cur = { m: rm.m, label: rm.label, color: rm.color, startIdx: i, endIdx: i };
+        }
     }
-    
+    if (cur) chunks.push(cur);
+
+    // ── H: Absorb short chunks into their longer neighbor ───────────────────
+    // Use type-aware minimums:
+    //   • Sailing legs (upwind/downwind/reach/capsize) → MIN_SAILING_LEG (e.g. 300s)
+    //   • Ashore blocks                                → MIN_CHUNK_ASHORE (45s)
+    // Iterate until stable — guarantees every sliver is absorbed.
+    const minForChunk = (ch) => ch.m === 'ashore' ? MIN_CHUNK_ASHORE : MIN_SAILING_LEG;
+
+    let changed = true;
+    while (changed) {
+        changed = false;
+        const merged = [];
+        for (let c = 0; c < chunks.length; c++) {
+            const ch = chunks[c];
+            const dur = ch.endIdx - ch.startIdx + 1;
+            if (dur < minForChunk(ch) && merged.length > 0) {
+                merged[merged.length - 1].endIdx = ch.endIdx;
+                changed = true;
+            } else {
+                merged.push(ch);
+            }
+        }
+        chunks = merged;
+    }
+
+    // Rebuild labels so merged chunks reflect the dominant mode of their samples
+    chunks = chunks.map(ch => {
+        const mid = Math.round((ch.startIdx + ch.endIdx) / 2);
+        return { ...ch, m: rawMode[mid].m, label: rawMode[mid].label, color: rawMode[mid].color };
+    });
+
+    // Merge adjacent same-mode chunks (may occur after absorption)
+    const tempChunks = [];
+    for (const ch of chunks) {
+        if (tempChunks.length > 0 && tempChunks[tempChunks.length - 1].m === ch.m) {
+            tempChunks[tempChunks.length - 1].endIdx = ch.endIdx;
+        } else {
+            tempChunks.push({ ...ch });
+        }
+    }
+
+    // ── I: Build sublegs + maneuver markers ─────────────────────────────────
     let finalSublegs = [];
     let tackCount = 0, gybeCount = 0, bearAwayCount = 0, roundingCount = 0;
-    
+
     for (let c = 0; c < tempChunks.length; c++) {
         const chunk = tempChunks[c];
-        
+
         if (c > 0) {
-            const prev = tempChunks[c-1];
-            const isPrevUp = prev.mode.includes('upwind');
-            const isPrevDown = prev.mode.includes('downwind');
-            const isCurUp = chunk.mode.includes('upwind');
-            const isCurDown = chunk.mode.includes('downwind');
-            
-            if (isPrevUp && isCurUp && prev.label !== chunk.label) {
+            const prev = tempChunks[c - 1];
+            const isPrevUp   = prev.m.includes('upwind');
+            const isPrevDown = prev.m.includes('downwind');
+            const isCurUp    = chunk.m.includes('upwind');
+            const isCurDown  = chunk.m.includes('downwind');
+
+            const mStart = Math.max(0, chunk.startIdx - 4);
+            const mEnd   = Math.min(n - 1, chunk.startIdx + 4);
+
+            // Measure the heading change across the boundary (last hdg of prev → first hdg of cur).
+            // We sample a short window on each side to get a stable reading.
+            const sampleBefore = Math.max(prev.startIdx, chunk.startIdx - 12);
+            const sampleAfter  = Math.min(chunk.endIdx,  chunk.startIdx + 12);
+            const hdgBefore    = hdgs[sampleBefore] || 0;
+            const hdgAfter     = hdgs[sampleAfter]  || 0;
+            let hdgDelta = Math.abs(hdgAfter - hdgBefore);
+            if (hdgDelta > 180) hdgDelta = 360 - hdgDelta;  // shortest arc
+
+            const isTackAngle = hdgDelta >= tackMinAngle;
+
+            if (isPrevUp && isCurUp && prev.label !== chunk.label && isTackAngle) {
                 tackCount++;
-                const mStart = Math.max(0, chunk.startIdx - 4);
-                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
-                finalSublegs.push({
-                    id: 'sub_tack_' + tackCount + '_' + Date.now(),
-                    startIdx: mStart,
-                    endIdx: mEnd,
-                    type: 'maneuver',
-                    label: `🔄 Tack #${tackCount}`,
-                    color: '#f59e0b'
-                });
-            } else if (isPrevDown && isCurDown && prev.label !== chunk.label) {
+                finalSublegs.push({ id: 'sub_tack_' + tackCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🔄 Tack #${tackCount}`, color: '#f59e0b' });
+            } else if (isPrevDown && isCurDown && prev.label !== chunk.label && isTackAngle) {
                 gybeCount++;
-                const mStart = Math.max(0, chunk.startIdx - 4);
-                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
-                finalSublegs.push({
-                    id: 'sub_gybe_' + gybeCount + '_' + Date.now(),
-                    startIdx: mStart,
-                    endIdx: mEnd,
-                    type: 'maneuver',
-                    label: `🌪️ Gybe #${gybeCount}`,
-                    color: '#10b981'
-                });
+                finalSublegs.push({ id: 'sub_gybe_' + gybeCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🌪️ Gybe #${gybeCount}`, color: '#10b981' });
             } else if (isPrevUp && isCurDown) {
                 bearAwayCount++;
-                const mStart = Math.max(0, chunk.startIdx - 4);
-                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
-                finalSublegs.push({
-                    id: 'sub_bear_' + bearAwayCount + '_' + Date.now(),
-                    startIdx: mStart,
-                    endIdx: mEnd,
-                    type: 'maneuver',
-                    label: `💨 Bear Away #${bearAwayCount}`,
-                    color: '#a855f7'
-                });
+                finalSublegs.push({ id: 'sub_bear_' + bearAwayCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `💨 Bear Away #${bearAwayCount}`, color: '#a855f7' });
             } else if (isPrevDown && isCurUp) {
                 roundingCount++;
-                const mStart = Math.max(0, chunk.startIdx - 4);
-                const mEnd = Math.min(sogs.length - 1, chunk.startIdx + 4);
-                finalSublegs.push({
-                    id: 'sub_round_' + roundingCount + '_' + Date.now(),
-                    startIdx: mStart,
-                    endIdx: mEnd,
-                    type: 'maneuver',
-                    label: `🏁 Mark Rounding #${roundingCount}`,
-                    color: '#06b6d4'
-                });
+                finalSublegs.push({ id: 'sub_round_' + roundingCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🏁 Mark Rounding #${roundingCount}`, color: '#06b6d4' });
             }
         }
-        
+
         finalSublegs.push({
             id: 'sub_' + c + '_' + Date.now(),
             startIdx: chunk.startIdx,
-            endIdx: chunk.endIdx,
-            type: 'subleg',
-            label: chunk.label,
-            color: chunk.color
+            endIdx:   chunk.endIdx,
+            type:     chunk.m === 'ashore' ? 'hidden' : 'subleg',
+            label:    chunk.label,
+            color:    chunk.color
         });
     }
-    
+
     activeSublegs = finalSublegs;
     if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
-    
     renderSublegRibbon();
-    
+
     if (!silent) {
         const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
-        alert(isEs 
-            ? `Autodetectados ${activeSublegs.length} subtramos (${tackCount} Viradas, ${gybeCount} Trasluchadas, ${bearAwayCount} Arribadas)` 
-            : `Auto-detected ${activeSublegs.length} sublegs (${tackCount} Tacks, ${gybeCount} Gybes, ${bearAwayCount} Bear-Aways)`);
+        const ashoreCount = tempChunks.filter(c => c.m === 'ashore').length;
+        alert(isEs
+            ? `Autodetectados ${activeSublegs.length} subtramos (${tackCount} Viradas, ${gybeCount} Trasluchadas, ${bearAwayCount} Arribadas, ${ashoreCount} bloque(s) en tierra)`
+            : `Auto-detected ${activeSublegs.length} sublegs (${tackCount} Tacks, ${gybeCount} Gybes, ${bearAwayCount} Bear-Aways, ${ashoreCount} ashore block(s))`);
     }
 };
 
 window.createLegFromSelectedSubleg = function() {
     if (!sessionData || !activeSublegs || activeSublegs.length === 0) return;
-    
+
     const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
 
     let targetSublegs = [];
@@ -2244,16 +2365,37 @@ function findNearestTrackPoint(latlng) {
     return index;
 }
 
+window.setPlaybackSpeed = function(speed) {
+    playbackSpeed = parseFloat(speed) || 1;
+    const speeds = [1, 2, 5, 10];
+    speeds.forEach(s => {
+        const btn = document.getElementById(`speedBtn${s}`);
+        if (btn) {
+            if (s === playbackSpeed) {
+                btn.style.background = '#0284c7';
+                btn.style.color = '#ffffff';
+                btn.style.borderColor = '#38bdf8';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = '#94a3b8';
+                btn.style.borderColor = 'transparent';
+            }
+        }
+    });
+};
+
 function togglePlay() {
     if (!sessionData || !sessionData.track || sessionData.track.length === 0) return;
     isPlaying = !isPlaying;
     const btn = document.getElementById('playBtn');
     if (isPlaying) {
         btn.innerText = "⏸";
-        animate();
+        lastAnimTime = performance.now();
+        animationId = requestAnimationFrame(animate);
     } else {
         btn.innerText = "▶";
         cancelAnimationFrame(animationId);
+        lastAnimTime = null;
     }
 }
 
@@ -2274,15 +2416,37 @@ window.stepFrame = function(seconds) {
     updateFrame(playbackIndex);
 };
 
-function animate() {
-    if (!isPlaying || !sessionData) return;
-    playbackIndex += playbackSpeed;
-    if (playbackIndex >= sessionData.track.length) {
+function animate(now) {
+    if (!isPlaying || !sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) {
+        lastAnimTime = null;
+        return;
+    }
+    
+    const currentTime = now || performance.now();
+    if (!lastAnimTime) lastAnimTime = currentTime;
+    const dt = Math.max(0, (currentTime - lastAnimTime) / 1000);
+    lastAnimTime = currentTime;
+
+    const currentElapsed = sessionData.elapsed[playbackIndex] || 0;
+    const maxElapsed = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
+    const targetElapsed = currentElapsed + (dt * playbackSpeed);
+
+    if (targetElapsed >= maxElapsed) {
         playbackIndex = 0;
         togglePlay();
         updateFrame(0);
+        updateScrubberPosition();
         return;
     }
+
+    let low = playbackIndex, high = sessionData.elapsed.length - 1;
+    while (low < high) {
+        let mid = Math.floor((low + high) / 2);
+        if (sessionData.elapsed[mid] < targetElapsed) low = mid + 1;
+        else high = mid;
+    }
+    
+    playbackIndex = low;
     updateFrame(playbackIndex);
     updateScrubberPosition();
     animationId = requestAnimationFrame(animate);
