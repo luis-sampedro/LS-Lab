@@ -3209,23 +3209,36 @@ window.buildReportPreview = function() {
     syncSpecsFromInputs();
     const sheet = document.getElementById('print-report-sheet');
     if (!sheet) return;
-    
-    const incSummary = document.getElementById('rep-mod-summary')?.checked ?? true;
-    const incCurves = document.getElementById('rep-mod-curves')?.checked ?? true;
-    const incCanvas = document.getElementById('rep-mod-canvas')?.checked ?? true;
-    const incLabel = document.getElementById('rep-mod-label')?.checked ?? true;
-    const incRig = document.getElementById('rep-mod-rig')?.checked ?? true;
-    const notes = document.getElementById('rep-learning-points')?.value || '';
-    
-    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const isPort = (scanData.tack === 'port');
+
+    const incSummary  = document.getElementById('rep-mod-summary')?.checked ?? true;
+    const incAero     = document.getElementById('rep-mod-aero')?.checked ?? true;
+    const incCurves   = document.getElementById('rep-mod-curves')?.checked ?? true;
+    const incBarChart = document.getElementById('rep-mod-barchart')?.checked ?? true;
+    const incRadar    = document.getElementById('rep-mod-radar')?.checked ?? true;
+    const incScatter  = document.getElementById('rep-mod-scatter')?.checked ?? true;
+    const incCanvas   = document.getElementById('rep-mod-canvas')?.checked ?? true;
+    const incLabel    = document.getElementById('rep-mod-label')?.checked ?? true;
+    const incRig      = document.getElementById('rep-mod-rig')?.checked ?? true;
+    const notes       = document.getElementById('rep-learning-points')?.value || '';
+
+    const dateStr  = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const isPort   = (scanData.tack === 'port');
     const tackLabel = isPort ? 'PORT' : 'STBD';
     const tackColor = isPort ? '#ef4444' : '#10b981';
-    const tackBg = isPort ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+    const tackBg    = isPort ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
 
+    // Target reference values from Step 3 toolbar
     const refCamber = parseFloat(document.getElementById('ref-camber')?.value ?? '12.5');
     const refDraft  = parseFloat(document.getElementById('ref-draft')?.value ?? '40');
-    
+    const refEntry  = parseFloat(document.getElementById('ref-entry')?.value ?? '18');
+
+    // Helper: capture a Chart.js canvas snapshot
+    const snapChart = (chartObj) => {
+        try { if (chartObj && typeof chartObj.toBase64Image === 'function') return chartObj.toBase64Image(); } catch(e) {}
+        return null;
+    };
+
+    // ── HEADER ─────────────────────────────────────────────────────────────
     let html = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 1rem; margin-bottom: 1.5rem;">
             <div>
@@ -3238,70 +3251,212 @@ window.buildReportPreview = function() {
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
                     ${scanData.boatName || 'Grand Prix Sailing'} • Sail: <strong>${scanData.sailName || 'J1 Light-Medium'}</strong> (${scanData.sailNumber || 'ESP-831'})
                     &nbsp;•&nbsp; Tack: <strong style="color: ${tackColor};">${isPort ? 'Port (Babor)' : 'Starboard (Estribor)'}</strong>
+                    &nbsp;•&nbsp; Date: ${dateStr}
                 </div>
+                ${(!isNaN(refCamber) && !isNaN(refDraft)) ? `
+                <div style="margin-top: 5px; font-size: 0.75rem; color: #64748b; display: flex; gap: 12px;">
+                    <span>🎯 Target Camber: <strong style="color: #d97706;">${refCamber}%</strong></span>
+                    <span>🎯 Target Draft: <strong style="color: #7c3aed;">${refDraft}%</strong></span>
+                    ${!isNaN(refEntry) ? `<span>🎯 Target Entry: <strong style="color: #059669;">${refEntry}°</strong></span>` : ''}
+                </div>` : ''}
             </div>
             <div style="text-align: right;">
                 <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${dateStr}</div>
                 <div style="font-size: 0.75rem; color: #64748b;">LS Lab Antigravity Engine</div>
+                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">Cert: ${scanData.certificateType || 'ORC'} · Loft: ${scanData.sailmaker || '--'}</div>
             </div>
         </div>
     `;
-    
-    if (incSummary) {
+
+    // ── 1. EXECUTIVE SUMMARY & EXPANDED CAMBER TABLE ───────────────────────
+    if (incSummary && scanData.stripes.length) {
         html += `
             <div style="margin-bottom: 1.5rem;">
                 <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    1. Camber Distribution & Geometry Metrics (Target: C ${refCamber}%, D ${refDraft}%)
+                    1. Camber Distribution &amp; Aerodynamic Metrics
                 </h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
                     <thead>
-                        <tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1;">
-                            <th style="padding: 6px 8px;">Stripe</th>
-                            <th style="padding: 6px 8px;">Camber</th>
-                            <th style="padding: 6px 8px;">Draft Pos</th>
-                            <th style="padding: 6px 8px;">Twist</th>
-                            <th style="padding: 6px 8px;">Entry/Exit</th>
-                            <th style="padding: 6px 8px;">Shape Idx</th>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+                            <th style="padding: 6px 8px; color: #475569;">Stripe</th>
+                            <th style="padding: 6px 8px; color: #0284c7;">Max Camber</th>
+                            <th style="padding: 6px 8px; color: #d97706;">Draft Pos</th>
+                            <th style="padding: 6px 8px; color: #059669;">Twist</th>
+                            <th style="padding: 6px 8px; color: #475569;">Entry °</th>
+                            <th style="padding: 6px 8px; color: #475569;">Exit °</th>
+                            <th style="padding: 6px 8px; color: #7c3aed;">Shape Index</th>
+                            <th style="padding: 6px 8px; color: #475569;">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${scanData.stripes.map(s => {
                             const m = s.metrics || {};
-                            const camberVal = parseFloat(m.camber ?? 0);
-                            const draftVal = parseFloat(m.draft_pos ?? 0);
-                            const shapeIdx = m.entry && m.exit ? ((parseFloat(m.entry) / Math.max(1, parseFloat(m.exit))) * 100).toFixed(0) : '--';
-                            const cColor = Math.abs(camberVal - refCamber) < 1 ? '#10b981' : '#ef4444';
-                            const dColor = Math.abs(draftVal - refDraft) < 3 ? '#10b981' : '#f59e0b';
+                            const cv = parseFloat(m.camber ?? 0);
+                            const dv = parseFloat(m.draft_pos ?? 0);
+                            const cd = Math.abs(cv - refCamber);
+                            const dd = Math.abs(dv - refDraft);
+                            const si = (m.entry && m.exit) ? ((parseFloat(m.entry) / Math.max(1, parseFloat(m.exit))) * 100).toFixed(0) : '--';
+                            const cBg = cd < 1 ? '#dcfce7' : cd < 3 ? '#fef9c3' : '#fee2e2';
+                            const dBg = dd < 3 ? '#dcfce7' : dd < 7 ? '#fef9c3' : '#fee2e2';
+                            const status = cd < 1 && dd < 3 ? '🟢 On target' : cd < 3 && dd < 7 ? '🟡 Close' : '🔴 Review';
                             return `
                             <tr style="border-bottom: 1px solid #e2e8f0;">
-                                <td style="padding: 6px 8px; font-weight: 700; color: ${s.color};">${s.label}</td>
-                                <td style="padding: 6px 8px; font-weight: 700; color: ${cColor};">${m.camber ?? '--'}%</td>
-                                <td style="padding: 6px 8px; font-weight: 700; color: ${dColor};">${m.draft_pos ?? '--'}%</td>
-                                <td style="padding: 6px 8px;">${m.twist ?? '--'}°</td>
-                                <td style="padding: 6px 8px;">${m.entry ?? '--'}°/${m.exit ?? '--'}°</td>
-                                <td style="padding: 6px 8px; font-weight: 600;">${shapeIdx}</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color: ${s.color};">
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.color}; margin-right:5px;"></span>
+                                    ${s.label}
+                                </td>
+                                <td style="padding: 6px 8px; font-weight: 700; color: #0284c7; background: ${cBg};">${m.camber ?? '--'}%</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color: #d97706; background: ${dBg};">${m.draft_pos ?? '--'}%</td>
+                                <td style="padding: 6px 8px; color: #059669;">${m.twist ?? '--'}°</td>
+                                <td style="padding: 6px 8px;">${m.entry ?? '--'}°</td>
+                                <td style="padding: 6px 8px;">${m.exit ?? '--'}°</td>
+                                <td style="padding: 6px 8px; color: #7c3aed; font-weight: 600;">${si}</td>
+                                <td style="padding: 6px 8px; font-size: 0.78rem;">${status}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
                 </table>
+                <div style="margin-top: 5px; font-size: 0.72rem; color: #94a3b8;">
+                    🟢 Within target  🟡 Close (&lt;3% camber / &lt;7% draft deviation)  🔴 Review required
+                </div>
             </div>
         `;
     }
-    
+
+    // ── 2. AERO PARAMETER CARDS (Step 3 sidebar data) ──────────────────────
+    if (incAero && scanData.stripes.length) {
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
+                    2. Aero Parameter Cards
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
+                    ${scanData.stripes.map(s => {
+                        const m = s.metrics || {};
+                        const cv = parseFloat(m.camber ?? 0);
+                        const dv = parseFloat(m.draft_pos ?? 0);
+                        const si = (m.entry && m.exit) ? ((parseFloat(m.entry) / Math.max(1, parseFloat(m.exit))) * 100).toFixed(0) : '--';
+                        const camberOk = Math.abs(cv - refCamber) < 2;
+                        const draftOk  = Math.abs(dv - refDraft) < 5;
+                        return `
+                        <div style="border: 1px solid #e2e8f0; border-left: 4px solid ${s.color}; border-radius: 6px; padding: 8px 10px; background: #f8fafc;">
+                            <div style="font-weight: 700; color: ${s.color}; font-size: 0.85rem; margin-bottom: 5px;">${s.label}</div>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 0.75rem;">
+                                <span style="color: #64748b;">Camber:</span><span style="font-weight: 700; color: ${camberOk ? '#059669' : '#dc2626'};">${m.camber ?? '--'}%</span>
+                                <span style="color: #64748b;">Draft:</span><span style="font-weight: 700; color: ${draftOk ? '#059669' : '#d97706'};">${m.draft_pos ?? '--'}%</span>
+                                <span style="color: #64748b;">Twist:</span><span style="color: #7c3aed;">${m.twist ?? '--'}°</span>
+                                <span style="color: #64748b;">Entry:</span><span>${m.entry ?? '--'}°</span>
+                                <span style="color: #64748b;">Exit:</span><span>${m.exit ?? '--'}°</span>
+                                <span style="color: #64748b;">Shape Idx:</span><span style="font-weight: 600; color: #d97706;">${si}</span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // ── 3. CAMBER PROFILE CHART ────────────────────────────────────────────
+    if (incCurves) {
+        const snap = snapChart(camberChart);
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
+                    3. Camber Profile Curves (% Chord vs % Depth)
+                </h3>
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                    ${snap
+                        ? `<img src="${snap}" style="width: 100%; max-height: 200px; object-fit: contain;">`
+                        : `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center;">📊 Open Step 3 to generate chart snapshot · ${scanData.stripes.length} stripe${scanData.stripes.length !== 1 ? 's' : ''} detected</div>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+
+    // ── 4. BAR CHART ──────────────────────────────────────────────────────
+    if (incBarChart) {
+        const snap = snapChart(draftBarChart);
+        html += `
+            <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: ${incRadar ? '1fr 1fr' : '1fr'}; gap: 1rem; align-items: start;">
+                <div>
+                    <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                        4a. Camber &amp; Draft Bar Chart
+                    </h3>
+                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                        ${snap
+                            ? `<img src="${snap}" style="width: 100%; max-height: 160px; object-fit: contain;">`
+                            : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
+                        }
+                    </div>
+                </div>
+        `;
+
+        // ── 5. RADAR CHART (inline alongside bar if both enabled) ─────────
+        if (incRadar) {
+            const snapR = snapChart(radarChart);
+            html += `
+                <div>
+                    <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                        4b. Shape Fingerprint Radar
+                    </h3>
+                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                        ${snapR
+                            ? `<img src="${snapR}" style="width: 100%; max-height: 160px; object-fit: contain;">`
+                            : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
+                        }
+                    </div>
+                </div>
+            `;
+        }
+        html += `</div>`;
+    } else if (incRadar) {
+        // Radar only (bar disabled)
+        const snapR = snapChart(radarChart);
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                    4. Shape Fingerprint Radar
+                </h3>
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                    ${snapR
+                        ? `<img src="${snapR}" style="width: 100%; max-height: 160px; object-fit: contain;">`
+                        : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+
+    // ── 6. SHAPE INDEX SCATTER ────────────────────────────────────────────
+    if (incScatter) {
+        const snap = snapChart(shapeIndexChart);
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                    5. Shape Index Scatter (Draft Pos % vs Max Camber %) &nbsp;
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 400;">⊕ = Target (${refDraft}% / ${refCamber}%)</span>
+                </h3>
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                    ${snap
+                        ? `<img src="${snap}" style="width: 100%; max-height: 160px; object-fit: contain;">`
+                        : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first to generate scatter chart</div>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+
+    // ── 7. SAIL PHOTO & CANVAS OVERLAY ────────────────────────────────────
     if (incCanvas) {
         let canvasSnap = null;
-        try {
-            if (canvas && scanData.imageObj) {
-                canvasSnap = canvas.toDataURL('image/jpeg', 0.85);
-            }
-        } catch (e) {}
+        try { if (canvas && scanData.imageObj) canvasSnap = canvas.toDataURL('image/jpeg', 0.85); } catch(e) {}
         if (!canvasSnap && scanData.imageSrc) canvasSnap = scanData.imageSrc;
-
         if (canvasSnap) {
             html += `
                 <div style="margin-bottom: 1.5rem;">
                     <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                        Sail Photo &amp; Traced Draft Stripes Overlay
+                        6. Sail Photo &amp; Traced Draft Stripes Overlay
                     </h3>
                     <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #0b0f17; max-height: 260px; display: flex; align-items: center; justify-content: center;">
                         <img src="${canvasSnap}" style="max-width: 100%; max-height: 260px; object-fit: contain;">
@@ -3311,90 +3466,49 @@ window.buildReportPreview = function() {
         }
     }
 
-    if (incCurves) {
-        // Grab all 4 Step-3 analytics chart snapshots live
-        const getSnap = chart => {
-            try { return (chart && typeof chart.toBase64Image === 'function') ? chart.toBase64Image() : null; } catch { return null; }
-        };
-        const snap1 = getSnap(camberChart);
-        const snap2 = getSnap(draftBarChart);
-        const snap3 = getSnap(radarChart);
-        const snap4 = getSnap(shapeIndexChart);
-
-        const chartImg = (snap, hint) => snap
-            ? `<img src="${snap}" style="width: 100%; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff;">`
-            : `<div style="height: 110px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 8px;">${hint}</div>`;
-
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    3. Aero Analytics Studio — 4-Chart Panel
-                </h3>
-                <div style="margin-bottom: 0.6rem;">
-                    <div style="font-size: 0.72rem; font-weight: 700; color: #0284c7; margin-bottom: 3px;">① Camber Profile Curves — % Chord vs % Camber Depth</div>
-                    ${chartImg(snap1, '📊 Visit Step 3 first to capture chart')}
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-                    <div>
-                        <div style="font-size: 0.72rem; font-weight: 700; color: #d97706; margin-bottom: 3px;">② Camber &amp; Draft Bar Chart</div>
-                        ${chartImg(snap2, '📊 Visit Step 3 first')}
-                    </div>
-                    <div>
-                        <div style="font-size: 0.72rem; font-weight: 700; color: #7c3aed; margin-bottom: 3px;">③ Shape Fingerprint Radar</div>
-                        ${chartImg(snap3, '📊 Visit Step 3 first')}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-size: 0.72rem; font-weight: 700; color: #059669; margin-bottom: 3px;">④ Shape Index Scatter — Draft % vs Max Camber %</div>
-                    ${chartImg(snap4, '📊 Visit Step 3 first')}
-                </div>
-            </div>
-        `;
-    }
-
+    // ── 8. TOP LABEL & ORC MEASUREMENTS ──────────────────────────────────
     if (incLabel) {
         html += `
             <div style="margin-bottom: 1.5rem;">
                 <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    Official Sail Measurements &amp; Top Label (ORC Certification)
+                    7. Official Sail Measurements &amp; Top Label (ORC)
                 </h3>
                 <div style="display: grid; grid-template-columns: 140px 1fr; gap: 1rem; align-items: center;">
-                    ${scanData.labelPhotoSrc ? `
-                        <div style="width: 140px; height: 140px; border-radius: 6px; border: 1px solid #cbd5e1; overflow: hidden;">
-                            <img src="${scanData.labelPhotoSrc}" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                    ` : `<div style="width: 140px; height: 140px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8;">No Label Photo</div>`}
-                    
-                    <div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 0.8rem; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                            <div>HLU: <strong>${scanData.dimensions.hlu || '--'} m</strong></div>
-                            <div>HLP: <strong>${scanData.dimensions.hlp || '--'} m</strong></div>
-                            <div>HQW: <strong>${scanData.dimensions.hqw || '--'} m</strong></div>
-                            <div>HHW: <strong>${scanData.dimensions.hhw || '--'} m</strong></div>
-                            <div>HTW: <strong>${scanData.dimensions.htw || '--'} m</strong></div>
-                            <div>HUW: <strong>${scanData.dimensions.huw || '--'} m</strong></div>
-                            <div>HB: <strong>${scanData.dimensions.hb || '--'} m</strong></div>
-                            <div>Loft: <strong>${scanData.sailmaker || '--'}</strong></div>
-                        </div>
+                    ${scanData.labelPhotoSrc
+                        ? `<div style="width: 140px; height: 140px; border-radius: 6px; border: 1px solid #cbd5e1; overflow: hidden;"><img src="${scanData.labelPhotoSrc}" style="width: 100%; height: 100%; object-fit: cover;"></div>`
+                        : `<div style="width: 140px; height: 140px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8;">No Label Photo</div>`
+                    }
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 0.8rem; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <div>HLU (Luff): <strong>${scanData.dimensions.hlu || '18.14'} m</strong></div>
+                        <div>HLP (Perp): <strong>${scanData.dimensions.hlp || '5.25'} m</strong></div>
+                        <div>HQW (1/4): <strong>${scanData.dimensions.hqw || '3.93'} m</strong></div>
+                        <div>HHW (1/2): <strong>${scanData.dimensions.hhw || '2.68'} m</strong></div>
+                        <div>HTW (3/4): <strong>${scanData.dimensions.htw || '1.46'} m</strong></div>
+                        <div>HUW (7/8): <strong>${scanData.dimensions.huw || '0.77'} m</strong></div>
+                        <div>HB (Head): <strong>${scanData.dimensions.hb || '0.108'} m</strong></div>
+                        <div>Loft: <strong>${scanData.sailmaker || 'OneSails'}</strong></div>
                     </div>
                 </div>
             </div>
         `;
     }
-    
+
+    // ── 9. WIND & RIG SETTINGS ────────────────────────────────────────────
     if (incRig && (scanData.wind.tws || scanData.rig.cunningham)) {
         html += `
             <div style="margin-bottom: 1.5rem; background: #f1f5f9; padding: 10px 14px; border-radius: 6px; font-size: 0.8rem;">
-                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                    <div>Wind Speed (TWS): <strong>${scanData.wind.tws || '--'} kn</strong></div>
-                    <div>Wind Angle (TWA): <strong>${scanData.wind.twa || '--'}°</strong></div>
+                <strong style="font-size: 0.85rem; color: #0f172a;">8. Wind &amp; Rig Tuning</strong>
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 5px;">
+                    <div>TWS: <strong>${scanData.wind.tws || '--'} kn</strong></div>
+                    <div>TWA: <strong>${scanData.wind.twa || '--'}°</strong></div>
                     <div>Cunningham: <strong>${scanData.rig.cunningham || '--'}</strong></div>
                     <div>Sheet / Car: <strong>${scanData.rig.sheet || '--'}</strong></div>
                 </div>
             </div>
         `;
     }
-    
+
+    // ── 10. NOTES ─────────────────────────────────────────────────────────
     if (notes) {
         html += `
             <div style="margin-bottom: 1.5rem;">
@@ -3407,11 +3521,68 @@ window.buildReportPreview = function() {
             </div>
         `;
     }
-    
+
+    // ── 11. METHODOLOGY GLOSSARY ──────────────────────────────────────────
+    const incMethodology = document.getElementById('rep-mod-methodology')?.checked ?? true;
+    if (incMethodology) {
+        const methodUrl = window.location.origin + '/methodology';
+        html += `
+            <div style="margin-bottom: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                <h3 style="font-size: 1.05rem; color: #0f172a; padding-bottom: 4px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 10px;">
+                    Measurement Methodology &amp; Variable Definitions
+                    <a href="${methodUrl}" target="_blank"
+                       style="font-size: 0.72rem; font-weight: 600; color: #0284c7; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 9px; border-radius: 12px; text-decoration: none; white-space: nowrap;">
+                        📖 Full Methodology →
+                    </a>
+                </h3>
+                <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 0.75rem; line-height: 1.5;">
+                    L3S uses computer vision and B-spline geometry to quantify sail shape from a single photograph.
+                    All values are normalised to chord length so they are independent of camera distance or zoom.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 0.75rem;">
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #0284c7; margin-bottom: 3px;">📐 Max Camber %</div>
+                        <div style="color: #334155; line-height: 1.4;">Maximum perpendicular depth of the sail profile from the chord line.<br>
+                        <code style="background:#e0f2fe; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(Max_Y / Chord) × 100</code></div>
+                    </div>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #d97706; margin-bottom: 3px;">📍 Draft Position %</div>
+                        <div style="color: #334155; line-height: 1.4;">Chord position of maximum depth — 40% = draft is 40% aft of luff.<br>
+                        <code style="background:#fef9c3; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(X_at_MaxY / Chord) × 100</code></div>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #059669; margin-bottom: 3px;">🔄 Twist °</div>
+                        <div style="color: #334155; line-height: 1.4;">Angle of the stripe chord relative to the image frame (boom reference).<br>
+                        <code style="background:#dcfce7; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">arctan(ΔY / ΔX)</code></div>
+                    </div>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #dc2626; margin-bottom: 3px;">➡️ Entry Angle °</div>
+                        <div style="color: #334155; line-height: 1.4;">Tangent angle of the leading edge (first 15% of chord). Governs attached-flow sensitivity.</div>
+                    </div>
+                    <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #7c3aed; margin-bottom: 3px;">⬅️ Exit Angle °</div>
+                        <div style="color: #334155; line-height: 1.4;">Tangent angle of the trailing edge (last 15% of chord). Governs leech tension and turbulence.</div>
+                    </div>
+                    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 5px; padding: 7px 9px;">
+                        <div style="font-weight: 800; color: #ea580c; margin-bottom: 3px;">⚡ Shape Index</div>
+                        <div style="color: #334155; line-height: 1.4;">Ratio of Entry to Exit angle × 100. Higher = more power-biased leading edge vs. leech.<br>
+                        <code style="background:#ffedd5; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(Entry / Exit) × 100</code></div>
+                    </div>
+                </div>
+                <div style="margin-top: 7px; font-size: 0.72rem; color: #94a3b8; text-align: right;">
+                    Full methodology with derivation and B-spline fitting details:
+                    <a href="${methodUrl}" target="_blank" style="color: #0284c7; text-decoration: underline;">${methodUrl}</a>
+                </div>
+            </div>
+        `;
+    }
+
     sheet.innerHTML = html;
+
 };
 
 // ---------------- DATABASE PERSISTENCE & LS-PRO SAVING ----------------
+
 
 function initAuth() {
     const token = localStorage.getItem('firebaseToken') || window.currentUserToken;

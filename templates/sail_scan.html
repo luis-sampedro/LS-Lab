@@ -88,6 +88,13 @@
             <div id="save-toast" style="display: none; margin-top: 4px; font-size: 0.75rem; color: #10b981; text-align: center; font-weight: 600;">
                 ✅ Saved successfully!
             </div>
+            <a href="/methodology" target="_blank"
+               style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #1e293b; background: #0b0f17; color: #64748b; font-size: 0.72rem; text-decoration: none; transition: color 0.15s, border-color 0.15s;"
+               onmouseover="this.style.color='#94a3b8'; this.style.borderColor='#334155';"
+               onmouseout="this.style.color='#64748b'; this.style.borderColor='#1e293b';"
+               title="How L3S calculates camber, draft, twist, entry &amp; exit angles">
+                📖 <span>Measurement Methodology</span>
+            </a>
         </div>
 
         <div style="padding: 0.75rem 1rem; border-top: 1px solid #1f2937; background: #0b0f17; font-size: 0.72rem; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
@@ -1234,10 +1241,15 @@
                         <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">1. Module Selection</h4>
                         <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-summary" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Executive Summary &amp; Camber Table</label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-curves" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Camber Depth &amp; Twist Plots</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-aero" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">⚡</span> Aero Parameter Cards (Step 3)</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-curves" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Camber Profile Chart</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-barchart" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">■</span> Camber &amp; Draft Bar Chart</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-radar" checked onchange="buildReportPreview()" style="accent-color: #a78bfa;"> <span style="color: #a78bfa;">■</span> Shape Fingerprint Radar</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-scatter" checked onchange="buildReportPreview()" style="accent-color: #10b981;"> <span style="color: #10b981;">■</span> Shape Index Scatter</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-canvas" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Sail Photo &amp; Traced Overlay</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-label" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Top Label &amp; ORC Measurements</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-rig" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> Wind &amp; Rig Tuning Settings</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-methodology" onchange="buildReportPreview()" style="accent-color: #64748b;"> <span style="color: #94a3b8;">📖</span> Methodology &amp; Variable Glossary</label>
                         </div>
                     </div>
 
