@@ -333,7 +333,7 @@ def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto',
         detected_stripes.sort(key=lambda s: s['mean_y'], reverse=True)
         for idx, s in enumerate(detected_stripes):
             s['id'] = f'stripe_{idx+1}'
-            s['label'] = f"Stripe #{idx+1} ({"Bottom" if idx==0 else "Mid" if idx==1 else "Top"})"
+            s['label'] = f"Stripe #{idx+1} ({'Bottom' if idx==0 else 'Mid' if idx==1 else 'Top'})"
             s['color'] = colors[idx % len(colors)]
             
     return {
