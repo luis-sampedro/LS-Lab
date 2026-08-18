@@ -2,8 +2,8 @@ Flask==3.0.0
 gunicorn==21.2.0
 scipy
 opencv-python-headless==5.0.0.93
-numpy==2.5.1
+numpy
 firebase-admin==6.2.0
 stripe==7.9.0
-scikit-image==0.26.0
+scikit-image
 
