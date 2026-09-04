@@ -32,19 +32,103 @@
 
 <!-- Add Sail Modal -->
 <div id="addSailModal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 1rem;">
     <div
-        style="background: #0f172a; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #1e293b;">
-        <h2 style="margin-bottom: 1.5rem;">Add New Sail</h2>
-        <input type="text" id="sailCode" placeholder="Code (e.g. J1, MN-A)"
-            style="width: 100%; padding: 10px; margin-bottom: 1rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
-        <input type="text" id="sailDesc" placeholder="Description (e.g. Light Air Jib)"
-            style="width: 100%; padding: 10px; margin-bottom: 1.5rem; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px;">
+        style="background: #0f172a; padding: 1.75rem; border-radius: 12px; width: 100%; max-width: 520px; border: 1px solid #334155; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.7);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h2 style="margin: 0; font-size: 1.25rem; color: #f8fafc;">+ Add New Sail</h2>
+            <button onclick="closeAddSailModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer;">&times;</button>
+        </div>
 
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <button class="btn secondary"
-                onclick="document.getElementById('addSailModal').style.display='none'">Cancel</button>
-            <button class="btn primary" onclick="createSail()">Create</button>
+        <!-- Sail Label OCR Dropzone -->
+        <div style="background: #1e293b; border: 1px dashed #475569; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; text-align: center;">
+            <div style="font-size: 0.85rem; font-weight: 600; color: #38bdf8; margin-bottom: 4px;">📸 Upload / Scan Sail Label Badge</div>
+            <p style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 10px;">Upload a photo of the ORC / sailmaker badge to auto-fill code, certificate, and dimensions via OCR.</p>
+            
+            <div style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <input type="file" id="addSailLabelInput" accept="image/*" style="display: none;" onchange="handleModalLabelUpload(event)">
+                <button type="button" class="btn secondary" style="padding: 5px 12px; font-size: 0.8rem;" onclick="document.getElementById('addSailLabelInput').click()">📁 Choose Photo...</button>
+                <button type="button" class="btn secondary" style="padding: 5px 12px; font-size: 0.8rem; border-color: #38bdf8; color: #38bdf8;" onclick="loadSampleBadgeForModal()">⚡ Load Sample (831 ESP)</button>
+            </div>
+
+            <div id="modal-ocr-status" style="display: none; font-size: 0.72rem; color: #38bdf8; font-weight: 600; margin-top: 8px; background: rgba(56, 189, 248, 0.1); padding: 4px; border-radius: 4px;">
+                🔍 Scanning badge with OCR...
+            </div>
+
+            <div id="modal-label-preview-wrap" style="display: none; margin-top: 10px; align-items: center; justify-content: center; gap: 10px;">
+                <img id="modal-label-preview" src="" style="height: 60px; border-radius: 4px; border: 1px solid #38bdf8; object-fit: contain;">
+                <span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">✓ Badge Attached</span>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
+            <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Sail Code / ID *</label>
+                <input type="text" id="sailCode" placeholder="e.g. J1, ESP-831, MN-A"
+                    style="width: 100%; padding: 8px 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Certificate</label>
+                <select id="sailCert" style="width: 100%; padding: 8px 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
+                    <option value="ORC">ORC International</option>
+                    <option value="IRC">IRC</option>
+                    <option value="OneDesign">One Design</option>
+                    <option value="Club">Club / Training</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
+            <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Sailmaker / Loft</label>
+                <input type="text" id="sailMaker" placeholder="e.g. OneSails, North Sails"
+                    style="width: 100%; padding: 8px 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Description</label>
+                <input type="text" id="sailDesc" placeholder="e.g. Light Air Genoa"
+                    style="width: 100%; padding: 8px 10px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
+            </div>
+        </div>
+
+        <!-- ORC Dimensions Details -->
+        <div style="margin-bottom: 1.25rem;">
+            <label style="font-size: 0.75rem; color: #38bdf8; display: block; margin-bottom: 6px; font-weight: 600;">ORC Dimensions (meters)</label>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HLU (Luff)</span>
+                    <input type="text" id="add_dim_hlu" placeholder="18.14" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HLP (Perp)</span>
+                    <input type="text" id="add_dim_hlp" placeholder="5.25" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HQW (1/4)</span>
+                    <input type="text" id="add_dim_hqw" placeholder="3.93" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HHW (1/2)</span>
+                    <input type="text" id="add_dim_hhw" placeholder="2.68" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HTW (3/4)</span>
+                    <input type="text" id="add_dim_htw" placeholder="1.46" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HUW (7/8)</span>
+                    <input type="text" id="add_dim_huw" placeholder="0.77" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <span style="font-size: 0.68rem; color: #94a3b8;">HB (Head)</span>
+                    <input type="text" id="add_dim_hb" placeholder="0.11" style="width: 100%; padding: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;">
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid #334155; padding-top: 1rem;">
+            <button class="btn secondary" onclick="closeAddSailModal()">Cancel</button>
+            <button class="btn primary" onclick="createSail()">Save Sail to Fleet</button>
         </div>
     </div>
 </div>
@@ -67,11 +151,97 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="{{ url_for('static', filename='js/sail-label-scanner.js') }}"></script>
 <script type="module">
     import { auth, onAuthStateChanged } from "{{ url_for('static', filename='js/firebase-init.js') }}";
 
     let currentUserToken = null;
+    let currentModalLabelPhoto = null;
     const boatId = "{{ boat.id }}";
+
+    window.closeAddSailModal = () => {
+        document.getElementById('addSailModal').style.display = 'none';
+    };
+
+    window.handleModalLabelUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        await processBadgeFile(file);
+    };
+
+    window.loadSampleBadgeForModal = async () => {
+        const sampleUrl = "{{ url_for('static', filename='images/sample-jib-label.jpg') }}";
+        const res = await fetch(sampleUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'sample-jib-label.jpg', { type: 'image/jpeg' });
+        await processBadgeFile(file);
+    };
+
+    async function processBadgeFile(file) {
+        const statusEl = document.getElementById('modal-ocr-status');
+        if (statusEl) {
+            statusEl.innerText = '🔍 Scanning badge with OCR...';
+            statusEl.style.display = 'block';
+        }
+
+        try {
+            if (window.SailLabelScanner) {
+                const res = await window.SailLabelScanner.scanLabel(file, (pct, status) => {
+                    if (statusEl) statusEl.innerText = `🔍 ${status || 'Scanning'} (${pct}%)`;
+                });
+
+                if (res && res.success) {
+                    currentModalLabelPhoto = res.dataUrl;
+                    const preview = document.getElementById('modal-label-preview');
+                    const previewWrap = document.getElementById('modal-label-preview-wrap');
+                    if (preview && previewWrap) {
+                        preview.src = res.dataUrl;
+                        previewWrap.style.display = 'flex';
+                    }
+
+                    const p = res.parsed || {};
+                    if (p.sailNumber && !document.getElementById('sailCode').value) {
+                        document.getElementById('sailCode').value = p.sailNumber;
+                    }
+                    if (p.sailmaker && document.getElementById('sailMaker')) {
+                        document.getElementById('sailMaker').value = p.sailmaker;
+                    }
+                    if (p.certificate && document.getElementById('sailCert')) {
+                        document.getElementById('sailCert').value = p.certificate;
+                    }
+
+                    const dims = p.dimensions || {};
+                    ['hlu', 'hlp', 'hqw', 'hhw', 'htw', 'huw', 'hb'].forEach(k => {
+                        if (dims[k] && document.getElementById('add_dim_' + k)) {
+                            document.getElementById('add_dim_' + k).value = dims[k];
+                        }
+                    });
+
+                    if (statusEl) {
+                        statusEl.innerText = '✅ Label scanned & dimensions extracted!';
+                        setTimeout(() => { statusEl.style.display = 'none'; }, 3500);
+                    }
+                }
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentModalLabelPhoto = e.target.result;
+                    const preview = document.getElementById('modal-label-preview');
+                    const previewWrap = document.getElementById('modal-label-preview-wrap');
+                    if (preview && previewWrap) {
+                        preview.src = e.target.result;
+                        previewWrap.style.display = 'flex';
+                    }
+                    if (statusEl) statusEl.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        } catch (e) {
+            console.warn('Error processing badge:', e);
+            if (statusEl) statusEl.style.display = 'none';
+        }
+    }
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -97,9 +267,33 @@
     }
 
     window.createSail = async () => {
-        const code = document.getElementById('sailCode').value;
-        const desc = document.getElementById('sailDesc').value;
-        if (!code) return;
+        const code = document.getElementById('sailCode').value.trim();
+        const desc = document.getElementById('sailDesc').value.trim();
+        const sailmaker = document.getElementById('sailMaker')?.value.trim() || '';
+        const cert = document.getElementById('sailCert')?.value || 'ORC';
+        if (!code) {
+            alert('Please enter a Sail Code or ID');
+            return;
+        }
+
+        const dimensions = {
+            hlu: document.getElementById('add_dim_hlu')?.value || '',
+            hlp: document.getElementById('add_dim_hlp')?.value || '',
+            hqw: document.getElementById('add_dim_hqw')?.value || '',
+            hhw: document.getElementById('add_dim_hhw')?.value || '',
+            htw: document.getElementById('add_dim_htw')?.value || '',
+            huw: document.getElementById('add_dim_huw')?.value || '',
+            hb: document.getElementById('add_dim_hb')?.value || ''
+        };
+
+        const payload = {
+            code,
+            description: desc,
+            sailmaker,
+            certificate_type: cert,
+            dimensions,
+            label_photo: currentModalLabelPhoto || null
+        };
 
         const res = await fetch(`/api/boats/${boatId}/sails`, {
             method: 'POST',
@@ -107,12 +301,25 @@
                 'Authorization': currentUserToken,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ code, description: desc })
+            body: JSON.stringify(payload)
         });
 
         if (res.ok) {
             document.getElementById('addSailModal').style.display = 'none';
+            // Reset modal fields
+            document.getElementById('sailCode').value = '';
+            document.getElementById('sailDesc').value = '';
+            document.getElementById('sailMaker').value = '';
+            ['hlu', 'hlp', 'hqw', 'hhw', 'htw', 'huw', 'hb'].forEach(k => {
+                const el = document.getElementById('add_dim_' + k);
+                if (el) el.value = '';
+            });
+            currentModalLabelPhoto = null;
+            const previewWrap = document.getElementById('modal-label-preview-wrap');
+            if (previewWrap) previewWrap.style.display = 'none';
             loadSails();
+        } else {
+            alert('Failed to save sail');
         }
     };
 
@@ -133,17 +340,34 @@
         sails.forEach(sail => {
             const card = document.createElement('div');
             card.className = 'card card-link';
-            // Link to Sail Details (History)
             card.onclick = (e) => {
                 if (e.target.closest('.delete-btn')) return;
                 window.location.href = `/boat/${boatId}/sail/${sail.id}`;
             };
 
+            const labelThumb = sail.label_photo
+                ? `<div style="width: 50px; height: 50px; border-radius: 6px; overflow: hidden; border: 1px solid #475569; flex-shrink: 0;"><img src="${sail.label_photo}" style="width: 100%; height: 100%; object-fit: cover;"></div>`
+                : '';
+
+            let dimsSummary = '';
+            if (sail.dimensions && Object.keys(sail.dimensions).some(k => sail.dimensions[k])) {
+                const d = sail.dimensions;
+                const parts = [d.hlu ? `HLU ${d.hlu}m` : null, d.hlp ? `HLP ${d.hlp}m` : null].filter(Boolean);
+                dimsSummary = `<div style="font-size: 0.72rem; color: #38bdf8; margin-top: 6px; background: rgba(56, 189, 248, 0.08); padding: 2px 6px; border-radius: 4px; display: inline-block;">🏷️ ${sail.certificate_type || 'ORC'}${parts.length ? ' • ' + parts.join(' • ') : ''}</div>`;
+            }
+
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div>
-                        <h3 style="color: #38bdf8; margin-bottom: 0.5rem;">${sail.code}</h3>
-                        <p>${sail.description || ''}</p>
+                <div style="display:flex; justify-content:space-between; align-items:start; gap: 10px;">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        ${labelThumb}
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3 style="color: #38bdf8; margin: 0; font-size: 1.1rem;">${sail.code}</h3>
+                                ${sail.sailmaker ? `<span style="font-size: 0.7rem; color: #94a3b8; background: #0f172a; padding: 1px 6px; border-radius: 3px; border: 1px solid #334155;">${sail.sailmaker}</span>` : ''}
+                            </div>
+                            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #cbd5e1;">${sail.description || ''}</p>
+                            ${dimsSummary}
+                        </div>
                     </div>
                     <button class="btn secondary delete-btn" style="z-index:10; padding: 6px 10px; border-color: #ef4444; color: #ef4444;" onclick="deleteSail('${sail.id}')">🗑️</button>
                 </div>

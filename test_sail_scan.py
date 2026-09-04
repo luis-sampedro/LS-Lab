@@ -36,10 +36,28 @@ def test_endpoints():
     assert 'detected_sail' in data2, "Missing detected_sail in response"
     assert 'detected_stripe' in data2, "Missing detected_stripe in response"
     
-    # Assert 4-point B-Spline control points
+    # Assert 4-point B-Spline control points and metadata
     for s in data2['stripes']:
         assert 'p0' in s and 'p1' in s and 'p2' in s and 'p3' in s, "Stripe missing 4-point B-spline controls (p0, p1, p2, p3)"
+        assert 'label' in s and 'name' in s and 'type' in s, "Stripe missing label/name/type"
     print(f"  -> Auto-Detect OK! 4-Point B-Splines verified. Sail: {data2['detected_sail']['name']} ({data2['detected_sail']['hex']}), Stripe: {data2['detected_stripe']['name']} ({data2['detected_stripe']['hex']})")
+    
+    # 2b. Test /api/sail-scan/autodetect with Port1.jpg benchmark
+    import os
+    port1_path = 'autodetect-workbench/uploads/Port1.jpg'
+    if os.path.exists(port1_path):
+        print("Testing POST /api/sail-scan/autodetect (Port1.jpg Real Sail Benchmark) ...")
+        with open(port1_path, 'rb') as f:
+            port1_b64 = "data:image/jpeg;base64," + base64.b64encode(f.read()).decode('utf-8')
+        r_port1 = client.post('/api/sail-scan/autodetect', data=json.dumps({'image': port1_b64}), content_type='application/json')
+        assert r_port1.status_code == 200
+        d_port1 = json.loads(r_port1.data)
+        assert d_port1.get('success') is True, "Port1 autodetection failed"
+        assert len(d_port1['stripes']) == 3, f"Expected 3 stripes on Port1, got {len(d_port1['stripes'])}"
+        for s in d_port1['stripes']:
+            assert s['metrics']['bowl_valid'] is True, f"Stripe {s['label']} bowl not valid"
+            assert 7.0 <= s['metrics']['camber'] <= 15.0, f"Stripe {s['label']} camber out of range"
+        print(f"  -> Port1.jpg Benchmark OK! 3 bowl curves verified: {[s['label'] + ': ' + str(s['metrics']['camber']) + '%' for s in d_port1['stripes']]}")
     
     # 3. Test /api/sail-scan/autodetect with Custom Sampled Color (#c83232)
     print("Testing POST /api/sail-scan/autodetect (Custom Sampled Color #c83232) ...")

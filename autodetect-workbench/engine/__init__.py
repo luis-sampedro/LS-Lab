@@ -1,0 +1,5 @@
+from .autodetect_engine import run_autodetect_pipeline
+from .sail_geometry import analyze_sail_geometry
+from .ridge_extractor import extract_stripe_saliency
+from .stripe_tracker import locate_stripe_candidates, trace_ridge_from_seed
+from .camber_solver import fit_bowl_constrained_curve

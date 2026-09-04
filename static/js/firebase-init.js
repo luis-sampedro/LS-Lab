@@ -37,6 +37,20 @@ export async function getAuthToken() {
     return null;
 }
 
+// Expose on window for non-module scripts (like sailscan-studio.js)
+window.firebaseApp = {
+    app,
+    auth,
+    db,
+    onAuthStateChanged,
+    getAuthToken,
+    signInWithGoogle,
+    signOut
+};
+window.getAuthToken = getAuthToken;
+window.auth = auth;
+window.dispatchEvent(new CustomEvent('firebaseReady', { detail: { auth, db } }));
+
 // Optional: Global Auth Listener for UI updates (passed in callback)
 export function initGlobalAuthListener(loginBtnId, userIconId) {
     onAuthStateChanged(auth, (user) => {
@@ -55,3 +69,4 @@ export function initGlobalAuthListener(loginBtnId, userIconId) {
         }
     });
 }
+

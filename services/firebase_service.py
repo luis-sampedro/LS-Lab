@@ -88,17 +88,55 @@ def is_user_pro(uid):
     return profile.get('is_pro', False) if profile else False
 
 
+def sanitize_for_firestore(data):
+    """
+    Recursively sanitizes data to be compliant with Firestore requirements:
+    - Firestore disallows nested arrays / list of lists (e.g. [[x, y], [x, y]]).
+    - Converts lists of lists/tuples to lists of dicts: [{'x': p[0], 'y': p[1]}].
+    - Converts numpy types (float32, int64, ndarray) to native python types.
+    """
+    if data is None:
+        return None
+    try:
+        import numpy as np
+        if isinstance(data, (np.integer, np.int32, np.int64)):
+            return int(data)
+        if isinstance(data, (np.floating, np.float32, np.float64)):
+            return float(data)
+        if isinstance(data, np.ndarray):
+            return sanitize_for_firestore(data.tolist())
+    except ImportError:
+        pass
+
+    if isinstance(data, list):
+        if len(data) > 0 and isinstance(data[0], (list, tuple)):
+            return [
+                {"x": float(p[0]), "y": float(p[1])} if len(p) >= 2 
+                else {"x": float(p[0])} if len(p) == 1 
+                else {} 
+                for p in data
+            ]
+        return [sanitize_for_firestore(item) for item in data]
+    if isinstance(data, dict):
+        return {str(k): sanitize_for_firestore(v) for k, v in data.items()}
+    return data
+
 def verify_token(id_token):
     """Verifies ID token from client."""
+    if not id_token or not isinstance(id_token, str):
+        return None
     try:
+        token = id_token.strip()
+        if token.lower().startswith('bearer '):
+            token = token[7:].strip()
         # Verify the ID token. 
         # clock_skew_seconds=10 allows for slight time diffs.
-        decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+        decoded_token = auth.verify_id_token(token, check_revoked=True)
         return decoded_token
     except Exception as e:
-        print(f"!!! TOKEN VERIFICATION FAILED !!!")
-        print(f"Error details: {e}")
-        return str(e)
+        print(f"!!! TOKEN VERIFICATION FAILED: {e} !!!")
+        return None
+
 
 def get_user_boats(uid):
     """Fetches boats for a specific user."""
@@ -154,16 +192,19 @@ def get_boat_sails(uid, boat_id):
         print(f"Error getting sails: {e}")
         return []
 
-def create_sail(uid, boat_id, code, description):
-    """Creates a new sail."""
+def create_sail(uid, boat_id, code, description, extra_data=None):
+    """Creates a new sail with optional dimensions, label_photo, and specs."""
     if not db: return None
     try:
         sails_ref = db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails')
-        _, doc_ref = sails_ref.add({
+        doc_payload = {
             'code': code,
             'description': description,
             'created_at': firestore.SERVER_TIMESTAMP
-        })
+        }
+        if isinstance(extra_data, dict):
+            doc_payload.update(extra_data)
+        _, doc_ref = sails_ref.add(doc_payload)
         return doc_ref.id
     except Exception as e:
         print(f"Error creating sail: {e}")
@@ -229,7 +270,8 @@ def update_sail(uid, boat_id, sail_id, code=None, description=None, extra_data=N
                 update_dict.update(extra_data)
         
         if update_dict:
-            db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails').document(sail_id).set(update_dict, merge=True)
+            sanitized_dict = sanitize_for_firestore(update_dict)
+            db.collection('users').document(uid).collection('boats').document(boat_id).collection('sails').document(sail_id).set(sanitized_dict, merge=True)
         return True
     except Exception as e:
         print(f"Error updating sail: {e}")
@@ -253,6 +295,7 @@ def create_analysis(uid, boat_id, sail_id, date_str=None, metrics=None, path=Non
             }
             
         doc_data['created_at'] = firestore.SERVER_TIMESTAMP
+        doc_data = sanitize_for_firestore(doc_data)
         _, doc_ref = analyses_ref.add(doc_data)
         return doc_ref.id
     except Exception as e:
@@ -267,6 +310,7 @@ def save_sailscan_project(uid, project_data):
         projects_ref = db.collection('users').document(uid).collection('sailscan_projects')
         
         project_data['updated_at'] = firestore.SERVER_TIMESTAMP
+        project_data = sanitize_for_firestore(project_data)
         
         if project_id:
             projects_ref.document(project_id).set(project_data, merge=True)
@@ -355,12 +399,14 @@ def add_datalab_report(uid, boat_id, report_data):
         
         # Add server timestamp
         report_data['created_at'] = firestore.SERVER_TIMESTAMP
+        report_data = sanitize_for_firestore(report_data)
         
         _, doc_ref = reports_ref.add(report_data)
         return doc_ref.id
     except Exception as e:
         print(f"Error creating datalab report: {e}")
         raise e
+
 
 def get_moth_bookings(date_str=None):
     """Fetches all bookings for a date or all dates if date_str is None."""

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SailCam Vision Lab — Cognitive Autodetect Workbench</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/workbench.css">
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo-area">
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 22L20 22"></path>
+                    <path d="M12 2L4 22"></path>
+                    <path d="M12 2L20 22"></path>
+                    <path d="M12 2V22"></path>
+                    <path d="M4 14H20"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                    SailCam Vision Lab <span class="badge badge-cyan">Cognitive Engine Workbench</span>
+                </h1>
+                <p class="text-xs text-slate-400">Human-Cognitive Methodology: Sun $\to$ Mast $\to$ Cloth & Boundaries $\to$ Height Sectors $\to$ Camber Curves</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span id="latencyBadge" class="badge badge-slate">Ready</span>
+            <span id="bowlStatusHeader" class="badge badge-emerald">Bowl Constraint Active</span>
+            <button id="runDetectBtn" class="btn btn-primary" onclick="triggerDetect()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Run Autodetect
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workbench-layout">
+        
+        <!-- Left Sidebar: Controls & Presets -->
+        <aside class="sidebar">
+            
+            <!-- Image Selector Section -->
+            <div class="panel-section">
+                <label class="section-title">Test Image Source</label>
+                <select id="imageSelect" class="input-select" onchange="handleImageSelection(this.value)">
+                    {% for img in images %}
+                        <option value="{{ img.path }}">{{ img.name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <div class="upload-box mt-2" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(this.files)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Click or Drag to Upload Custom Photo</span>
+                </div>
+            </div>
+
+            <!-- User Prior & Context (Cognitive Foundation) -->
+            <div class="panel-section">
+                <label class="section-title">User Prior & Context</label>
+                
+                <!-- Foot picture confirmation badge -->
+                <div class="flex items-center justify-between mb-2 p-2 rounded bg-slate-900 border border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-amber-400">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        </span>
+                        <span class="text-xs font-semibold text-slate-200">Foot Picture</span>
+                    </div>
+                    <span class="badge badge-emerald text-[10px]">Looking Up from Below</span>
+                </div>
+
+                <!-- Sail Type Selection -->
+                <div class="control-row">
+                    <label>Sail Selection</label>
+                    <div class="pill-selector w-full grid grid-cols-2 gap-1" id="sailTypeGroup">
+                        <button class="pill active" id="btnMainsail" onclick="setSailType('mainsail')">Mainsail</button>
+                        <button class="pill" id="btnJib" onclick="setSailType('jib')">Jib / Headsail</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cognitive Step-by-Step Thinking Log -->
+            <div class="panel-section">
+                <label class="section-title flex items-center justify-between">
+                    <span>Cognitive Recognition Process</span>
+                    <span class="text-[10px] text-sky-400 font-mono">5 Steps</span>
+                </label>
+                <div id="cognitiveStepsList" class="cognitive-steps-container">
+                    <div class="text-xs text-slate-500 italic p-2">Click "Run Autodetect" to execute cognitive steps...</div>
+                </div>
+            </div>
+
+            <!-- Autodetect Algorithm Parameters -->
+            <div class="panel-section">
+                <label class="section-title">Aerodynamic & CV Controls</label>
+                
+                <!-- Bowl Constraint Toggle -->
+                <div class="toggle-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold text-xs text-sky-400">Enforce Bowl Constraint</span>
+                            <p class="text-[10px] text-slate-400">Strictly open towards sky (camber 7%–15%, draft ~40%)</p>
+                        </div>
+                        <input type="checkbox" id="enforceBowlToggle" checked onchange="triggerDetect()" class="toggle-checkbox">
+                    </div>
+                </div>
+
+                <!-- Stripe Color Filter -->
+                <div class="control-row">
+                    <label>Stripe Color Tone</label>
+                    <select id="stripeColorSelect" class="input-select" onchange="triggerDetect()">
+                        <option value="auto">Auto (Detect Cloth & Stripe)</option>
+                        <option value="white">White / Light Stripe</option>
+                        <option value="black">Black / Dark Stripe</option>
+                        <option value="red">Red Stripe</option>
+                        <option value="blue">Blue Stripe</option>
+                    </select>
+                </div>
+
+                <!-- Sensitivity Slider -->
+                <div class="control-row">
+                    <div class="flex justify-between text-xs">
+                        <span>Sensitivity</span>
+                        <span id="sensitivityVal" class="text-sky-400 font-mono">1.00x</span>
+                    </div>
+                    <input type="range" id="sensitivitySlider" min="0.4" max="2.4" step="0.1" value="1.0" class="range-slider" oninput="document.getElementById('sensitivityVal').innerText = parseFloat(this.value).toFixed(2) + 'x'" onchange="triggerDetect()">
+                </div>
+            </div>
+
+            <!-- Interactive Tools -->
+            <div class="panel-section">
+                <label class="section-title">Interactive Tools</label>
+                <div class="tool-btn-grid">
+                    <button id="snapToolBtn" class="btn btn-secondary" onclick="toggleSnapTool()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        1-Click Snap Tool
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetCanvasView()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                        Reset Camera
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cloth & Color Detection Card -->
+            <div class="panel-section">
+                <label class="section-title">Detected Fabric Signature</label>
+                <div class="info-card">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-slate-400">Sail Cloth:</span>
+                        <span id="sailDetectedBadge" class="text-xs font-semibold text-white">--</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-slate-400">Stripe Signature:</span>
+                        <span id="stripeDetectedBadge" class="text-xs font-semibold text-sky-400">--</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-400">Color Consistency:</span>
+                        <span id="brightnessBadge" class="text-xs font-mono text-slate-300">--</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Center Viewport: Interactive Canvas -->
+        <section class="viewport-area">
+            
+            <!-- Canvas Layer Switcher -->
+            <div class="viewport-overlay-bar">
+                <div class="layer-pills">
+                    <label class="layer-checkbox"><input type="checkbox" id="layerOrig" checked onchange="redraw()"> Photo</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerLuff" checked onchange="redraw()"> ⚪ Luff (White Edge)</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerCurves" checked onchange="redraw()"> 🌊 Camber Curves</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerHandles" checked onchange="redraw()"> 🎯 Controls (P0-P3)</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerSectors" checked onchange="redraw()"> 📏 1/4 2/4 3/4 Sectors</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerLeech" checked onchange="redraw()"> 🟧 Leech</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerSun" onchange="redraw()"> ☀️ Sun/Light</label>
+                    <label class="layer-checkbox"><input type="checkbox" id="layerHeatmap" onchange="redraw()"> 🔥 Heatmap</label>
+                </div>
+
+                <div class="zoom-readout font-mono text-xs text-slate-400" id="zoomLevel">
+                    Zoom: 100%
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="workbenchCanvas"></canvas>
+            </div>
+
+        </section>
+
+        <!-- Right Sidebar: Metrics & Aerodynamics Inspector -->
+        <aside class="inspector">
+            
+            <div class="panel-section">
+                <label class="section-title">Aerodynamic Camber Analysis</label>
+                
+                <div id="stripesCardsList" class="stripes-cards">
+                    <!-- Cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Curvature Chart Card -->
+            <div class="panel-section">
+                <label class="section-title">Camber Profiles (0% Luff to 100% Leech)</label>
+                <div class="chart-box">
+                    <canvas id="profileChartCanvas" width="280" height="150"></canvas>
+                </div>
+            </div>
+
+            <!-- Production JSON Preview -->
+            <div class="panel-section">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="section-title mb-0">Production JSON Preview</label>
+                    <button class="text-[11px] text-sky-400 hover:text-sky-300" onclick="copyJson()">Copy</button>
+                </div>
+                <textarea id="jsonPreview" readonly class="code-box font-mono text-[11px]"></textarea>
+            </div>
+
+        </aside>
+
+    </main>
+
+    <script src="/static/workbench.js"></script>
+</body>
+</html>

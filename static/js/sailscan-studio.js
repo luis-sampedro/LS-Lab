@@ -1190,7 +1190,8 @@ function ensure4PointBSpline(stripe) {
         stripe.p2 = p2;
         stripe.p3 = p3;
     }
-    if (!stripe.type) stripe.type = 'mid';
+    if (!stripe.type) stripe.type = stripe.order || 'mid';
+    if (!stripe.label) stripe.label = stripe.name || `Stripe #${(scanData.stripes.indexOf(stripe) + 1) || 1}`;
     computeStripeMetricsFromBSpline(stripe);
 }
 
@@ -3184,16 +3185,108 @@ function updateCompareView() {
     }
 }
 
-window.handleLabelPhoto = function(file) {
+window.handleLabelPhoto = async function(file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        scanData.labelPhotoSrc = e.target.result;
-        document.getElementById('labelPhotoImg').src = e.target.result;
-        document.getElementById('labelPhotoImg').style.display = 'block';
-        document.getElementById('labelPhotoPlaceholder').style.display = 'none';
+    const isEs = isSpanishLang();
+    const statusEl = document.getElementById('label-ocr-status');
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerText = isEs ? '🔍 Escaneando etiqueta y extrayendo medidas...' : '🔍 Scanning label badge and extracting ORC data...';
+    }
+
+    try {
+        if (window.SailLabelScanner) {
+            const res = await window.SailLabelScanner.scanLabel(file, (prog) => {
+                if (statusEl) statusEl.innerText = `${isEs ? '🔍 Escaneando:' : '🔍 Scanning:'} ${prog.status}`;
+            });
+            if (res && res.success) {
+                scanData.labelPhotoSrc = res.dataUrl;
+                const img = document.getElementById('labelPhotoImg');
+                const placeholder = document.getElementById('labelPhotoPlaceholder');
+                if (img) { img.src = res.dataUrl; img.style.display = 'block'; }
+                if (placeholder) placeholder.style.display = 'none';
+
+                const p = res.parsed || {};
+                if (p.sailNumber) {
+                    if (document.getElementById('specSailNumber')) document.getElementById('specSailNumber').value = p.sailNumber;
+                    if (document.getElementById('inputSailNumber')) document.getElementById('inputSailNumber').value = p.sailNumber;
+                }
+                if (p.sailmaker && document.getElementById('specSailmaker')) {
+                    document.getElementById('specSailmaker').value = p.sailmaker;
+                }
+                if (p.certificate && document.getElementById('specCertificate')) {
+                    document.getElementById('specCertificate').value = p.certificate;
+                }
+                const dims = p.dimensions || {};
+                ['hlu', 'hlp', 'hqw', 'hhw', 'htw', 'huw', 'hb'].forEach(k => {
+                    if (dims[k] && document.getElementById('dim_' + k)) {
+                        document.getElementById('dim_' + k).value = dims[k];
+                    }
+                });
+
+                if (statusEl) {
+                    statusEl.innerText = isEs ? '✅ Medidas ORC extraídas de la etiqueta con éxito' : '✅ ORC measurements extracted from label successfully';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+                }
+                showToast(isEs ? '✅ Medidas extraídas de la etiqueta' : '✅ Measurements extracted from badge');
+            }
+        } else {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                scanData.labelPhotoSrc = e.target.result;
+                const img = document.getElementById('labelPhotoImg');
+                const placeholder = document.getElementById('labelPhotoPlaceholder');
+                if (img) { img.src = e.target.result; img.style.display = 'block'; }
+                if (placeholder) placeholder.style.display = 'none';
+                syncSpecsFromInputs();
+                buildReportPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+    } catch (e) {
+        console.warn('Error scanning label:', e);
+        if (statusEl) statusEl.style.display = 'none';
+    }
+
+    syncSpecsFromInputs();
+    buildReportPreview();
+};
+
+window.setReportPreset = function(preset) {
+    const setCheck = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = val;
     };
-    reader.readAsDataURL(file);
+    if (preset === 'full') {
+        ['rep-mod-summary', 'rep-mod-aero', 'rep-mod-curves', 'rep-mod-barchart', 'rep-mod-radar', 'rep-mod-scatter', 'rep-mod-canvas', 'rep-mod-label', 'rep-mod-rig', 'rep-mod-notes', 'rep-mod-methodology'].forEach(id => setCheck(id, true));
+    } else if (preset === 'executive') {
+        setCheck('rep-mod-summary', true);
+        setCheck('rep-mod-aero', true);
+        setCheck('rep-mod-curves', true);
+        setCheck('rep-mod-barchart', false);
+        setCheck('rep-mod-radar', false);
+        setCheck('rep-mod-scatter', false);
+        setCheck('rep-mod-canvas', false);
+        setCheck('rep-mod-label', true);
+        setCheck('rep-mod-rig', false);
+        setCheck('rep-mod-notes', true);
+        setCheck('rep-mod-methodology', false);
+    } else if (preset === 'aero') {
+        setCheck('rep-mod-summary', true);
+        setCheck('rep-mod-aero', true);
+        setCheck('rep-mod-curves', true);
+        setCheck('rep-mod-barchart', true);
+        setCheck('rep-mod-radar', true);
+        setCheck('rep-mod-scatter', true);
+        setCheck('rep-mod-canvas', true);
+        setCheck('rep-mod-label', false);
+        setCheck('rep-mod-rig', false);
+        setCheck('rep-mod-notes', false);
+        setCheck('rep-mod-methodology', false);
+    } else if (preset === 'none') {
+        ['rep-mod-summary', 'rep-mod-aero', 'rep-mod-curves', 'rep-mod-barchart', 'rep-mod-radar', 'rep-mod-scatter', 'rep-mod-canvas', 'rep-mod-label', 'rep-mod-rig', 'rep-mod-notes', 'rep-mod-methodology'].forEach(id => setCheck(id, false));
+    }
+    buildReportPreview();
 };
 
 function syncSpecsFromInputs() {
@@ -3248,20 +3341,23 @@ window.buildReportPreview = function() {
     const sheet = document.getElementById('print-report-sheet');
     if (!sheet) return;
 
-    const incSummary  = document.getElementById('rep-mod-summary')?.checked ?? true;
-    const incAero     = document.getElementById('rep-mod-aero')?.checked ?? true;
-    const incCurves   = document.getElementById('rep-mod-curves')?.checked ?? true;
-    const incBarChart = document.getElementById('rep-mod-barchart')?.checked ?? true;
-    const incRadar    = document.getElementById('rep-mod-radar')?.checked ?? true;
-    const incScatter  = document.getElementById('rep-mod-scatter')?.checked ?? true;
-    const incCanvas   = document.getElementById('rep-mod-canvas')?.checked ?? true;
-    const incLabel    = document.getElementById('rep-mod-label')?.checked ?? true;
-    const incRig      = document.getElementById('rep-mod-rig')?.checked ?? true;
-    const notes       = document.getElementById('rep-learning-points')?.value || '';
+    const isEs = isSpanishLang();
+    const incSummary     = document.getElementById('rep-mod-summary')?.checked ?? true;
+    const incAero        = document.getElementById('rep-mod-aero')?.checked ?? true;
+    const incCurves      = document.getElementById('rep-mod-curves')?.checked ?? true;
+    const incBarChart    = document.getElementById('rep-mod-barchart')?.checked ?? true;
+    const incRadar       = document.getElementById('rep-mod-radar')?.checked ?? true;
+    const incScatter     = document.getElementById('rep-mod-scatter')?.checked ?? true;
+    const incCanvas      = document.getElementById('rep-mod-canvas')?.checked ?? true;
+    const incLabel       = document.getElementById('rep-mod-label')?.checked ?? true;
+    const incRig         = document.getElementById('rep-mod-rig')?.checked ?? true;
+    const incNotes       = document.getElementById('rep-mod-notes')?.checked ?? true;
+    const incMethodology = document.getElementById('rep-mod-methodology')?.checked ?? false;
+    const notes          = document.getElementById('rep-learning-points')?.value || '';
 
-    const dateStr  = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const dateStr  = new Date().toLocaleDateString(isEs ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const isPort   = (scanData.tack === 'port');
-    const tackLabel = isPort ? 'PORT' : 'STBD';
+    const tackLabel = isPort ? (isEs ? 'BABOR' : 'PORT') : (isEs ? 'ESTRIBOR' : 'STBD');
     const tackColor = isPort ? '#ef4444' : '#10b981';
     const tackBg    = isPort ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
 
@@ -3276,54 +3372,71 @@ window.buildReportPreview = function() {
         return null;
     };
 
-    // ── HEADER ─────────────────────────────────────────────────────────────
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+    // ── PAGE 1 HEADER ───────────────────────────────────────────────────────
+    const makeMainHeader = () => `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
             <div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-                    <h1 style="font-size: 1.6rem; color: #0284c7; margin: 0; font-weight: 800; text-transform: uppercase;">
-                        L3S Sail Scan Performance Report
+                    <h1 style="font-size: 1.5rem; color: #0284c7; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
+                        ${isEs ? 'Informe de Rendimiento L3S Sail Scan' : 'L3S Sail Scan Performance Report'}
                     </h1>
-                    <span style="font-size: 0.85rem; font-weight: 900; letter-spacing: 2px; color: ${tackColor}; background: ${tackBg}; border: 1.5px solid ${tackColor}; padding: 3px 10px; border-radius: 5px;">${tackLabel}</span>
+                    <span style="font-size: 0.8rem; font-weight: 900; letter-spacing: 2px; color: ${tackColor}; background: ${tackBg}; border: 1.5px solid ${tackColor}; padding: 2px 8px; border-radius: 4px;">${tackLabel}</span>
                 </div>
-                <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
-                    ${scanData.boatName || 'Grand Prix Sailing'} • Sail: <strong>${scanData.sailName || 'J1 Light-Medium'}</strong> (${scanData.sailNumber || 'ESP-831'})
-                    &nbsp;•&nbsp; Tack: <strong style="color: ${tackColor};">${isPort ? 'Port (Babor)' : 'Starboard (Estribor)'}</strong>
-                    &nbsp;•&nbsp; Date: ${dateStr}
+                <div style="font-size: 0.82rem; color: #475569; margin-top: 3px;">
+                    ${scanData.boatName || (isEs ? 'Barco Regata' : 'Grand Prix Sailing')} • ${isEs ? 'Vela:' : 'Sail:'} <strong>${scanData.sailName || 'J1 Light-Medium'}</strong> (${scanData.sailNumber || 'ESP-831'})
+                    &nbsp;•&nbsp; ${isEs ? 'Amura:' : 'Tack:'} <strong style="color: ${tackColor};">${isPort ? (isEs ? 'Babor' : 'Port') : (isEs ? 'Estribor' : 'Starboard')}</strong>
+                    &nbsp;•&nbsp; ${isEs ? 'Fecha:' : 'Date:'} ${dateStr}
                 </div>
                 ${(!isNaN(refCamber) && !isNaN(refDraft)) ? `
-                <div style="margin-top: 5px; font-size: 0.75rem; color: #64748b; display: flex; gap: 12px;">
-                    <span>🎯 Target Camber: <strong style="color: #d97706;">${refCamber}%</strong></span>
-                    <span>🎯 Target Draft: <strong style="color: #7c3aed;">${refDraft}%</strong></span>
-                    ${!isNaN(refEntry) ? `<span>🎯 Target Entry: <strong style="color: #059669;">${refEntry}°</strong></span>` : ''}
+                <div style="margin-top: 4px; font-size: 0.72rem; color: #64748b; display: flex; gap: 10px;">
+                    <span>🎯 ${isEs ? 'Camber Objetivo:' : 'Target Camber:'} <strong style="color: #d97706;">${refCamber}%</strong></span>
+                    <span>🎯 ${isEs ? 'Calado Objetivo:' : 'Target Draft:'} <strong style="color: #7c3aed;">${refDraft}%</strong></span>
+                    ${!isNaN(refEntry) ? `<span>🎯 ${isEs ? 'Entrada:' : 'Entry:'} <strong style="color: #059669;">${refEntry}°</strong></span>` : ''}
                 </div>` : ''}
             </div>
             <div style="text-align: right;">
-                <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${dateStr}</div>
-                <div style="font-size: 0.75rem; color: #64748b;">LS Lab Antigravity Engine</div>
-                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">Cert: ${scanData.certificateType || 'ORC'} · Loft: ${scanData.sailmaker || '--'}</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">${dateStr}</div>
+                <div style="font-size: 0.72rem; color: #64748b;">LS Lab Antigravity Engine</div>
+                <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px;">Cert: ${scanData.certificateType || 'ORC'} · Loft: ${scanData.sailmaker || '--'}</div>
             </div>
         </div>
     `;
 
-    // ── 1. EXECUTIVE SUMMARY & EXPANDED CAMBER TABLE ───────────────────────
+    // ── RUNNING HEADER (FOR PAGE 2+) ───────────────────────────────────────
+    const makeRunningHeader = (pageTitle) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #64748b;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 800; color: #0284c7; text-transform: uppercase;">L3S Sail Scan</span>
+                <span>•</span>
+                <span>${pageTitle || (isEs ? 'Análisis Aerodinámico' : 'Aerodynamic Analysis')}</span>
+            </div>
+            <div>
+                <strong>${scanData.sailName || 'Sail'}</strong> (${scanData.sailNumber || 'ESP-831'}) • <span style="color: ${tackColor}; font-weight: 700;">${tackLabel}</span>
+            </div>
+        </div>
+    `;
+
+    // ── SECTION HTML BUILDERS ──────────────────────────────────────────────
+
+    // Group 1: Section 1 (Summary & Table)
+    let s1Html = '';
     if (incSummary && scanData.stripes.length) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    1. Camber Distribution &amp; Aerodynamic Metrics
+        s1Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
+                    1. ${isEs ? 'Distribución de Camber y Métricas Aerodinámicas' : 'Camber Distribution & Aerodynamic Metrics'}
                 </h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left;">
                     <thead>
                         <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
-                            <th style="padding: 6px 8px; color: #475569;">Stripe</th>
-                            <th style="padding: 6px 8px; color: #0284c7;">Max Camber</th>
-                            <th style="padding: 6px 8px; color: #d97706;">Draft Pos</th>
-                            <th style="padding: 6px 8px; color: #059669;">Twist</th>
-                            <th style="padding: 6px 8px; color: #475569;">Entry °</th>
-                            <th style="padding: 6px 8px; color: #475569;">Exit °</th>
-                            <th style="padding: 6px 8px; color: #7c3aed;">Shape Index</th>
-                            <th style="padding: 6px 8px; color: #475569;">Status</th>
+                            <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Banda' : 'Stripe'}</th>
+                            <th style="padding: 5px 6px; color: #0284c7;">${isEs ? 'Camber Máx' : 'Max Camber'}</th>
+                            <th style="padding: 5px 6px; color: #d97706;">${isEs ? 'Pos Calado' : 'Draft Pos'}</th>
+                            <th style="padding: 5px 6px; color: #059669;">${isEs ? 'Giro (Twist)' : 'Twist'}</th>
+                            <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Entrada °' : 'Entry °'}</th>
+                            <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Salida °' : 'Exit °'}</th>
+                            <th style="padding: 5px 6px; color: #7c3aed;">Shape Index</th>
+                            <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Estado' : 'Status'}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3336,39 +3449,40 @@ window.buildReportPreview = function() {
                             const si = (m.entry && m.exit) ? ((parseFloat(m.entry) / Math.max(1, parseFloat(m.exit))) * 100).toFixed(0) : '--';
                             const cBg = cd < 1 ? '#dcfce7' : cd < 3 ? '#fef9c3' : '#fee2e2';
                             const dBg = dd < 3 ? '#dcfce7' : dd < 7 ? '#fef9c3' : '#fee2e2';
-                            const status = cd < 1 && dd < 3 ? '🟢 On target' : cd < 3 && dd < 7 ? '🟡 Close' : '🔴 Review';
+                            const status = cd < 1 && dd < 3 ? (isEs ? '🟢 En rango' : '🟢 On target') : cd < 3 && dd < 7 ? (isEs ? '🟡 Próximo' : '🟡 Close') : (isEs ? '🔴 Ajustar' : '🔴 Review');
                             return `
                             <tr style="border-bottom: 1px solid #e2e8f0;">
-                                <td style="padding: 6px 8px; font-weight: 700; color: ${s.color};">
-                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.color}; margin-right:5px;"></span>
+                                <td style="padding: 5px 6px; font-weight: 700; color: ${s.color};">
+                                    <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:${s.color}; margin-right:4px;"></span>
                                     ${s.label}
                                 </td>
-                                <td style="padding: 6px 8px; font-weight: 700; color: #0284c7; background: ${cBg};">${m.camber ?? '--'}%</td>
-                                <td style="padding: 6px 8px; font-weight: 700; color: #d97706; background: ${dBg};">${m.draft_pos ?? '--'}%</td>
-                                <td style="padding: 6px 8px; color: #059669;">${m.twist ?? '--'}°</td>
-                                <td style="padding: 6px 8px;">${m.entry ?? '--'}°</td>
-                                <td style="padding: 6px 8px;">${m.exit ?? '--'}°</td>
-                                <td style="padding: 6px 8px; color: #7c3aed; font-weight: 600;">${si}</td>
-                                <td style="padding: 6px 8px; font-size: 0.78rem;">${status}</td>
+                                <td style="padding: 5px 6px; font-weight: 700; color: #0284c7; background: ${cBg};">${m.camber ?? '--'}%</td>
+                                <td style="padding: 5px 6px; font-weight: 700; color: #d97706; background: ${dBg};">${m.draft_pos ?? '--'}%</td>
+                                <td style="padding: 5px 6px; color: #059669;">${m.twist ?? '--'}°</td>
+                                <td style="padding: 5px 6px;">${m.entry ?? '--'}°</td>
+                                <td style="padding: 5px 6px;">${m.exit ?? '--'}°</td>
+                                <td style="padding: 5px 6px; color: #7c3aed; font-weight: 600;">${si}</td>
+                                <td style="padding: 5px 6px; font-size: 0.74rem;">${status}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
                 </table>
-                <div style="margin-top: 5px; font-size: 0.72rem; color: #94a3b8;">
-                    🟢 Within target  🟡 Close (&lt;3% camber / &lt;7% draft deviation)  🔴 Review required
+                <div style="margin-top: 4px; font-size: 0.68rem; color: #94a3b8;">
+                    ${isEs ? '🟢 En rango objetivo  🟡 Próximo (&lt;3% camber / &lt;7% calado)  🔴 Requiere ajuste' : '🟢 Within target  🟡 Close (&lt;3% camber / &lt;7% draft deviation)  🔴 Review required'}
                 </div>
             </div>
         `;
     }
 
-    // ── 2. AERO PARAMETER CARDS (Step 3 sidebar data) ──────────────────────
+    // Group 1: Section 2 (Aero Cards)
+    let s2Html = '';
     if (incAero && scanData.stripes.length) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    2. Aero Parameter Cards
+        s2Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
+                    2. ${isEs ? 'Tarjetas de Parámetros Aerodinámicos' : 'Aero Parameter Cards'}
                 </h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 8px;">
                     ${scanData.stripes.map(s => {
                         const m = s.metrics || {};
                         const cv = parseFloat(m.camber ?? 0);
@@ -3377,15 +3491,15 @@ window.buildReportPreview = function() {
                         const camberOk = Math.abs(cv - refCamber) < 2;
                         const draftOk  = Math.abs(dv - refDraft) < 5;
                         return `
-                        <div style="border: 1px solid #e2e8f0; border-left: 4px solid ${s.color}; border-radius: 6px; padding: 8px 10px; background: #f8fafc;">
-                            <div style="font-weight: 700; color: ${s.color}; font-size: 0.85rem; margin-bottom: 5px;">${s.label}</div>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 0.75rem;">
+                        <div style="border: 1px solid #e2e8f0; border-left: 3.5px solid ${s.color}; border-radius: 5px; padding: 6px 8px; background: #f8fafc;">
+                            <div style="font-weight: 700; color: ${s.color}; font-size: 0.8rem; margin-bottom: 3px;">${s.label}</div>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 1px 6px; font-size: 0.72rem;">
                                 <span style="color: #64748b;">Camber:</span><span style="font-weight: 700; color: ${camberOk ? '#059669' : '#dc2626'};">${m.camber ?? '--'}%</span>
                                 <span style="color: #64748b;">Draft:</span><span style="font-weight: 700; color: ${draftOk ? '#059669' : '#d97706'};">${m.draft_pos ?? '--'}%</span>
                                 <span style="color: #64748b;">Twist:</span><span style="color: #7c3aed;">${m.twist ?? '--'}°</span>
                                 <span style="color: #64748b;">Entry:</span><span>${m.entry ?? '--'}°</span>
                                 <span style="color: #64748b;">Exit:</span><span>${m.exit ?? '--'}°</span>
-                                <span style="color: #64748b;">Shape Idx:</span><span style="font-weight: 600; color: #d97706;">${si}</span>
+                                <span style="color: #64748b;">Index:</span><span style="font-weight: 600; color: #d97706;">${si}</span>
                             </div>
                         </div>`;
                     }).join('')}
@@ -3394,136 +3508,121 @@ window.buildReportPreview = function() {
         `;
     }
 
-    // ── 3. CAMBER PROFILE CHART ────────────────────────────────────────────
+    // Group 1: Section 3 (Camber Profile Curves)
+    let s3Html = '';
     if (incCurves) {
         const snap = snapChart(camberChart);
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    3. Camber Profile Curves (% Chord vs % Depth)
+        s3Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
+                    3. ${isEs ? 'Perfiles de Camber (% Cuerda vs % Profundidad)' : 'Camber Profile Curves (% Chord vs % Depth)'}
                 </h3>
-                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 110px; display: flex; align-items: center; justify-content: center;">
                     ${snap
-                        ? `<img src="${snap}" style="width: 100%; max-height: 200px; object-fit: contain;">`
-                        : `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center;">📊 Open Step 3 to generate chart snapshot · ${scanData.stripes.length} stripe${scanData.stripes.length !== 1 ? 's' : ''} detected</div>`
+                        ? `<img src="${snap}" style="width: 100%; max-height: 180px; object-fit: contain;">`
+                        : `<div style="font-size: 0.78rem; color: #94a3b8; text-align: center;">📊 ${isEs ? 'Abre el Paso 3 para capturar el gráfico' : 'Open Step 3 to generate chart snapshot'}</div>`
                     }
                 </div>
             </div>
         `;
     }
 
-    // ── 4. BAR CHART ──────────────────────────────────────────────────────
-    if (incBarChart) {
-        const snap = snapChart(draftBarChart);
-        html += `
-            <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: ${incRadar ? '1fr 1fr' : '1fr'}; gap: 1rem; align-items: start;">
+    // Group 2: Section 4 (Bar Chart & Radar)
+    let s4Html = '';
+    if (incBarChart || incRadar) {
+        const snapB = incBarChart ? snapChart(draftBarChart) : null;
+        const snapR = incRadar ? snapChart(radarChart) : null;
+        s4Html = `
+            <div style="margin-bottom: 1.2rem; display: grid; grid-template-columns: ${(incBarChart && incRadar) ? '1fr 1fr' : '1fr'}; gap: 0.8rem; align-items: start;">
+                ${incBarChart ? `
                 <div>
-                    <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
-                        4a. Camber &amp; Draft Bar Chart
+                    <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
+                        4a. ${isEs ? 'Gráfico de Camber y Calado' : 'Camber & Draft Bar Chart'}
                     </h3>
-                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
-                        ${snap
-                            ? `<img src="${snap}" style="width: 100%; max-height: 160px; object-fit: contain;">`
-                            : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
+                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                        ${snapB
+                            ? `<img src="${snapB}" style="width: 100%; max-height: 150px; object-fit: contain;">`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre Paso 3 primero' : 'Open Step 3 first'}</div>`
                         }
                     </div>
-                </div>
-        `;
-
-        // ── 5. RADAR CHART (inline alongside bar if both enabled) ─────────
-        if (incRadar) {
-            const snapR = snapChart(radarChart);
-            html += `
+                </div>` : ''}
+                ${incRadar ? `
                 <div>
-                    <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
-                        4b. Shape Fingerprint Radar
+                    <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
+                        4b. ${isEs ? 'Radar Huella de Forma (Shape Radar)' : 'Shape Fingerprint Radar'}
                     </h3>
-                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
                         ${snapR
-                            ? `<img src="${snapR}" style="width: 100%; max-height: 160px; object-fit: contain;">`
-                            : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
+                            ? `<img src="${snapR}" style="width: 100%; max-height: 150px; object-fit: contain;">`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre Paso 3 primero' : 'Open Step 3 first'}</div>`
                         }
                     </div>
-                </div>
-            `;
-        }
-        html += `</div>`;
-    } else if (incRadar) {
-        // Radar only (bar disabled)
-        const snapR = snapChart(radarChart);
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
-                    4. Shape Fingerprint Radar
-                </h3>
-                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
-                    ${snapR
-                        ? `<img src="${snapR}" style="width: 100%; max-height: 160px; object-fit: contain;">`
-                        : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first</div>`
-                    }
-                </div>
+                </div>` : ''}
             </div>
         `;
     }
 
-    // ── 6. SHAPE INDEX SCATTER ────────────────────────────────────────────
+    // Group 2: Section 5 (Shape Index Scatter)
+    let s5Html = '';
     if (incScatter) {
         const snap = snapChart(shapeIndexChart);
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
-                    5. Shape Index Scatter (Draft Pos % vs Max Camber %) &nbsp;
-                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 400;">⊕ = Target (${refDraft}% / ${refCamber}%)</span>
+        s5Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
+                    5. ${isEs ? 'Dispersión Shape Index (Calado vs Camber Máx)' : 'Shape Index Scatter (Draft Pos % vs Max Camber %)'} &nbsp;
+                    <span style="font-size: 0.68rem; color: #64748b; font-weight: 400;">⊕ = Target (${refDraft}% / ${refCamber}%)</span>
                 </h3>
-                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
                     ${snap
-                        ? `<img src="${snap}" style="width: 100%; max-height: 160px; object-fit: contain;">`
-                        : `<div style="font-size: 0.75rem; color: #94a3b8; text-align: center;">Open Step 3 first to generate scatter chart</div>`
+                        ? `<img src="${snap}" style="width: 100%; max-height: 150px; object-fit: contain;">`
+                        : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre el Paso 3 para generar el gráfico' : 'Open Step 3 first to generate scatter chart'}</div>`
                     }
                 </div>
             </div>
         `;
     }
 
-    // ── 7. SAIL PHOTO & CANVAS OVERLAY ────────────────────────────────────
+    // Group 2: Section 6 (Sail Photo & Canvas Overlay)
+    let s6Html = '';
     if (incCanvas) {
         let canvasSnap = null;
         try { if (canvas && scanData.imageObj) canvasSnap = canvas.toDataURL('image/jpeg', 0.85); } catch(e) {}
         if (!canvasSnap && scanData.imageSrc) canvasSnap = scanData.imageSrc;
         if (canvasSnap) {
-            html += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                        6. Sail Photo &amp; Traced Draft Stripes Overlay
+            s6Html = `
+                <div style="margin-bottom: 1.2rem;">
+                    <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
+                        6. ${isEs ? 'Fotografía de Vela y Trazado de Bandas' : 'Sail Photo & Traced Draft Stripes Overlay'}
                     </h3>
-                    <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #0b0f17; max-height: 260px; display: flex; align-items: center; justify-content: center;">
-                        <img src="${canvasSnap}" style="max-width: 100%; max-height: 260px; object-fit: contain;">
+                    <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #0b0f17; max-height: 230px; display: flex; align-items: center; justify-content: center;">
+                        <img src="${canvasSnap}" style="max-width: 100%; max-height: 230px; object-fit: contain;">
                     </div>
                 </div>
             `;
         }
     }
 
-    // ── 8. TOP LABEL & ORC MEASUREMENTS ──────────────────────────────────
+    // Group 3: Section 7 (Top Label Photo & ORC Dimensions)
+    let s7Html = '';
     if (incLabel) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    7. Official Sail Measurements &amp; Top Label (ORC)
+        s7Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
+                    7. ${isEs ? 'Medidas Oficiales de Vela y Etiqueta (ORC)' : 'Official Sail Measurements & Top Label (ORC)'}
                 </h3>
-                <div style="display: grid; grid-template-columns: 140px 1fr; gap: 1rem; align-items: center;">
+                <div style="display: grid; grid-template-columns: 125px 1fr; gap: 0.8rem; align-items: center;">
                     ${scanData.labelPhotoSrc
-                        ? `<div style="width: 140px; height: 140px; border-radius: 6px; border: 1px solid #cbd5e1; overflow: hidden;"><img src="${scanData.labelPhotoSrc}" style="width: 100%; height: 100%; object-fit: cover;"></div>`
-                        : `<div style="width: 140px; height: 140px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #94a3b8;">No Label Photo</div>`
+                        ? `<div style="width: 125px; height: 125px; border-radius: 6px; border: 1px solid #cbd5e1; overflow: hidden;"><img src="${scanData.labelPhotoSrc}" style="width: 100%; height: 100%; object-fit: cover;"></div>`
+                        : `<div style="width: 125px; height: 125px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 6px;">${isEs ? 'Sin Foto de Etiqueta' : 'No Label Photo'}</div>`
                     }
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 0.8rem; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                        <div>HLU (Luff): <strong>${scanData.dimensions.hlu || '18.14'} m</strong></div>
-                        <div>HLP (Perp): <strong>${scanData.dimensions.hlp || '5.25'} m</strong></div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 0.76rem; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <div>HLU (${isEs ? 'Gratil' : 'Luff'}): <strong>${scanData.dimensions.hlu || '18.14'} m</strong></div>
+                        <div>HLP (${isEs ? 'Perp' : 'Perp'}): <strong>${scanData.dimensions.hlp || '5.25'} m</strong></div>
                         <div>HQW (1/4): <strong>${scanData.dimensions.hqw || '3.93'} m</strong></div>
                         <div>HHW (1/2): <strong>${scanData.dimensions.hhw || '2.68'} m</strong></div>
                         <div>HTW (3/4): <strong>${scanData.dimensions.htw || '1.46'} m</strong></div>
                         <div>HUW (7/8): <strong>${scanData.dimensions.huw || '0.77'} m</strong></div>
-                        <div>HB (Head): <strong>${scanData.dimensions.hb || '0.108'} m</strong></div>
+                        <div>HB (${isEs ? 'Pena' : 'Head'}): <strong>${scanData.dimensions.hb || '0.108'} m</strong></div>
                         <div>Loft: <strong>${scanData.sailmaker || 'OneSails'}</strong></div>
                     </div>
                 </div>
@@ -3531,92 +3630,156 @@ window.buildReportPreview = function() {
         `;
     }
 
-    // ── 9. WIND & RIG SETTINGS ────────────────────────────────────────────
+    // Group 3: Section 8 (Wind & Rig Settings)
+    let s8Html = '';
     if (incRig && (scanData.wind.tws || scanData.rig.cunningham)) {
-        html += `
-            <div style="margin-bottom: 1.5rem; background: #f1f5f9; padding: 10px 14px; border-radius: 6px; font-size: 0.8rem;">
-                <strong style="font-size: 0.85rem; color: #0f172a;">8. Wind &amp; Rig Tuning</strong>
-                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 5px;">
+        s8Html = `
+            <div style="margin-bottom: 1.2rem; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem;">
+                <strong style="font-size: 0.82rem; color: #0f172a;">8. ${isEs ? 'Condiciones de Viento y Ajustes de Jarcia' : 'Wind & Rig Tuning Settings'}</strong>
+                <div style="display: flex; gap: 1.2rem; flex-wrap: wrap; margin-top: 4px;">
                     <div>TWS: <strong>${scanData.wind.tws || '--'} kn</strong></div>
                     <div>TWA: <strong>${scanData.wind.twa || '--'}°</strong></div>
                     <div>Cunningham: <strong>${scanData.rig.cunningham || '--'}</strong></div>
-                    <div>Sheet / Car: <strong>${scanData.rig.sheet || '--'}</strong></div>
+                    <div>${isEs ? 'Escota / Carro' : 'Sheet / Car'}: <strong>${scanData.rig.sheet || '--'}</strong></div>
                 </div>
             </div>
         `;
     }
 
-    // ── 10. NOTES ─────────────────────────────────────────────────────────
-    if (notes) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.75rem;">
-                    Trimmer &amp; Coach Recommendations
+    // Group 3: Section 9 (Trimmer & Coach Recommendations)
+    let s9Html = '';
+    if (incNotes && notes) {
+        s9Html = `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
+                    9. ${isEs ? 'Recomendaciones del Trimmer y Entrenador' : 'Trimmer & Coach Recommendations'}
                 </h3>
-                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; background: #fafafa; border-left: 3px solid #0284c7; padding: 8px 12px;">
+                <div style="font-size: 0.8rem; color: #334155; line-height: 1.45; background: #fafafa; border-left: 3px solid #0284c7; padding: 7px 10px; border-radius: 0 4px 4px 0;">
                     ${notes.replace(/\n/g, '<br>')}
                 </div>
             </div>
         `;
     }
 
-    // ── 11. METHODOLOGY GLOSSARY ──────────────────────────────────────────
-    const incMethodology = document.getElementById('rep-mod-methodology')?.checked ?? true;
+    // Group 3: Section 10 (Methodology Glossary)
+    let s10Html = '';
     if (incMethodology) {
         const methodUrl = window.location.origin + '/methodology';
-        html += `
-            <div style="margin-bottom: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-                <h3 style="font-size: 1.05rem; color: #0f172a; padding-bottom: 4px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 10px;">
-                    Measurement Methodology &amp; Variable Definitions
+        s10Html = `
+            <div style="margin-bottom: 1.2rem; border-top: 1px solid #e2e8f0; padding-top: 0.8rem;">
+                <h3 style="font-size: 0.92rem; color: #0f172a; padding-bottom: 3px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    10. ${isEs ? 'Metodología y Glosario de Variables' : 'Measurement Methodology & Glossary'}
                     <a href="${methodUrl}" target="_blank"
-                       style="font-size: 0.72rem; font-weight: 600; color: #0284c7; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 9px; border-radius: 12px; text-decoration: none; white-space: nowrap;">
-                        📖 Full Methodology →
+                       style="font-size: 0.68rem; font-weight: 600; color: #0284c7; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 7px; border-radius: 10px; text-decoration: none; white-space: nowrap;">
+                        📖 ${isEs ? 'Ver Completa →' : 'Full Methodology →'}
                     </a>
                 </h3>
-                <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 0.75rem; line-height: 1.5;">
-                    L3S uses computer vision and B-spline geometry to quantify sail shape from a single photograph.
-                    All values are normalised to chord length so they are independent of camera distance or zoom.
+                <p style="font-size: 0.74rem; color: #64748b; margin-bottom: 0.6rem; line-height: 1.4;">
+                    ${isEs
+                        ? 'L3S cuantifica la geometría tridimensional de la vela a partir de fotografía mediante B-splines normalizados a la longitud de cuerda.'
+                        : 'L3S uses computer vision and B-spline geometry to quantify sail shape from a single photograph, normalized to chord length.'}
                 </p>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 0.75rem;">
-                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #0284c7; margin-bottom: 3px;">📐 Max Camber %</div>
-                        <div style="color: #334155; line-height: 1.4;">Maximum perpendicular depth of the sail profile from the chord line.<br>
-                        <code style="background:#e0f2fe; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(Max_Y / Chord) × 100</code></div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 0.72rem;">
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 6px 8px;">
+                        <div style="font-weight: 800; color: #0284c7; margin-bottom: 2px;">📐 Max Camber %</div>
+                        <div style="color: #334155; line-height: 1.3;">${isEs ? 'Profundidad perpendicular máxima sobre la cuerda.' : 'Maximum perpendicular depth from chord line.'}</div>
                     </div>
-                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #d97706; margin-bottom: 3px;">📍 Draft Position %</div>
-                        <div style="color: #334155; line-height: 1.4;">Chord position of maximum depth — 40% = draft is 40% aft of luff.<br>
-                        <code style="background:#fef9c3; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(X_at_MaxY / Chord) × 100</code></div>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 6px 8px;">
+                        <div style="font-weight: 800; color: #d97706; margin-bottom: 2px;">📍 Draft Pos %</div>
+                        <div style="color: #334155; line-height: 1.3;">${isEs ? 'Posición longitudinal de máxima profundidad.' : 'Chord position of maximum depth.'}</div>
                     </div>
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #059669; margin-bottom: 3px;">🔄 Twist °</div>
-                        <div style="color: #334155; line-height: 1.4;">Angle of the stripe chord relative to the image frame (boom reference).<br>
-                        <code style="background:#dcfce7; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">arctan(ΔY / ΔX)</code></div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px 8px;">
+                        <div style="font-weight: 800; color: #059669; margin-bottom: 2px;">🔄 Twist °</div>
+                        <div style="color: #334155; line-height: 1.3;">${isEs ? 'Ángulo relativo de cuerda respecto a la botavara.' : 'Stripe chord angle relative to boom.'}</div>
                     </div>
-                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #dc2626; margin-bottom: 3px;">➡️ Entry Angle °</div>
-                        <div style="color: #334155; line-height: 1.4;">Tangent angle of the leading edge (first 15% of chord). Governs attached-flow sensitivity.</div>
-                    </div>
-                    <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #7c3aed; margin-bottom: 3px;">⬅️ Exit Angle °</div>
-                        <div style="color: #334155; line-height: 1.4;">Tangent angle of the trailing edge (last 15% of chord). Governs leech tension and turbulence.</div>
-                    </div>
-                    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 5px; padding: 7px 9px;">
-                        <div style="font-weight: 800; color: #ea580c; margin-bottom: 3px;">⚡ Shape Index</div>
-                        <div style="color: #334155; line-height: 1.4;">Ratio of Entry to Exit angle × 100. Higher = more power-biased leading edge vs. leech.<br>
-                        <code style="background:#ffedd5; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem;">(Entry / Exit) × 100</code></div>
-                    </div>
-                </div>
-                <div style="margin-top: 7px; font-size: 0.72rem; color: #94a3b8; text-align: right;">
-                    Full methodology with derivation and B-spline fitting details:
-                    <a href="${methodUrl}" target="_blank" style="color: #0284c7; text-decoration: underline;">${methodUrl}</a>
                 </div>
             </div>
         `;
     }
 
-    sheet.innerHTML = html;
+    // ── DYNAMIC PAGE PACKING LOGIC ──────────────────────────────────────────
+    const group1Content = [s1Html, s2Html, s3Html].filter(Boolean).join('');
+    const group2Content = [s4Html, s5Html, s6Html].filter(Boolean).join('');
+    const group3Content = [s7Html, s8Html, s9Html, s10Html].filter(Boolean).join('');
 
+    const pageBuckets = [];
+
+    // Compact mode: if very few modules are enabled, pack all into Page 1
+    const totalModulesCount = [s1Html, s2Html, s3Html, s4Html, s5Html, s6Html, s7Html, s8Html, s9Html, s10Html].filter(Boolean).length;
+
+    if (totalModulesCount <= 3) {
+        // Fits comfortably on a single A4 page
+        pageBuckets.push({
+            title: isEs ? 'Resumen de Rendimiento' : 'Performance Summary',
+            isFirst: true,
+            content: group1Content + group2Content + group3Content
+        });
+    } else {
+        // Multi-page division
+        if (group1Content) {
+            pageBuckets.push({
+                title: isEs ? 'Métricas de Camber' : 'Camber Distribution',
+                isFirst: true,
+                content: group1Content
+            });
+        }
+        if (group2Content) {
+            pageBuckets.push({
+                title: isEs ? 'Polars y Geometría de Vela' : 'Polars & Traced Geometry',
+                isFirst: (pageBuckets.length === 0),
+                content: group2Content
+            });
+        }
+        if (group3Content) {
+            pageBuckets.push({
+                title: isEs ? 'Medidas Oficiales y Trimado' : 'Official Specs & Rig Tuning',
+                isFirst: (pageBuckets.length === 0),
+                content: group3Content
+            });
+        }
+    }
+
+    if (pageBuckets.length === 0) {
+        pageBuckets.push({
+            title: isEs ? 'Informe Vacío' : 'Empty Report',
+            isFirst: true,
+            content: `<div style="text-align: center; padding: 4rem 1rem; color: #94a3b8;">${isEs ? 'Selecciona al menos un módulo en el menú izquierdo para generar el informe.' : 'Please select at least one module on the left to generate the report.'}</div>`
+        });
+    }
+
+    const totalPages = pageBuckets.length;
+    const pageCountLbl = document.getElementById('lbl-page-count');
+    if (pageCountLbl) {
+        pageCountLbl.innerText = `${totalPages} ${isEs ? (totalPages === 1 ? 'Página' : 'Páginas') : (totalPages === 1 ? 'Page' : 'Pages')} (A4)`;
+    }
+
+    // Render individual .report-page containers with running headers & footers
+    let fullHtml = '';
+    pageBuckets.forEach((p, idx) => {
+        const pageNum = idx + 1;
+        if (idx > 0) {
+            fullHtml += `
+                <div class="report-page-divider">
+                    <span>📄 ${isEs ? 'Salto de Página A4' : 'A4 Page Break'} • ${isEs ? 'Página' : 'Page'} ${pageNum}</span>
+                </div>
+            `;
+        }
+
+        fullHtml += `
+            <div class="report-page card" data-page="${pageNum}">
+                ${p.isFirst ? makeMainHeader() : makeRunningHeader(p.title)}
+                <div style="flex: 1;">
+                    ${p.content}
+                </div>
+                <div class="report-page-footer">
+                    <span>L3S Sail Scan Engine • LS Lab Antigravity</span>
+                    <span>${isEs ? 'Página' : 'Page'} ${pageNum} ${isEs ? 'de' : 'of'} ${totalPages}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    sheet.innerHTML = fullHtml;
 };
 
 // ---------------- DATABASE PERSISTENCE & LS-PRO SAVING ----------------
@@ -3628,6 +3791,15 @@ function isSpanishLang() {
 }
 
 async function getAuthToken() {
+    if (window.getAuthToken) {
+        try {
+            const tok = await window.getAuthToken();
+            if (tok) {
+                currentUserToken = tok;
+                return tok;
+            }
+        } catch (e) {}
+    }
     if (window.firebaseApp && window.firebaseApp.auth) {
         const user = window.firebaseApp.auth.currentUser;
         if (user) {
@@ -3910,6 +4082,64 @@ window.handleSailChange = async function(sId) {
         if (inputSailName && !inputSailName.value) {
             inputSailName.value = scanData.sailName.split(' (')[0];
         }
+
+        // Fetch sail details from database to pre-populate dimensions & specs
+        if (scanData.boatId) {
+            const token = await getAuthToken();
+            if (token) {
+                try {
+                    const res = await fetch(`/api/boats/${scanData.boatId}/sails/${sId}`, {
+                        headers: { 'Authorization': token }
+                    });
+                    if (res.ok) {
+                        const sData = await res.json();
+                        if (sData) {
+                            if (sData.sail_number) {
+                                scanData.sailNumber = sData.sail_number;
+                                if (document.getElementById('specSailNumber')) document.getElementById('specSailNumber').value = sData.sail_number;
+                                if (document.getElementById('inputSailNumber')) document.getElementById('inputSailNumber').value = sData.sail_number;
+                            }
+                            if (sData.code) {
+                                if (document.getElementById('specSailName')) document.getElementById('specSailName').value = sData.code;
+                                if (document.getElementById('inputSailName')) document.getElementById('inputSailName').value = sData.code;
+                            }
+                            if (sData.sailmaker) {
+                                scanData.sailmaker = sData.sailmaker;
+                                if (document.getElementById('specSailmaker')) document.getElementById('specSailmaker').value = sData.sailmaker;
+                            }
+                            if (sData.certificate_type) {
+                                scanData.certificateType = sData.certificate_type;
+                                if (document.getElementById('specCertificate')) document.getElementById('specCertificate').value = sData.certificate_type;
+                            }
+                            if (sData.boat_year) {
+                                scanData.boatYear = sData.boat_year;
+                                if (document.getElementById('specBoatYear')) document.getElementById('specBoatYear').value = sData.boat_year;
+                            }
+                            if (sData.dimensions && typeof sData.dimensions === 'object') {
+                                scanData.dimensions = { ...scanData.dimensions, ...sData.dimensions };
+                                ['hlu', 'hlp', 'hqw', 'hhw', 'htw', 'huw', 'hb'].forEach(k => {
+                                    const val = sData.dimensions[k] || sData.dimensions[k.toUpperCase()];
+                                    if (val !== undefined && val !== null && document.getElementById('dim_' + k)) {
+                                        document.getElementById('dim_' + k).value = val;
+                                    }
+                                });
+                            }
+                            if (sData.label_photo) {
+                                scanData.labelPhotoSrc = sData.label_photo;
+                                const img = document.getElementById('labelPhotoImg');
+                                const placeholder = document.getElementById('labelPhotoPlaceholder');
+                                if (img) { img.src = sData.label_photo; img.style.display = 'block'; }
+                                if (placeholder) placeholder.style.display = 'none';
+                            }
+                            syncSpecsFromInputs();
+                            if (typeof buildReportPreview === 'function') buildReportPreview();
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Could not load sail details from database:', err);
+                }
+            }
+        }
     } else if (!sId) {
         scanData.sailName = '';
         const activeSailLbl = document.getElementById('lbl-active-sail');
@@ -3946,6 +4176,8 @@ window.saveScanToFleetDatabase = async function() {
             if (newSail && newSail.id) {
                 scanData.sailId = newSail.id;
                 scanData.sailName = newSail.code || sailName.trim();
+                const activeSailLbl = document.getElementById('lbl-active-sail');
+                if (activeSailLbl) activeSailLbl.innerText = scanData.sailName;
             } else {
                 alert((isEs ? 'Error al crear la vela: ' : 'Error creating sail: ') + (newSail.error || 'Unknown'));
                 return;
@@ -3962,24 +4194,63 @@ window.saveScanToFleetDatabase = async function() {
         return;
     }
 
+    // Helper to ensure nested arrays (lists of lists) are flattened into array of objects for Firestore
+    const sanitizePath = (p) => {
+        if (!p) return [];
+        if (Array.isArray(p) && p.length > 0 && Array.isArray(p[0])) {
+            return p.map(pt => ({ x: Number(pt[0]), y: Number(pt[1]) }));
+        }
+        return p;
+    };
+
+    const sanitizeMetrics = (m) => {
+        if (!m || typeof m !== 'object') return {};
+        const newM = { ...m };
+        if (newM.normalized_curve) {
+            newM.normalized_curve = sanitizePath(newM.normalized_curve);
+        }
+        return newM;
+    };
+
+    const sanitizedStripes = (scanData.stripes || []).map(s => ({
+        ...s,
+        path: sanitizePath(s.path),
+        metrics: sanitizeMetrics(s.metrics)
+    }));
+
+    // Capture lightweight snapshot from canvas if available
+    let snapshotData = null;
+    try {
+        if (canvas) {
+            snapshotData = canvas.toDataURL('image/jpeg', 0.6);
+        }
+    } catch (e) {
+        console.warn('Canvas snapshot capture skipped:', e);
+    }
+
+    const primaryStripe = sanitizedStripes[0] || {};
+    const primaryMetrics = sanitizeMetrics(primaryStripe.metrics || {});
+
     const analysisPayload = {
         date: new Date().toISOString(),
         scan_type: scanData.scanType,
-        stripes: scanData.stripes,
-        annotations: scanData.annotations,
-        transform: scanData.transform,
-        metrics: scanData.stripes[0]?.metrics || {},
+        stripes: sanitizedStripes,
+        annotations: scanData.annotations || [],
+        transform: scanData.transform || {},
+        metrics: primaryMetrics,
+        path: primaryStripe.path || [],
+        snapshot: snapshotData,
         sail_specs: {
-            sail_number: scanData.sailNumber,
-            sail_name: scanData.sailName,
-            boat_year: scanData.boatYear,
-            sailmaker: scanData.sailmaker,
-            certificate_type: scanData.certificateType,
-            dimensions: scanData.dimensions,
-            label_photo: scanData.labelPhotoSrc
+            sail_number: scanData.sailNumber || '',
+            sail_name: scanData.sailName || '',
+            boat_year: scanData.boatYear || '',
+            sailmaker: scanData.sailmaker || '',
+            certificate_type: scanData.certificateType || 'ORC',
+            dimensions: scanData.dimensions || {},
+            label_photo: scanData.labelPhotoSrc || null
         },
-        wind: scanData.wind,
-        rig: scanData.rig,
+        wind: scanData.wind || {},
+        rig: scanData.rig || {},
         notes: document.getElementById('rep-learning-points')?.value || ''
     };
 
@@ -4031,6 +4302,7 @@ window.saveSailScanProject = async function() {
         showToast('💾 Project saved locally in session.');
     });
 };
+
 
 function showToast(msg) {
     const toast = document.getElementById('save-toast');

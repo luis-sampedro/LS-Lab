@@ -333,14 +333,70 @@ def api_sail_scan_snap_stripe():
         print(f"Snap Stripe API Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/sail-scan/parse-label', methods=['POST'])
+def api_sail_scan_parse_label():
+    try:
+        data = request.json or {}
+        raw_text = data.get('text', '')
+        
+        import re
+        parsed = {
+            'dimensions': {},
+            'certificate_type': 'ORC',
+            'sail_number': '',
+            'sailmaker': '',
+            'date': ''
+        }
+        
+        # Dimensions regex patterns: e.g. HB: 0.108, HLU 18.14, HLP: 5.25
+        dim_keys = ['hb', 'hlu', 'hlp', 'hqw', 'hhw', 'htw', 'huw']
+        for k in dim_keys:
+            m = re.search(rf'\b{k}[:\s=]+([0-9]+[.,][0-9]+|[0-9]+)\b', raw_text, re.IGNORECASE)
+            if m:
+                val = m.group(1).replace(',', '.')
+                parsed['dimensions'][k] = val
+
+        # Certificate
+        if re.search(r'\bORC\b', raw_text, re.IGNORECASE):
+            parsed['certificate_type'] = 'ORC'
+        elif re.search(r'\bIRC\b', raw_text, re.IGNORECASE):
+            parsed['certificate_type'] = 'IRC'
+        elif re.search(r'\bOne\s*Design\b', raw_text, re.IGNORECASE):
+            parsed['certificate_type'] = 'OneDesign'
+
+        # Sail Number (e.g. ESP-831, 831 ESP, ESP 831, GBR-1234)
+        m_num = re.search(r'\b([A-Z]{2,3}[-\s]?[0-9]{2,5}|[0-9]{2,5}[-\s]?[A-Z]{2,3})\b', raw_text)
+        if m_num:
+            parsed['sail_number'] = m_num.group(1).strip()
+        else:
+            m_digits = re.search(r'\b([0-9]{3,5})\b', raw_text)
+            if m_digits:
+                parsed['sail_number'] = m_digits.group(1).strip()
+
+        # Date
+        m_date = re.search(r'\b([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})\b', raw_text)
+        if m_date:
+            parsed['date'] = m_date.group(1)
+
+        # Sailmaker
+        for maker in ['OneSails', 'North Sails', 'Quantum', 'Doyle', 'Elvstrom', 'Ullman', 'Hyde', 'Incidence']:
+            if re.search(rf'\b{re.escape(maker)}\b', raw_text, re.IGNORECASE):
+                parsed['sailmaker'] = maker
+                break
+
+        return jsonify({'success': True, 'parsed': parsed})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/sail-scan/save-analysis', methods=['POST'])
 def api_sail_scan_save_analysis():
     try:
         auth_header = request.headers.get('Authorization')
         if not auth_header: return jsonify({'error': 'No token provided'}), 401
         user = verify_token(auth_header)
-        if not user: return jsonify({'error': 'Invalid token'}), 401
-        uid = user['uid']
+        if not user or not isinstance(user, dict): return jsonify({'error': 'Invalid token'}), 401
+        uid = user.get('uid')
+        if not uid: return jsonify({'error': 'Invalid user session'}), 401
         
         data = request.json or {}
         boat_id = data.get('boat_id')
@@ -369,6 +425,8 @@ def api_sail_scan_save_analysis():
         })
     except Exception as e:
         print(f"Save Analysis Error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sail-scan/save-project', methods=['POST'])
@@ -377,8 +435,9 @@ def api_sail_scan_save_project():
         auth_header = request.headers.get('Authorization')
         if not auth_header: return jsonify({'error': 'No token provided'}), 401
         user = verify_token(auth_header)
-        if not user: return jsonify({'error': 'Invalid token'}), 401
-        uid = user['uid']
+        if not user or not isinstance(user, dict): return jsonify({'error': 'Invalid token'}), 401
+        uid = user.get('uid')
+        if not uid: return jsonify({'error': 'Invalid user session'}), 401
         
         data = request.json or {}
         project_name = data.get('name', 'Sail_Scan_Project')
@@ -394,6 +453,8 @@ def api_sail_scan_save_project():
         })
     except Exception as e:
         print(f"Save Project Error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sail-scan/projects', methods=['GET'])
@@ -651,12 +712,20 @@ def api_sails(boat_id):
         return flask.jsonify(sails)
         
     if request.method == 'POST':
-        data = request.json
+        data = request.json or {}
         code = data.get('code')
         desc = data.get('description')
         if not code: return {'error': 'Missing code'}, 400
         
-        sail_id = create_sail(uid, boat_id, code, desc)
+        extra_data = {}
+        if 'dimensions' in data: extra_data['dimensions'] = data.get('dimensions')
+        if 'label_photo' in data: extra_data['label_photo'] = data.get('label_photo')
+        if 'sailmaker' in data: extra_data['sailmaker'] = data.get('sailmaker')
+        if 'certificate_type' in data: extra_data['certificate_type'] = data.get('certificate_type')
+        if 'sail_number' in data: extra_data['sail_number'] = data.get('sail_number')
+        if 'boat_year' in data: extra_data['boat_year'] = data.get('boat_year')
+        
+        sail_id = create_sail(uid, boat_id, code, desc, extra_data=extra_data)
         if sail_id:
             return {'success': True, 'id': sail_id}
         return {'error': 'DB Error'}, 500
@@ -703,9 +772,17 @@ def api_sail_item(boat_id, sail_id):
         return {'error': 'Not found'}, 404
 
     if request.method == 'PUT':
-        data = request.json
+        data = request.json or {}
         from services.firebase_service import update_sail
-        if update_sail(uid, boat_id, sail_id, data.get('code'), data.get('description')):
+        extra_data = {}
+        if 'dimensions' in data: extra_data['dimensions'] = data.get('dimensions')
+        if 'label_photo' in data: extra_data['label_photo'] = data.get('label_photo')
+        if 'sailmaker' in data: extra_data['sailmaker'] = data.get('sailmaker')
+        if 'certificate_type' in data: extra_data['certificate_type'] = data.get('certificate_type')
+        if 'sail_number' in data: extra_data['sail_number'] = data.get('sail_number')
+        if 'boat_year' in data: extra_data['boat_year'] = data.get('boat_year')
+        
+        if update_sail(uid, boat_id, sail_id, code=data.get('code'), description=data.get('description'), extra_data=extra_data):
              return {'success': True}
         return {'error': 'Update failed'}, 500
 
