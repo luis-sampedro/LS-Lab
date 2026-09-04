@@ -190,6 +190,14 @@
                         </select>
                     </div>
 
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;">Select Saved Sail</label>
+                        <select id="sailSelect" onchange="handleSailChange(this.value)" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                            <option value="">Select or Create Sail</option>
+                            <option value="_new_">+ Create New Sail...</option>
+                        </select>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;">Sail Identification</label>

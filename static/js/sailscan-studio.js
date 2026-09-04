@@ -1010,7 +1010,8 @@ function renderCanvas() {
     
     // 2. Apply Camera Transform (Center + Pan + Zoom)
     const baseScale = Math.min(cw / scanData.imageDimensions.width, ch / scanData.imageDimensions.height);
-    const effectiveScale = baseScale * camera.zoom;
+    const effectiveScale = (baseScale * camera.zoom) || 1.0;
+    camera.effectiveScale = effectiveScale;
     
     ctx.translate(cw / 2 + camera.panX, ch / 2 + camera.panY);
     ctx.scale(effectiveScale, effectiveScale);
@@ -1270,6 +1271,9 @@ function computeStripeMetricsFromBSpline(stripe) {
 }
 
 function drawDraftStripesOnContext(ctx) {
+    const effScale = (camera && camera.effectiveScale) ? camera.effectiveScale : 1.0;
+    const s = 1.0 / effScale;
+    
     scanData.stripes.forEach((stripe, idx) => {
         ensure4PointBSpline(stripe);
         const isActive = (idx === scanData.activeStripeIndex);
@@ -1278,9 +1282,9 @@ function drawDraftStripesOnContext(ctx) {
         
         // 1. Draw Chord Line (dashed)
         ctx.save();
-        ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.25)';
-        ctx.setLineDash([5, 5]);
-        ctx.lineWidth = isActive ? 1.8 : 1.0;
+        ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.75)' : 'rgba(255, 255, 255, 0.28)';
+        ctx.setLineDash([5 * s, 5 * s]);
+        ctx.lineWidth = (isActive ? 1.8 : 1.0) * s;
         ctx.beginPath();
         ctx.moveTo(stripe.p0.x, stripe.p0.y);
         ctx.lineTo(stripe.p3.x, stripe.p3.y);
@@ -1290,11 +1294,11 @@ function drawDraftStripesOnContext(ctx) {
         // 2. Draw 4-Point 3-Deg Cubic B-Spline Curve
         ctx.save();
         ctx.strokeStyle = stripe.color || '#38bdf8';
-        ctx.lineWidth = isActive ? 4.0 : 2.5;
+        ctx.lineWidth = (isActive ? 3.5 : 2.2) * s;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.shadowColor = stripe.color || '#38bdf8';
-        ctx.shadowBlur = isActive ? 12 : 2;
+        ctx.shadowBlur = isActive ? (8 * s) : (1.5 * s);
         
         ctx.beginPath();
         ctx.moveTo(path[0][0], path[0][1]);
@@ -1309,9 +1313,9 @@ function drawDraftStripesOnContext(ctx) {
             ctx.save();
             ctx.fillStyle = '#ef4444';
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.5 * s;
             ctx.beginPath();
-            ctx.arc(stripe.metrics.max_point.x, stripe.metrics.max_point.y, isActive ? 5.5 : 4, 0, Math.PI * 2);
+            ctx.arc(stripe.metrics.max_point.x, stripe.metrics.max_point.y, (isActive ? 5.5 : 4.0) * s, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             ctx.restore();
@@ -1322,8 +1326,8 @@ function drawDraftStripesOnContext(ctx) {
             if (showBSplinePolygon) {
                 // Control Polygon / Tangent Arms
                 ctx.save();
-                ctx.setLineDash([4, 4]);
-                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4 * s, 4 * s]);
+                ctx.lineWidth = 1.5 * s;
                 
                 // P0 -> P1 (Entry Tangent Arm)
                 ctx.strokeStyle = '#06b6d4';
@@ -1338,39 +1342,58 @@ function drawDraftStripesOnContext(ctx) {
                 ctx.moveTo(stripe.p3.x, stripe.p3.y);
                 ctx.lineTo(stripe.p2.x, stripe.p2.y);
                 ctx.stroke();
+
+                // Chord Projection -> P2 (Dashed Yellow Draft Depth Arm)
+                const chordDx = stripe.p3.x - stripe.p0.x;
+                const chordDy = stripe.p3.y - stripe.p0.y;
+                const cLenSq = chordDx * chordDx + chordDy * chordDy + 1e-6;
+                const tProj = Math.max(0, Math.min(1, ((stripe.p2.x - stripe.p0.x) * chordDx + (stripe.p2.y - stripe.p0.y) * chordDy) / cLenSq));
+                const projX = stripe.p0.x + tProj * chordDx;
+                const projY = stripe.p0.y + tProj * chordDy;
+                ctx.strokeStyle = '#eab308';
+                ctx.beginPath();
+                ctx.moveTo(projX, projY);
+                ctx.lineTo(stripe.p2.x, stripe.p2.y);
+                ctx.stroke();
                 ctx.restore();
                 
-                // 4 Interactive Handles
-                drawHandle(ctx, stripe.p0.x, stripe.p0.y, 'P0: Luff Root', '#38bdf8', hoverHandle === 'p0');
-                drawHandle(ctx, stripe.p1.x, stripe.p1.y, 'P1: Entry Angle', '#06b6d4', hoverHandle === 'p1');
-                drawHandle(ctx, stripe.p2.x, stripe.p2.y, 'P2: Draft & Exit', '#f59e0b', hoverHandle === 'p2');
-                drawHandle(ctx, stripe.p3.x, stripe.p3.y, 'P3: Leech Root', '#f97316', hoverHandle === 'p3');
+                // 4 Interactive Handles (crisp constant screen size)
+                drawHandle(ctx, stripe.p0.x, stripe.p0.y, 'P0: Luff Root', '#38bdf8', hoverHandle === 'p0', s);
+                drawHandle(ctx, stripe.p1.x, stripe.p1.y, 'P1: Entry Angle', '#06b6d4', hoverHandle === 'p1', s);
+                drawHandle(ctx, stripe.p2.x, stripe.p2.y, 'P2: Draft & Exit', '#f59e0b', hoverHandle === 'p2', s);
+                drawHandle(ctx, stripe.p3.x, stripe.p3.y, 'P3: Leech Root', '#f97316', hoverHandle === 'p3', s);
             } else {
                 // Just endpoint handles
-                drawHandle(ctx, stripe.p0.x, stripe.p0.y, 'Luff (P0)', '#38bdf8', hoverHandle === 'p0');
-                drawHandle(ctx, stripe.p3.x, stripe.p3.y, 'Leech (P3)', '#f97316', hoverHandle === 'p3');
+                drawHandle(ctx, stripe.p0.x, stripe.p0.y, 'Luff (P0)', '#38bdf8', hoverHandle === 'p0', s);
+                drawHandle(ctx, stripe.p3.x, stripe.p3.y, 'Leech (P3)', '#f97316', hoverHandle === 'p3', s);
             }
         }
     });
 }
 
-function drawHandle(ctx, x, y, label, color, isHover) {
+function drawHandle(ctx, x, y, label, color, isHover, s = 1.0) {
     ctx.save();
     ctx.fillStyle = color;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = isHover ? 3.5 : 2;
+    ctx.lineWidth = (isHover ? 2.8 : 1.8) * s;
     ctx.beginPath();
-    ctx.arc(x, y, isHover ? 9.5 : 6.5, 0, Math.PI * 2);
+    ctx.arc(x, y, (isHover ? 9.0 : 6.5) * s, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     
-    // Pill label
+    // Pill label (crisp constant screen size)
     ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.font = 'bold 11px Inter, sans-serif';
+    const fontSize = 11 * s;
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
     const textW = ctx.measureText(label).width;
-    ctx.fillRect(x - textW / 2 - 4, y - 24, textW + 8, 16);
+    const padX = 4 * s;
+    const boxW = textW + padX * 2;
+    const boxH = 16 * s;
+    const boxY = y - (24 * s);
+    
+    ctx.fillRect(x - boxW / 2, boxY, boxW, boxH);
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(label, x - textW / 2, y - 12);
+    ctx.fillText(label, x - textW / 2, boxY + 12 * s);
     ctx.restore();
 }
 
@@ -1385,18 +1408,19 @@ function drawCadAnnotationsOnContext(ctx) {
 }
 
 function drawSingleAnnotation(ctx, ann, isSelected = false) {
+    const s = 1.0 / ((camera && camera.effectiveScale) ? camera.effectiveScale : 1.0);
     ctx.save();
     ctx.strokeStyle = ann.strokeColor || '#38bdf8';
     ctx.fillStyle = ann.fillColor || ann.strokeColor || '#38bdf8';
-    ctx.lineWidth = ann.lineWidth || 2;
+    ctx.lineWidth = (ann.lineWidth || 2) * s;
     
-    if (ann.lineStyle === 'dashed') ctx.setLineDash([6, 6]);
-    else if (ann.lineStyle === 'dotted') ctx.setLineDash([2, 4]);
+    if (ann.lineStyle === 'dashed') ctx.setLineDash([6 * s, 6 * s]);
+    else if (ann.lineStyle === 'dotted') ctx.setLineDash([2 * s, 4 * s]);
     else ctx.setLineDash([]);
     
     if (isSelected) {
         ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 8 * s;
     }
     
     const type = ann.type;
@@ -1414,7 +1438,7 @@ function drawSingleAnnotation(ctx, ann, isSelected = false) {
         // Ticks at ends
         const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
         const perp = angle + Math.PI / 2;
-        const tickLen = 8;
+        const tickLen = 8 * s;
         
         ctx.beginPath();
         ctx.moveTo(p1.x + Math.cos(perp) * tickLen, p1.y + Math.sin(perp) * tickLen);
@@ -1569,22 +1593,24 @@ function drawSingleAnnotation(ctx, ann, isSelected = false) {
 }
 
 function drawCadTextBadge(ctx, x, y, text, color) {
+    const s = 1.0 / ((camera && camera.effectiveScale) ? camera.effectiveScale : 1.0);
     ctx.save();
-    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.font = `bold ${11 * s}px Inter, sans-serif`;
     const textW = ctx.measureText(text).width;
     
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     ctx.strokeStyle = color || '#38bdf8';
-    ctx.lineWidth = 1;
-    ctx.fillRect(x - textW / 2 - 6, y - 18, textW + 12, 20);
-    ctx.strokeRect(x - textW / 2 - 6, y - 18, textW + 12, 20);
+    ctx.lineWidth = 1 * s;
+    ctx.fillRect(x - textW / 2 - 6 * s, y - 18 * s, textW + 12 * s, 20 * s);
+    ctx.strokeRect(x - textW / 2 - 6 * s, y - 18 * s, textW + 12 * s, 20 * s);
     
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(text, x - textW / 2, y - 4);
+    ctx.fillText(text, x - textW / 2, y - 4 * s);
     ctx.restore();
 }
 
 function drawCropOverlay(ctx, iw, ih) {
+    const s = 1.0 / ((camera && camera.effectiveScale) ? camera.effectiveScale : 1.0);
     const r = cropState.rect;
     
     // Darken outer mask
@@ -1602,8 +1628,8 @@ function drawCropOverlay(ctx, iw, ih) {
     
     // 8-point crop bounding border
     ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 2 * s;
+    ctx.setLineDash([6 * s, 6 * s]);
     ctx.strokeRect(r.x, r.y, r.w, r.h);
     ctx.setLineDash([]);
     
@@ -1621,7 +1647,7 @@ function drawCropOverlay(ctx, iw, ih) {
     
     ctx.fillStyle = '#38bdf8';
     handles.forEach(h => {
-        ctx.fillRect(h.x - 5, h.y - 5, 10, 10);
+        ctx.fillRect(h.x - 5 * s, h.y - 5 * s, 10 * s, 10 * s);
     });
     
     ctx.restore();
@@ -1668,15 +1694,20 @@ function setupCanvasEvents() {
         
         // 4. Select & Move Tool
         if (currentTool === 'select') {
-            // Check 4-point B-Spline handles for active stripe
+            // Check 4-point B-Spline handles for active stripe in screen space
             const activeStripe = scanData.stripes[scanData.activeStripeIndex];
             if (activeStripe) {
                 ensure4PointBSpline(activeStripe);
-                const thresh = 22 / camera.zoom;
-                const d0 = Math.hypot(imgPt.x - activeStripe.p0.x, imgPt.y - activeStripe.p0.y);
-                const d1 = Math.hypot(imgPt.x - activeStripe.p1.x, imgPt.y - activeStripe.p1.y);
-                const d2 = Math.hypot(imgPt.x - activeStripe.p2.x, imgPt.y - activeStripe.p2.y);
-                const d3 = Math.hypot(imgPt.x - activeStripe.p3.x, imgPt.y - activeStripe.p3.y);
+                const s0 = imageToScreen(activeStripe.p0.x, activeStripe.p0.y);
+                const s1 = imageToScreen(activeStripe.p1.x, activeStripe.p1.y);
+                const s2 = imageToScreen(activeStripe.p2.x, activeStripe.p2.y);
+                const s3 = imageToScreen(activeStripe.p3.x, activeStripe.p3.y);
+                
+                const d0 = Math.hypot(mouse.x - s0.x, mouse.y - s0.y);
+                const d1 = Math.hypot(mouse.x - s1.x, mouse.y - s1.y);
+                const d2 = Math.hypot(mouse.x - s2.x, mouse.y - s2.y);
+                const d3 = Math.hypot(mouse.x - s3.x, mouse.y - s3.y);
+                const thresh = 15; // 15 screen pixels tolerance
                 
                 if (d0 < thresh) { isDraggingHandle = 'p0'; pushUndoState(); return; }
                 if (d1 < thresh && showBSplinePolygon) { isDraggingHandle = 'p1'; pushUndoState(); return; }
@@ -1684,14 +1715,16 @@ function setupCanvasEvents() {
                 if (d3 < thresh) { isDraggingHandle = 'p3'; pushUndoState(); return; }
             }
             
-            // Check other stripes selection
+            // Check other stripes selection in screen space
             for (let i = 0; i < scanData.stripes.length; i++) {
                 if (i === scanData.activeStripeIndex) continue;
                 const s = scanData.stripes[i];
                 ensure4PointBSpline(s);
-                const d0 = Math.hypot(imgPt.x - s.p0.x, imgPt.y - s.p0.y);
-                const d3 = Math.hypot(imgPt.x - s.p3.x, imgPt.y - s.p3.y);
-                if (d0 < 22 / camera.zoom || d3 < 22 / camera.zoom) {
+                const s0 = imageToScreen(s.p0.x, s.p0.y);
+                const s3 = imageToScreen(s.p3.x, s.p3.y);
+                const d0 = Math.hypot(mouse.x - s0.x, mouse.y - s0.y);
+                const d3 = Math.hypot(mouse.x - s3.x, mouse.y - s3.y);
+                if (d0 < 15 || d3 < 15) {
                     selectStripeByIndex(i);
                     return;
                 }
@@ -1861,16 +1894,21 @@ function setupCanvasEvents() {
             }
         }
         
-        // Hover detection on all 4 handles
+        // Hover detection on all 4 handles in screen space
         if (currentTool === 'select' && scanData.stripes.length) {
             const activeStripe = scanData.stripes[scanData.activeStripeIndex];
             if (activeStripe) {
                 ensure4PointBSpline(activeStripe);
-                const thresh = 18 / camera.zoom;
-                const d0 = Math.hypot(imgPt.x - activeStripe.p0.x, imgPt.y - activeStripe.p0.y);
-                const d1 = Math.hypot(imgPt.x - activeStripe.p1.x, imgPt.y - activeStripe.p1.y);
-                const d2 = Math.hypot(imgPt.x - activeStripe.p2.x, imgPt.y - activeStripe.p2.y);
-                const d3 = Math.hypot(imgPt.x - activeStripe.p3.x, imgPt.y - activeStripe.p3.y);
+                const s0 = imageToScreen(activeStripe.p0.x, activeStripe.p0.y);
+                const s1 = imageToScreen(activeStripe.p1.x, activeStripe.p1.y);
+                const s2 = imageToScreen(activeStripe.p2.x, activeStripe.p2.y);
+                const s3 = imageToScreen(activeStripe.p3.x, activeStripe.p3.y);
+                
+                const d0 = Math.hypot(mouse.x - s0.x, mouse.y - s0.y);
+                const d1 = Math.hypot(mouse.x - s1.x, mouse.y - s1.y);
+                const d2 = Math.hypot(mouse.x - s2.x, mouse.y - s2.y);
+                const d3 = Math.hypot(mouse.x - s3.x, mouse.y - s3.y);
+                const thresh = 15; // 15 screen pixels
                 
                 if (d0 < thresh) hoverHandle = 'p0';
                 else if (d1 < thresh && showBSplinePolygon) hoverHandle = 'p1';
@@ -3583,128 +3621,347 @@ window.buildReportPreview = function() {
 
 // ---------------- DATABASE PERSISTENCE & LS-PRO SAVING ----------------
 
+function isSpanishLang() {
+    return (new URLSearchParams(window.location.search).get('lang') === 'es') || 
+           window.location.pathname.includes('-es') || 
+           document.documentElement.lang === 'es';
+}
+
+async function getAuthToken() {
+    if (window.firebaseApp && window.firebaseApp.auth) {
+        const user = window.firebaseApp.auth.currentUser;
+        if (user) {
+            try {
+                currentUserToken = await user.getIdToken();
+                return currentUserToken;
+            } catch (e) {
+                console.warn('Could not refresh Firebase token:', e);
+            }
+        }
+    }
+    return currentUserToken || localStorage.getItem('firebaseToken') || null;
+}
 
 function initAuth() {
-    const token = localStorage.getItem('firebaseToken') || window.currentUserToken;
-    if (token) {
-        currentUserToken = token;
-        loadUserFleet();
+    const setupAuth = () => {
+        if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.onAuthStateChanged) {
+            window.firebaseApp.onAuthStateChanged(window.firebaseApp.auth, async (user) => {
+                if (user) {
+                    try {
+                        currentUserToken = await user.getIdToken();
+                        // Check PRO status
+                        try {
+                            const profRes = await fetch('/api/user/profile', {
+                                headers: { 'Authorization': currentUserToken }
+                            });
+                            if (profRes.ok) {
+                                const prof = await profRes.json();
+                                isUserPro = !!prof.is_pro;
+                            }
+                        } catch (pe) {
+                            console.warn('Profile fetch error:', pe);
+                        }
+                        await loadUserFleet();
+                    } catch (e) {
+                        console.error('Failed to get token on auth change:', e);
+                    }
+                } else {
+                    currentUserToken = null;
+                    isUserPro = false;
+                    const isEs = isSpanishLang();
+                    const boatSelect = document.getElementById('boatSelect');
+                    if (boatSelect) {
+                        boatSelect.innerHTML = `<option value="">${isEs ? 'Invitado (Flota no registrada)' : 'Guest (Unregistered Fleet)'}</option><option value="_new_">${isEs ? '+ Crear Nuevo Barco...' : '+ Create New Boat...'}</option>`;
+                    }
+                    const sailSelect = document.getElementById('sailSelect');
+                    if (sailSelect) {
+                        sailSelect.innerHTML = `<option value="">${isEs ? 'Seleccionar o Crear Vela' : 'Select or Create Sail'}</option><option value="_new_">${isEs ? '+ Crear Nueva Vela...' : '+ Create New Sail...'}</option>`;
+                        sailSelect.disabled = true;
+                    }
+                    const activeBoatLbl = document.getElementById('lbl-active-boat');
+                    if (activeBoatLbl) activeBoatLbl.innerText = isEs ? 'Modo Invitado' : 'Guest Mode';
+                    const activeSailLbl = document.getElementById('lbl-active-sail');
+                    if (activeSailLbl) activeSailLbl.innerText = isEs ? 'Sin asignar' : 'Unassigned';
+                }
+            });
+        }
+    };
+
+    if (window.firebaseApp && window.firebaseApp.auth) {
+        setupAuth();
+    } else {
+        window.addEventListener('firebaseReady', setupAuth);
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (window.firebaseApp && window.firebaseApp.auth) {
+                clearInterval(interval);
+                setupAuth();
+            } else if (attempts > 30) {
+                clearInterval(interval);
+            }
+        }, 150);
     }
 }
 
-function loadUserFleet() {
-    if (!currentUserToken) return;
-    fetch('/api/boats', {
-        headers: { 'Authorization': currentUserToken }
-    })
-    .then(r => r.json())
-    .then(boats => {
+async function loadUserFleet() {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    try {
+        const r = await fetch('/api/boats', {
+            headers: { 'Authorization': token }
+        });
+        if (!r.ok) {
+            console.warn('Could not fetch fleet: status', r.status);
+            return;
+        }
+        const boats = await r.json();
         const boatSelect = document.getElementById('boatSelect');
+        const isEs = isSpanishLang();
+
         if (boatSelect && Array.isArray(boats)) {
-            boatSelect.innerHTML = '<option value="">Guest (Unregistered)</option><option value="_new_">+ Create New Boat...</option>';
+            boatSelect.innerHTML = `<option value="">${isEs ? 'Invitado (Flota no registrada)' : 'Guest (Unregistered Fleet)'}</option><option value="_new_">${isEs ? '+ Crear Nuevo Barco...' : '+ Create New Boat...'}</option>`;
             boats.forEach(b => {
                 const opt = document.createElement('option');
                 opt.value = b.id;
                 opt.innerText = `${b.name} (${b.type || 'Boat'})`;
                 boatSelect.appendChild(opt);
             });
-            
-            if (scanData.boatId) {
-                boatSelect.value = scanData.boatId;
-                handleBoatChange(scanData.boatId);
+
+            // Restore previously selected boat or memory
+            const lastBid = localStorage.getItem('lastSelectedBoatId');
+            const targetBoatId = scanData.boatId || (boats.some(b => b.id === lastBid) ? lastBid : null);
+
+            if (targetBoatId && boats.some(b => b.id === targetBoatId)) {
+                boatSelect.value = targetBoatId;
+                handleBoatChange(targetBoatId);
+            } else if (boats.length > 0 && !scanData.boatId) {
+                // Auto-select first boat if user has fleet and nothing was selected
+                boatSelect.value = boats[0].id;
+                handleBoatChange(boats[0].id);
             }
         }
-    })
-    .catch(err => console.warn('Could not fetch fleet:', err));
+    } catch (err) {
+        console.warn('Could not fetch fleet:', err);
+    }
 }
 
-window.handleBoatChange = function(bId) {
+window.handleBoatChange = async function(bId) {
+    const isEs = isSpanishLang();
     if (bId === '_new_') {
-        const name = prompt('Enter new boat name:');
-        if (name) {
-            fetch('/api/boats', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': currentUserToken },
-                body: JSON.stringify({ name: name, type: 'Grand Prix' })
-            })
-            .then(r => r.json())
-            .then(newBoat => {
-                scanData.boatId = newBoat.id;
-                scanData.boatName = newBoat.name;
-                loadUserFleet();
-            });
+        const name = prompt(isEs ? 'Introduce el nombre del nuevo barco:' : 'Enter new boat name:');
+        if (name && name.trim()) {
+            const token = await getAuthToken();
+            if (!token) {
+                alert(isEs ? 'Debes iniciar sesión para crear un barco.' : 'Please sign in first to create a boat.');
+                const bSel = document.getElementById('boatSelect');
+                if (bSel) bSel.value = scanData.boatId || '';
+                return;
+            }
+            try {
+                const res = await fetch('/api/boats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ name: name.trim(), type: 'Grand Prix' })
+                });
+                const newBoat = await res.json();
+                if (newBoat && newBoat.id) {
+                    scanData.boatId = newBoat.id;
+                    scanData.boatName = newBoat.name;
+                    localStorage.setItem('lastSelectedBoatId', newBoat.id);
+                    localStorage.setItem('lastSelectedBoatName', newBoat.name);
+                    window.dispatchEvent(new Event('storage'));
+                    await loadUserFleet();
+                } else {
+                    alert((isEs ? 'Error al crear el barco: ' : 'Error creating boat: ') + (newBoat.error || 'Unknown'));
+                }
+            } catch (e) {
+                alert((isEs ? 'Error al crear el barco: ' : 'Error creating boat: ') + e);
+            }
+        } else {
+            const bSel = document.getElementById('boatSelect');
+            if (bSel) bSel.value = scanData.boatId || '';
         }
         return;
     }
-    
-    scanData.boatId = bId;
+
+    scanData.boatId = bId || '';
     const bSel = document.getElementById('boatSelect');
-    if (bSel && bSel.selectedIndex >= 0) {
+    if (bSel && bSel.selectedIndex >= 0 && bId) {
         scanData.boatName = bSel.options[bSel.selectedIndex].text;
-        document.getElementById('lbl-active-boat').innerText = scanData.boatName;
+        const activeBoatLbl = document.getElementById('lbl-active-boat');
+        if (activeBoatLbl) activeBoatLbl.innerText = scanData.boatName;
+        localStorage.setItem('lastSelectedBoatId', bId);
+        localStorage.setItem('lastSelectedBoatName', scanData.boatName);
+        window.dispatchEvent(new Event('storage'));
+    } else if (!bId) {
+        scanData.boatName = isEs ? 'Modo Invitado' : 'Guest Mode';
+        const activeBoatLbl = document.getElementById('lbl-active-boat');
+        if (activeBoatLbl) activeBoatLbl.innerText = scanData.boatName;
+        localStorage.removeItem('lastSelectedBoatId');
+        localStorage.removeItem('lastSelectedBoatName');
+        window.dispatchEvent(new Event('storage'));
     }
-    
-    if (bId) {
-        fetch(`/api/boats/${bId}/sails`, {
-            headers: { 'Authorization': currentUserToken }
-        })
-        .then(r => r.json())
-        .then(sails => {
-            const sailSelect = document.getElementById('sailSelect');
+
+    const sailSelect = document.getElementById('sailSelect');
+    if (!bId) {
+        if (sailSelect) {
+            sailSelect.innerHTML = `<option value="">${isEs ? 'Invitado / Sin Barco' : 'Guest / No Boat'}</option>`;
+            sailSelect.disabled = true;
+        }
+        scanData.sailId = '';
+        scanData.sailName = '';
+        const activeSailLbl = document.getElementById('lbl-active-sail');
+        if (activeSailLbl) activeSailLbl.innerText = isEs ? 'Sin asignar' : 'Unassigned';
+        return;
+    }
+
+    if (sailSelect) {
+        sailSelect.disabled = false;
+        sailSelect.innerHTML = `<option value="">${isEs ? 'Cargando velas...' : 'Loading sails...'}</option>`;
+    }
+
+    const token = await getAuthToken();
+    if (token) {
+        try {
+            const r = await fetch(`/api/boats/${bId}/sails`, {
+                headers: { 'Authorization': token }
+            });
+            const sails = await r.json();
             if (sailSelect && Array.isArray(sails)) {
-                sailSelect.innerHTML = '<option value="">Select or Create Sail</option><option value="_new_">+ Create New Sail...</option>';
+                sailSelect.innerHTML = `<option value="">${isEs ? 'Seleccionar o Crear Vela' : 'Select or Create Sail'}</option><option value="_new_">${isEs ? '+ Crear Nueva Vela...' : '+ Create New Sail...'}</option>`;
                 sails.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.id;
                     opt.innerText = s.code + (s.description ? ` (${s.description})` : '');
                     sailSelect.appendChild(opt);
                 });
-                
-                if (scanData.sailId) {
+
+                if (scanData.sailId && sails.some(s => s.id === scanData.sailId)) {
                     sailSelect.value = scanData.sailId;
                     handleSailChange(scanData.sailId);
+                } else {
+                    scanData.sailId = '';
+                    const activeSailLbl = document.getElementById('lbl-active-sail');
+                    if (activeSailLbl) activeSailLbl.innerText = isEs ? 'Sin asignar' : 'Unassigned';
                 }
             }
-        });
+        } catch (err) {
+            console.warn('Error fetching sails:', err);
+            if (sailSelect) sailSelect.innerHTML = `<option value="">${isEs ? 'Error cargando velas' : 'Error loading sails'}</option>`;
+        }
     }
 };
 
-window.handleSailChange = function(sId) {
+window.handleSailChange = async function(sId) {
+    const isEs = isSpanishLang();
     if (sId === '_new_') {
-        const code = prompt('Enter sail code / number (e.g. J1-4 / ESP-831):');
-        if (code) {
-            fetch(`/api/boats/${scanData.boatId}/sails`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': currentUserToken },
-                body: JSON.stringify({ code: code, description: 'Created in L3S Studio' })
-            })
-            .then(r => r.json())
-            .then(newSail => {
-                scanData.sailId = newSail.id;
-                scanData.sailName = code;
-                handleBoatChange(scanData.boatId);
-            });
+        if (!scanData.boatId) {
+            alert(isEs ? 'Por favor, selecciona primero un barco guardado.' : 'Please select a saved boat first.');
+            const sSel = document.getElementById('sailSelect');
+            if (sSel) sSel.value = '';
+            return;
+        }
+        const code = prompt(isEs ? 'Introduce el código o nombre de la vela (ej. J1-4 / ESP-831 / M-2):' : 'Enter sail code or number (e.g. J1-4 / ESP-831 / M-2):');
+        if (code && code.trim()) {
+            const token = await getAuthToken();
+            if (!token) {
+                alert(isEs ? 'Sesión no disponible. Por favor, inicia sesión.' : 'Not signed in. Please log in.');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/boats/${scanData.boatId}/sails`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ code: code.trim(), description: 'Created in L3S Studio' })
+                });
+                const newSail = await res.json();
+                if (newSail && newSail.id) {
+                    scanData.sailId = newSail.id;
+                    scanData.sailName = newSail.code || code.trim();
+                    const inputSailName = document.getElementById('inputSailName');
+                    if (inputSailName) inputSailName.value = scanData.sailName;
+                    await handleBoatChange(scanData.boatId);
+                    const sSel = document.getElementById('sailSelect');
+                    if (sSel) sSel.value = newSail.id;
+                    const activeSailLbl = document.getElementById('lbl-active-sail');
+                    if (activeSailLbl) activeSailLbl.innerText = scanData.sailName;
+                } else {
+                    alert((isEs ? 'Error al crear la vela: ' : 'Error creating sail: ') + (newSail.error || 'Unknown'));
+                }
+            } catch (err) {
+                alert((isEs ? 'Error al crear la vela: ' : 'Error creating sail: ') + err);
+            }
+        } else {
+            const sSel = document.getElementById('sailSelect');
+            if (sSel) sSel.value = scanData.sailId || '';
         }
         return;
     }
-    
-    scanData.sailId = sId;
+
+    scanData.sailId = sId || '';
     const sSel = document.getElementById('sailSelect');
-    if (sSel && sSel.selectedIndex >= 0) {
+    if (sSel && sSel.selectedIndex >= 0 && sId) {
         scanData.sailName = sSel.options[sSel.selectedIndex].text;
-        document.getElementById('lbl-active-sail').innerText = scanData.sailName;
+        const activeSailLbl = document.getElementById('lbl-active-sail');
+        if (activeSailLbl) activeSailLbl.innerText = scanData.sailName;
+        const inputSailName = document.getElementById('inputSailName');
+        if (inputSailName && !inputSailName.value) {
+            inputSailName.value = scanData.sailName.split(' (')[0];
+        }
+    } else if (!sId) {
+        scanData.sailName = '';
+        const activeSailLbl = document.getElementById('lbl-active-sail');
+        if (activeSailLbl) activeSailLbl.innerText = isEs ? 'Sin asignar' : 'Unassigned';
     }
 };
 
-window.saveScanToFleetDatabase = function() {
-    if (!scanData.boatId || !scanData.sailId) {
-        alert('Please assign a Boat and Sail profile in Step 1 to save into the database.');
+window.saveScanToFleetDatabase = async function() {
+    const isEs = isSpanishLang();
+    if (!scanData.boatId) {
+        alert(isEs ? 'Por favor, asigna un barco en el Paso 1 para guardar en la base de datos.' : 'Please assign a Boat profile in Step 1 to save into the database.');
         switchScanTab('upload');
         return;
     }
-    
+
     syncSpecsFromInputs();
-    
+
+    // Auto-create or resolve sail if not picked in sailSelect dropdown
+    if (!scanData.sailId) {
+        const sailName = scanData.sailName || document.getElementById('inputSailName')?.value || prompt(isEs ? 'Introduce el código o nombre de la vela para guardarla en el barco:' : 'Enter sail code or name to save it to the boat:');
+        if (!sailName || !sailName.trim()) {
+            alert(isEs ? 'Por favor, asigna o crea una vela en el Paso 1.' : 'Please assign or create a Sail in Step 1.');
+            switchScanTab('upload');
+            return;
+        }
+        try {
+            const token = await getAuthToken();
+            const resSail = await fetch(`/api/boats/${scanData.boatId}/sails`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ code: sailName.trim(), description: 'Created in L3S Studio' })
+            });
+            const newSail = await resSail.json();
+            if (newSail && newSail.id) {
+                scanData.sailId = newSail.id;
+                scanData.sailName = newSail.code || sailName.trim();
+            } else {
+                alert((isEs ? 'Error al crear la vela: ' : 'Error creating sail: ') + (newSail.error || 'Unknown'));
+                return;
+            }
+        } catch (e) {
+            alert((isEs ? 'Error al crear la vela: ' : 'Error creating sail: ') + e);
+            return;
+        }
+    }
+
+    const token = await getAuthToken();
+    if (!token) {
+        alert(isEs ? 'Sesión no iniciada. Por favor, inicia sesión.' : 'Not signed in. Please log in.');
+        return;
+    }
+
     const analysisPayload = {
         date: new Date().toISOString(),
         scan_type: scanData.scanType,
@@ -3725,10 +3982,10 @@ window.saveScanToFleetDatabase = function() {
         rig: scanData.rig,
         notes: document.getElementById('rep-learning-points')?.value || ''
     };
-    
+
     fetch('/api/sail-scan/save-analysis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': currentUserToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({
             boat_id: scanData.boatId,
             sail_id: scanData.sailId,
@@ -3739,26 +3996,27 @@ window.saveScanToFleetDatabase = function() {
     .then(r => r.json())
     .then(res => {
         if (res.success) {
-            showToast('✅ Saved to Boat & Sail Database successfully!');
+            showToast(isEs ? '✅ ¡Guardado en la base de datos de Barco y Vela con éxito!' : '✅ Saved to Boat & Sail Database successfully!');
         } else {
-            alert('Save failed: ' + (res.error || 'Unknown error'));
+            alert((isEs ? 'Error al guardar: ' : 'Save failed: ') + (res.error || 'Unknown error'));
         }
     })
-    .catch(err => alert('Save error: ' + err));
+    .catch(err => alert((isEs ? 'Error de conexión: ' : 'Save error: ') + err));
 };
 
-window.saveSailScanProject = function() {
+window.saveSailScanProject = async function() {
     syncSpecsFromInputs();
-    
+
     const projectPayload = {
         name: `${scanData.sailName || 'Sail_Scan'}_${new Date().toISOString().slice(0, 10)}`,
         scanData: scanData,
         timestamp: new Date().toISOString()
     };
-    
+
+    const token = await getAuthToken();
     fetch('/api/sail-scan/save-project', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': currentUserToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token || '' },
         body: JSON.stringify(projectPayload)
     })
     .then(r => r.json())

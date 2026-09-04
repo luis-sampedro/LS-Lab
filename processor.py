@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore', category=RankWarning)
 from scipy.signal import savgol_filter, find_peaks
 warnings.filterwarnings('ignore')
 
-def compute_4pt_bspline_controls(p_start, p_end, camber_pct=11.5, draft_pos_pct=45.0):
+def compute_4pt_bspline_controls(p_start, p_end, camber_pct=11.5, draft_pos_pct=45.0, camber_sign=1.0):
     """
     Computes 4-point 3rd-degree (cubic) B-Spline / Bezier control points:
     P0: Luff Root
@@ -27,27 +27,30 @@ def compute_4pt_bspline_controls(p_start, p_end, camber_pct=11.5, draft_pos_pct=
     chord_len = math.hypot(p3['x'] - p0['x'], p3['y'] - p0['y']) + 1e-6
     dx = p3['x'] - p0['x']
     dy = p3['y'] - p0['y']
-    nx = -dy / chord_len
-    ny = dx / chord_len
+    ux = dx / chord_len
+    uy = dy / chord_len
+    nx = -uy
+    ny = ux
     
-    camber_depth = (camber_pct / 100.0) * chord_len
+    camber_depth = (camber_pct / 100.0) * chord_len * camber_sign
     draft_frac = (draft_pos_pct / 100.0)
     
     p1 = {
-        'x': float(p0['x'] + dx * 0.25 + nx * camber_depth * 0.75),
-        'y': float(p0['y'] + dy * 0.25 + ny * camber_depth * 0.75)
+        'x': float(p0['x'] + dx * 0.28 + nx * camber_depth * 0.75),
+        'y': float(p0['y'] + dy * 0.28 + ny * camber_depth * 0.75)
     }
     p2 = {
-        'x': float(p0['x'] + dx * min(0.85, draft_frac + 0.15) + nx * camber_depth * 1.15),
-        'y': float(p0['y'] + dy * min(0.85, draft_frac + 0.15) + ny * camber_depth * 1.15)
+        'x': float(p0['x'] + dx * max(0.40, min(0.85, draft_frac + 0.10)) + nx * camber_depth * 1.15),
+        'y': float(p0['y'] + dy * max(0.40, min(0.85, draft_frac + 0.10)) + ny * camber_depth * 1.15)
     }
     return p0, p1, p2, p3
 
 def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto', num_stripes=3, sensitivity=1.0):
     """
-    Intelligent Auto-detection of camber draft stripes for Foot sail photos.
+    Intelligent Auto-detection of camber draft stripes for sail photos.
     Supports various sail materials (white/dacron/3Di, black carbon/technora, translucent)
-    and stripe colors (blue, red, black, green, orange, yellow, custom hex).
+    and stripe colors (white, light gray, blue, red, black, green, orange, yellow, custom hex).
+    Accurately maps camber stripes from Luff to Leech across Bottom, Mid, and Top heights.
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -56,11 +59,11 @@ def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto',
     
     orig_h, orig_w = img.shape[:2]
     
-    # Work on a normalized processing scale (max dimension 900px) for speed (<150ms) and stability
+    # Work on a normalized processing scale (max dimension 950px) for speed (<120ms) and stability
     scale = 1.0
     max_dim = max(orig_h, orig_w)
-    if max_dim > 900:
-        scale = 900.0 / max_dim
+    if max_dim > 950:
+        scale = 950.0 / max_dim
         proc_w = int(orig_w * scale)
         proc_h = int(orig_h * scale)
         proc_img = cv2.resize(img, (proc_w, proc_h), interpolation=cv2.INTER_AREA)
@@ -75,15 +78,41 @@ def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto',
     stripe_color_lower = str(stripe_color).lower().strip() if stripe_color else 'auto'
     sail_color_lower = str(sail_color).lower().strip() if sail_color else 'auto'
     
-    mean_brightness = float(np.mean(gray))
-    is_dark_sail = (sail_color_lower in ['black', 'dark', 'carbon']) or (sail_color_lower == 'auto' and mean_brightness < 120)
-    
     # 1. Sail Mask vs Sky/Sun
-    sky_mask = (b > 125) & (b.astype(np.float32) > r.astype(np.float32) + 12) & (gray > 95)
-    sun_glare = (gray > 245)
+    sky_mask = (b > 120) & (b.astype(np.float32) > r.astype(np.float32) + 10) & (gray > 80)
+    sun_glare = (gray > 248)
     sail_mask = (~sky_mask) & (~sun_glare)
-    kernel_m = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+    kernel_m = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
     sail_mask = cv2.morphologyEx(sail_mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel_m)
+    
+    sail_pixels = gray[sail_mask > 0]
+    mean_brightness = float(np.mean(sail_pixels)) if len(sail_pixels) > 0 else 128.0
+    is_dark_sail = (sail_color_lower in ['black', 'dark', 'carbon']) or (sail_color_lower == 'auto' and mean_brightness < 125.0)
+    
+    # Per-row sail envelope (Luff and Leech)
+    luff_xs = np.zeros(proc_h, dtype=np.float32)
+    leech_xs = np.zeros(proc_h, dtype=np.float32)
+    valid_rows = []
+    for y in range(proc_h):
+        row_pts = np.where(sail_mask[y, :] > 0)[0]
+        if len(row_pts) > int(proc_w * 0.10):
+            luff_xs[y] = row_pts[0]
+            leech_xs[y] = row_pts[-1]
+            valid_rows.append(y)
+            
+    if len(valid_rows) < 20:
+        y_min_sail, y_max_sail = int(proc_h * 0.10), int(proc_h * 0.90)
+        luff_xs[:] = proc_w * 0.08
+        leech_xs[:] = proc_w * 0.92
+    else:
+        y_min_sail, y_max_sail = min(valid_rows), max(valid_rows)
+        valid_set = set(valid_rows)
+        for y in range(proc_h):
+            if y not in valid_set:
+                luff_xs[y] = proc_w * 0.08
+                leech_xs[y] = proc_w * 0.92
+                
+    sail_height = max(50, y_max_sail - y_min_sail)
     
     # Compute Autodetected Sail Color Metrics
     sail_pts_bgr = proc_img[sail_mask > 0]
@@ -102,240 +131,210 @@ def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto',
         detected_sail_hex = "#1e293b" if is_dark_sail else "#f8fafc"
         detected_sail_name = "Black Carbon" if is_dark_sail else "White Dacron"
 
-    # 2. Multi-spectral stripe saliency
-    detected_stripe_name = "Auto-detected"
-    detected_stripe_hex = "#38bdf8"
+    # 2. Multi-spectral ridge & contrast saliency
+    k_stripe = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 3))
+    tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_stripe).astype(np.float32)
+    blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_stripe).astype(np.float32)
+    blue_chroma = np.maximum(0, b.astype(np.float32) - np.maximum(r.astype(np.float32), g.astype(np.float32)))
+    red_chroma = np.maximum(0, r.astype(np.float32) - np.maximum(b.astype(np.float32), g.astype(np.float32)))
     
-    # Helper to check if string is hex code
     is_custom_hex = stripe_color_lower.startswith('#') or (len(stripe_color_lower) in [6, 3] and all(c in '0123456789abcdef' for c in stripe_color_lower))
     
     if is_custom_hex:
-        # User picked a specific custom color from the image!
         hex_clean = stripe_color_lower.lstrip('#')
-        if len(hex_clean) == 3:
-            hex_clean = ''.join([c*2 for c in hex_clean])
+        if len(hex_clean) == 3: hex_clean = ''.join([c*2 for c in hex_clean])
         r_tgt = int(hex_clean[0:2], 16)
         g_tgt = int(hex_clean[2:4], 16)
         b_tgt = int(hex_clean[4:6], 16)
-        
         tgt_bgr = np.uint8([[[b_tgt, g_tgt, r_tgt]]])
         tgt_lab = cv2.cvtColor(tgt_bgr, cv2.COLOR_BGR2Lab)[0, 0].astype(np.float32)
         
-        # Chromatic distance with lightness tolerance
         delta_L = (lab[:, :, 0].astype(np.float32) - tgt_lab[0]) * 0.4
         delta_a = lab[:, :, 1].astype(np.float32) - tgt_lab[1]
         delta_b = lab[:, :, 2].astype(np.float32) - tgt_lab[2]
         c_dist = np.sqrt(delta_L**2 + delta_a**2 + delta_b**2)
-        
-        sal = np.maximum(0, 1.0 - (c_dist / 35.0))
-        sal[sail_mask == 0] = 0
-        thresh = max(0.12, 0.30 / float(sensitivity))
-        pts_mask = (sal > thresh)
-        
+        sal = np.maximum(0, 100.0 - c_dist * 2.0)
         detected_stripe_name = f"Custom Color (#{hex_clean})"
         detected_stripe_hex = f"#{hex_clean}"
-        
-    elif stripe_color_lower == 'red' or (stripe_color_lower == 'auto' and is_dark_sail):
-        r_f = r.astype(np.float32)
-        g_f = g.astype(np.float32)
-        b_f = b.astype(np.float32)
-        r_diff = r_f - np.maximum(g_f, b_f)
-        a_chan = lab[:, :, 1].astype(np.float32)
-        
-        red_metric = (np.maximum(0, r_diff) * 2.0) + (np.maximum(0, a_chan - 128.0) * 1.5)
-        red_metric[sail_mask == 0] = 0
-        thresh = max(2.0, 6.0 / float(sensitivity))
-        pts_mask = (red_metric > thresh)
-        
+    elif stripe_color_lower == 'red':
+        sal = red_chroma * 2.5
         detected_stripe_name = "Red Stripe"
         detected_stripe_hex = "#ef4444"
-        
-    elif stripe_color_lower == 'blue' or (stripe_color_lower == 'auto' and not is_dark_sail):
-        b_f = b.astype(np.float32)
-        g_f = g.astype(np.float32)
-        r_f = r.astype(np.float32)
-        b_diff = b_f - np.maximum(g_f, r_f)
-        b_lab = 128.0 - lab[:, :, 2].astype(np.float32)
-        
-        blue_metric = (np.maximum(0, b_diff) * 2.0) + (np.maximum(0, b_lab) * 1.5)
-        blue_metric[sail_mask == 0] = 0
-        thresh = max(3.5, 10.0 / float(sensitivity))
-        pts_mask = (blue_metric > thresh)
-        
+    elif stripe_color_lower == 'blue':
+        sal = blue_chroma * 2.5
         detected_stripe_name = "Blue Stripe"
         detected_stripe_hex = "#3b82f6"
-        
     elif stripe_color_lower in ['black', 'dark']:
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        inv_clahe = cv2.bitwise_not(clahe.apply(gray))
-        vesselness = frangi(inv_clahe, sigmas=range(1, 4), black_ridges=False)
-        if vesselness.max() > 0: vesselness /= vesselness.max()
-        vesselness[sail_mask == 0] = 0
-        thresh = max(0.08, 0.20 / float(sensitivity))
-        pts_mask = (vesselness > thresh)
-        
-        detected_stripe_name = "Dark Boom / Black Stripe"
+        sal = blackhat * 2.0
+        detected_stripe_name = "Dark / Black Stripe"
         detected_stripe_hex = "#1e293b"
-    else:
-        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-        enh = clahe.apply(gray) if is_dark_sail else cv2.bitwise_not(clahe.apply(gray))
-        vesselness = frangi(enh, sigmas=range(1, 4), black_ridges=False)
-        if vesselness.max() > 0: vesselness /= vesselness.max()
-        vesselness[sail_mask == 0] = 0
-        thresh = max(0.08, 0.20 / float(sensitivity))
-        pts_mask = (vesselness > thresh)
-        
-        detected_stripe_name = "Contrast Ridge"
-        detected_stripe_hex = "#38bdf8"
-        
-    ys, xs = np.where(pts_mask)
+    elif stripe_color_lower in ['white', 'light']:
+        sal = tophat * 2.5
+        detected_stripe_name = "White / Light Stripe"
+        detected_stripe_hex = "#f8fafc"
+    else:  # 'auto' mode
+        if is_dark_sail:
+            r_peak = np.percentile(red_chroma[sail_mask > 0], 99.5) if np.any(sail_mask > 0) else 0
+            if r_peak > 35:
+                sal = red_chroma * 2.5
+                detected_stripe_name = "Red Stripe"
+                detected_stripe_hex = "#ef4444"
+            else:
+                sal = tophat * 2.5
+                detected_stripe_name = "White / Light Stripe"
+                detected_stripe_hex = "#f8fafc"
+        else:
+            b_peak = np.percentile(blue_chroma[sail_mask > 0], 99.5) if np.any(sail_mask > 0) else 0
+            r_peak = np.percentile(red_chroma[sail_mask > 0], 99.5) if np.any(sail_mask > 0) else 0
+            if b_peak > 25:
+                sal = blue_chroma * 2.5
+                detected_stripe_name = "Blue Stripe"
+                detected_stripe_hex = "#3b82f6"
+            elif r_peak > 35:
+                sal = red_chroma * 2.5
+                detected_stripe_name = "Red Stripe"
+                detected_stripe_hex = "#ef4444"
+            else:
+                sal = blackhat * 2.0
+                detected_stripe_name = "Dark / Black Stripe"
+                detected_stripe_hex = "#1e293b"
+
+    sal[sail_mask == 0] = 0
+    sal *= float(sensitivity)
     
-    detected_stripes = []
+    # 3. Aerodynamic Draft Stripe Bands (Bottom, Mid, Top)
     colors = ['#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
     
-    if len(xs) >= 20:
-        if len(xs) > 2500:
-            idx_sub = np.random.choice(len(xs), 2500, replace=False)
-            xs = xs[idx_sub]
-            ys = ys[idx_sub]
-            
-        remaining_x = xs.astype(np.float64)
-        remaining_y = ys.astype(np.float64)
+    if num_stripes == 1:
+        band_ranges = [('Mid', 0.25, 0.65)]
+    elif num_stripes == 2:
+        band_ranges = [('Bottom', 0.40, 0.85), ('Top', 0.10, 0.45)]
+    else:
+        band_ranges = [
+            ('Bottom', 0.38, 0.85),
+            ('Mid', 0.20, 0.55),
+            ('Top', 0.05, 0.35)
+        ]
         
-        for s_idx in range(num_stripes * 2):
-            if len(remaining_x) < 30 or len(detected_stripes) >= num_stripes:
-                break
-                
-            best_inliers_count = 0
-            best_poly = None
-            best_inliers = None
+    detected_stripes = []
+    
+    for idx, (b_label, f_min, f_max) in enumerate(band_ranges[:num_stripes]):
+        y1_b = int(y_min_sail + f_min * sail_height)
+        y2_b = int(min(proc_h - 4, y_min_sail + f_max * sail_height))
+        if y2_b <= y1_b: continue
+        
+        sub_sal = sal[y1_b:y2_b, :]
+        row_sums = np.sum(sub_sal, axis=1) if sub_sal.size > 0 else np.array([])
+        
+        if row_sums.size == 0 or np.max(row_sums) == 0:
+            peak_y = (y1_b + y2_b) // 2
+        else:
+            peak_y = y1_b + int(np.argmax(row_sums))
             
-            for it in range(250):
-                sample_idx = np.random.choice(len(remaining_x), 3, replace=False)
-                sx = remaining_x[sample_idx]
-                sy = remaining_y[sample_idx]
-                if np.max(sx) - np.min(sx) < (proc_w * 0.15):
-                    continue
+        w_h = max(16, int(sail_height * 0.08))
+        w1, w2 = max(0, peak_y - w_h), min(proc_h, peak_y + w_h)
+        
+        sal_sail_pts = sal[sail_mask > 0]
+        thresh_val = np.percentile(sal_sail_pts, 80) if len(sal_sail_pts) > 0 else 10.0
+        sub_pts_mask = (sal[w1:w2, :] > max(8.0, thresh_val))
+        pts_y, pts_x = np.where(sub_pts_mask)
+        pts_y += w1
+        
+        y_center = int(np.clip(peak_y, 0, proc_h - 1))
+        x_start_proc = float(luff_xs[y_center])
+        x_end_proc = float(leech_xs[y_center])
+        chord_proc = max(20.0, x_end_proc - x_start_proc)
+        
+        fitted_poly = None
+        if len(pts_x) >= 20 and (pts_x.max() - pts_x.min()) > (proc_w * 0.20):
+            # RANSAC on points within band
+            best_inliers_cnt = 0
+            for _ in range(120):
+                samp_idx = np.random.choice(len(pts_x), 3, replace=False)
+                sx, sy = pts_x[samp_idx], pts_y[samp_idx]
+                if (np.max(sx) - np.min(sx)) < (chord_proc * 0.25): continue
                 try:
-                    poly = np.polyfit(sx, sy, 2)
-                    if abs(poly[0]) > 0.005: continue
-                    pred_y = np.polyval(poly, remaining_x)
-                    res = np.abs(remaining_y - pred_y)
-                    inliers = (res < 12.0)
-                    cnt = np.sum(inliers)
-                    if cnt > best_inliers_count:
-                        inlier_xs = remaining_x[inliers]
-                        if (np.max(inlier_xs) - np.min(inlier_xs)) > (proc_w * 0.22):
-                            best_inliers_count = cnt
-                            best_poly = poly
-                            best_inliers = inliers
+                    p = np.polyfit(sx, sy, 2)
+                    if abs(p[0]) > 0.005: continue
+                    pred_y = np.polyval(p, pts_x)
+                    inliers_cnt = np.sum(np.abs(pts_y - pred_y) < 8.0)
+                    if inliers_cnt > best_inliers_cnt:
+                        best_inliers_cnt = inliers_cnt
+                        fitted_poly = p
+                except Exception:
+                    pass
+            if fitted_poly is not None and best_inliers_cnt >= 20:
+                inlier_mask = np.abs(pts_y - np.polyval(fitted_poly, pts_x)) < 8.0
+                in_x = pts_x[inlier_mask]
+                in_y = pts_y[inlier_mask]
+                try:
+                    fitted_poly = np.polyfit(in_x, in_y, 2)
+                    x_start_proc = float(min(x_start_proc, in_x.min()))
+                    x_end_proc = float(max(x_end_proc, in_x.max()))
                 except Exception:
                     pass
                     
-            if best_poly is not None and best_inliers_count > 18:
-                inlier_xs = remaining_x[best_inliers]
-                inlier_ys = remaining_y[best_inliers]
-                poly = np.polyfit(inlier_xs, inlier_ys, 2)
-                
-                x_min_proc = float(max(int(proc_w * 0.05), int(np.min(inlier_xs))))
-                x_max_proc = float(min(int(proc_w * 0.95), int(np.max(inlier_xs))))
-                
-                eval_xs_proc = np.linspace(x_min_proc, x_max_proc, 70)
-                eval_ys_proc = np.polyval(poly, eval_xs_proc)
-                
-                # Map back to original coordinate space
-                eval_xs = eval_xs_proc / scale
-                eval_ys = eval_ys_proc / scale
-                
-                p1 = {'x': float(eval_xs[0]), 'y': float(eval_ys[0])}
-                p2 = {'x': float(eval_xs[-1]), 'y': float(eval_ys[-1])}
-                path = [[float(x), float(y)] for x, y in zip(eval_xs, eval_ys)]
-                
-                chord_len = np.hypot(p2['x'] - p1['x'], p2['y'] - p1['y'])
-                dx = p2['x'] - p1['x']
-                dy = p2['y'] - p1['y']
-                
-                dists = []
-                for px, py in path:
-                    dist = (dy * px - dx * py + p2['x'] * p1['y'] - p2['y'] * p1['x']) / (chord_len + 1e-6)
-                    dists.append(abs(dist))
-                    
-                max_depth = float(np.max(dists)) if dists else 0.0
-                max_idx = int(np.argmax(dists)) if dists else 0
-                camber_pct = float((max_depth / (chord_len + 1e-6)) * 100.0)
-                draft_pos_pct = float((max_idx / max(1, len(path) - 1)) * 100.0)
-                
-                mean_y = float(np.mean(eval_ys))
-                
-                # Compute 4-point 3rd-degree (cubic) B-spline control points
-                p0_pt, p1_ctrl, p2_ctrl, p3_pt = compute_4pt_bspline_controls(p1, p2, camber_pct, draft_pos_pct)
-                
-                detected_stripes.append({
-                    'id': f'stripe_{len(detected_stripes)+1}',
-                    'label': f'Stripe #{len(detected_stripes)+1}',
-                    'color': colors[len(detected_stripes) % len(colors)],
-                    'p0': p0_pt,
-                    'p1': p1_ctrl,
-                    'p2': p2_ctrl,
-                    'p3': p3_pt,
-                    'path': path,
-                    'mean_y': mean_y,
-                    'metrics': {
-                        'camber': round(camber_pct, 2),
-                        'draft_pos': round(draft_pos_pct, 1),
-                        'twist': round(len(detected_stripes) * 3.5, 1),
-                        'entry': 17.0,
-                        'exit': 8.5,
-                        'chord_len': round(chord_len, 1),
-                        'normalized_curve': [[(px - p1['x'])/chord_len, (d/chord_len)*100] for (px, py), d in zip(path, dists)]
-                    }
-                })
-                
-                # Remove nearby points
-                pred_y_all = np.polyval(poly, remaining_x)
-                far_mask = np.abs(remaining_y - pred_y_all) >= 20.0
-                remaining_x = remaining_x[far_mask]
-                remaining_y = remaining_y[far_mask]
-            else:
-                break
-                
-    # If no stripes detected by RANSAC, fallback to logical draft curves based on sail ROI
-    if len(detected_stripes) == 0:
-        default_y_fractions = [0.72, 0.48, 0.25]
-        for idx, y_frac in enumerate(default_y_fractions[:num_stripes]):
-            y_pos = orig_h * y_frac
-            x_start = orig_w * 0.12
-            x_end = orig_w * 0.88
-            p1 = {'x': float(x_start), 'y': float(y_pos + (orig_h * 0.04))}
-            p2 = {'x': float(x_end), 'y': float(y_pos - (orig_h * 0.04))}
-            chord_len = x_end - x_start
-            depth = chord_len * (0.13 - idx * 0.02)
-            xs_arr = np.linspace(x_start, x_end, 60)
-            ys_arr = [p1['y'] + (p2['y'] - p1['y']) * ((x - x_start)/chord_len) - depth * 4 * ((x - x_start)/chord_len) * (1 - (x - x_start)/chord_len) for x in xs_arr]
-            path = [[float(x), float(y)] for x, y in zip(xs_arr, ys_arr)]
-            metrics = calculate_interactive_geometry(np.array(path), p1, p2)
+        if fitted_poly is None:
+            # Aerodynamic parabolic curve spanning from luff to leech
+            c_depth = chord_proc * (0.12 - idx * 0.015)
+            x_mid = x_start_proc + chord_proc * 0.45
+            fitted_poly = np.polyfit([x_start_proc, x_mid, x_end_proc], [peak_y - 4, peak_y + c_depth, peak_y], 2)
             
-            p0_pt, p1_ctrl, p2_ctrl, p3_pt = compute_4pt_bspline_controls(p1, p2, metrics.get('camber', 11.5), metrics.get('draft_pos', 45.0))
-            detected_stripes.append({
-                'id': f'stripe_{idx+1}',
-                'label': f'Stripe #{idx+1} ({"Bottom" if idx==0 else "Mid" if idx==1 else "Top"})',
-                'color': colors[idx % len(colors)],
-                'p0': p0_pt,
-                'p1': p1_ctrl,
-                'p2': p2_ctrl,
-                'p3': p3_pt,
-                'path': path,
-                'mean_y': y_pos,
-                'metrics': metrics
-            })
-    else:
-        # Sort from Bottom (highest Y) to Top (lowest Y)
-        detected_stripes.sort(key=lambda s: s['mean_y'], reverse=True)
-        for idx, s in enumerate(detected_stripes):
-            s['id'] = f'stripe_{idx+1}'
-            s['label'] = f"Stripe #{idx+1} ({'Bottom' if idx==0 else 'Mid' if idx==1 else 'Top'})"
-            s['color'] = colors[idx % len(colors)]
+        eval_xs_proc = np.linspace(x_start_proc, x_end_proc, 70)
+        eval_ys_proc = np.polyval(fitted_poly, eval_xs_proc)
+        
+        # Map back to original coordinate space
+        eval_xs = eval_xs_proc / scale
+        eval_ys = eval_ys_proc / scale
+        path = [[float(x), float(y)] for x, y in zip(eval_xs, eval_ys)]
+        
+        p0_pt = {'x': float(eval_xs[0]), 'y': float(eval_ys[0])}
+        p3_pt = {'x': float(eval_xs[-1]), 'y': float(eval_ys[-1])}
+        
+        chord_len = math.hypot(p3_pt['x'] - p0_pt['x'], p3_pt['y'] - p0_pt['y']) + 1e-6
+        dx = p3_pt['x'] - p0_pt['x']
+        dy = p3_pt['y'] - p0_pt['y']
+        
+        dists = []
+        for px, py in path:
+            dist = (dy * px - dx * py + p3_pt['x'] * p0_pt['y'] - p3_pt['y'] * p0_pt['x']) / chord_len
+            dists.append(dist)
             
+        max_idx = int(np.argmax(np.abs(dists))) if dists else 0
+        max_depth = abs(dists[max_idx]) if dists else 0.0
+        camber_sign = 1.0 if dists[max_idx] >= 0 else -1.0
+        camber_pct = float((max_depth / chord_len) * 100.0)
+        draft_pos_pct = float((max_idx / max(1, len(path) - 1)) * 100.0)
+        
+        # Compute 4-point B-spline controls with signed camber
+        p0_ctrl, p1_ctrl, p2_ctrl, p3_ctrl = compute_4pt_bspline_controls(
+            p0_pt, p3_pt, max(5.0, camber_pct), draft_pos_pct, camber_sign
+        )
+        
+        max_pt = {'x': float(eval_xs[max_idx]), 'y': float(eval_ys[max_idx])}
+        
+        detected_stripes.append({
+            'id': f'stripe_{idx+1}',
+            'label': f'Stripe #{idx+1} ({b_label})',
+            'color': colors[idx % len(colors)],
+            'p0': p0_ctrl,
+            'p1': p1_ctrl,
+            'p2': p2_ctrl,
+            'p3': p3_ctrl,
+            'path': path,
+            'mean_y': float(np.mean(eval_ys)),
+            'metrics': {
+                'camber': round(camber_pct, 2),
+                'draft_pos': round(draft_pos_pct, 1),
+                'twist': round(idx * 3.5, 1),
+                'entry': 17.0,
+                'exit': 8.5,
+                'chord_len': round(chord_len, 1),
+                'max_point': max_pt,
+                'normalized_curve': [[(px - p0_pt['x'])/chord_len, (abs(d)/chord_len)*100] for (px, py), d in zip(path, dists)]
+            }
+        })
+        
     return {
         'success': True,
         'stripes': detected_stripes,
@@ -354,7 +353,6 @@ def autodetect_foot_stripes(image_bytes, sail_color='auto', stripe_color='auto',
         },
         'image_dimensions': {'width': int(orig_w), 'height': int(orig_h)}
     }
-
 
 def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color='auto', sensitivity=1.0):
     """
@@ -375,10 +373,16 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
     stripe_color_lower = str(stripe_color).lower().strip() if stripe_color else 'auto'
     sail_color_lower = str(sail_color).lower().strip() if sail_color else 'auto'
     mean_brightness = float(np.mean(gray))
-    is_dark_sail = (sail_color_lower in ['black', 'dark', 'carbon']) or (sail_color_lower == 'auto' and mean_brightness < 120)
+    is_dark_sail = (sail_color_lower in ['black', 'dark', 'carbon']) or (sail_color_lower == 'auto' and mean_brightness < 125)
     
-    # 1. Color Saliency
+    # 1. Saliency
     is_custom_hex = stripe_color_lower.startswith('#') or (len(stripe_color_lower) in [6, 3] and all(c in '0123456789abcdef' for c in stripe_color_lower))
+    
+    k_stripe = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 3))
+    tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_stripe).astype(np.float32)
+    blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_stripe).astype(np.float32)
+    blue_chroma = np.maximum(0, b.astype(np.float32) - np.maximum(r.astype(np.float32), g.astype(np.float32)))
+    red_chroma = np.maximum(0, r.astype(np.float32) - np.maximum(b.astype(np.float32), g.astype(np.float32)))
     
     if is_custom_hex:
         hex_clean = stripe_color_lower.lstrip('#')
@@ -393,24 +397,33 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
         delta_b = lab[:, :, 2].astype(np.float32) - tgt_lab[2]
         c_dist = np.sqrt(delta_L**2 + delta_a**2 + delta_b**2)
         saliency = np.maximum(0, 1.0 - (c_dist / 35.0)) * 100.0
-    elif stripe_color_lower == 'red' or (stripe_color_lower == 'auto' and is_dark_sail):
-        r_f = r.astype(np.float32)
-        g_f = g.astype(np.float32)
-        b_f = b.astype(np.float32)
-        r_diff = r_f - np.maximum(g_f, b_f)
-        a_chan = lab[:, :, 1].astype(np.float32)
-        saliency = (np.maximum(0, r_diff) * 2.0) + (np.maximum(0, a_chan - 128.0) * 1.5)
-    elif stripe_color_lower == 'blue' or (stripe_color_lower == 'auto' and not is_dark_sail):
-        b_f = b.astype(np.float32)
-        g_f = g.astype(np.float32)
-        r_f = r.astype(np.float32)
-        b_diff = b_f - np.maximum(g_f, r_f)
-        b_lab = 128.0 - lab[:, :, 2].astype(np.float32)
-        saliency = (np.maximum(0, b_diff) * 2.0) + (np.maximum(0, b_lab) * 1.5)
-    else:
-        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-        saliency = cv2.bitwise_not(clahe.apply(gray)).astype(np.float32)
-        
+    elif stripe_color_lower == 'red':
+        saliency = red_chroma * 2.5
+    elif stripe_color_lower == 'blue':
+        saliency = blue_chroma * 2.5
+    elif stripe_color_lower in ['black', 'dark']:
+        saliency = blackhat * 2.0
+    elif stripe_color_lower in ['white', 'light']:
+        saliency = tophat * 2.5
+    else:  # Auto: evaluate clicked region patch
+        w_patch = max(5, int(orig_w * 0.01))
+        x1_p, x2_p = max(0, cx - w_patch), min(orig_w, cx + w_patch)
+        y1_p, y2_p = max(0, cy - w_patch), min(orig_h, cy + w_patch)
+        patch_lab = lab[y1_p:y2_p, x1_p:x2_p]
+        if patch_lab.size > 0:
+            seed_L = np.mean(patch_lab[:, :, 0])
+            seed_a = np.mean(patch_lab[:, :, 1])
+            seed_b = np.mean(patch_lab[:, :, 2])
+            dL = (lab[:, :, 0].astype(np.float32) - seed_L) * 0.3
+            da = lab[:, :, 1].astype(np.float32) - seed_a
+            db = lab[:, :, 2].astype(np.float32) - seed_b
+            c_dist = np.sqrt(dL**2 + da**2 + db**2)
+            color_sal = np.maximum(0, 1.0 - (c_dist / 35.0)) * 50.0
+            ridge_sal = tophat if is_dark_sail else blackhat
+            saliency = color_sal + ridge_sal * 1.5
+        else:
+            saliency = tophat if is_dark_sail else blackhat
+            
     # 2. Local search around click point to lock onto exact stripe center
     win = int(max(25, orig_h * 0.06))
     x_min = max(0, cx - win)
@@ -439,7 +452,7 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
         y1 = max(0, curr_y - search_half_h)
         y2 = min(orig_h, curr_y + search_half_h)
         col = saliency[y1:y2, x]
-        if np.max(col) > 1.2:
+        if col.size > 0 and np.max(col) > 1.2:
             best_y = y1 + int(np.argmax(col))
             xs.insert(0, x)
             ys.insert(0, best_y)
@@ -454,7 +467,7 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
         y1 = max(0, curr_y - search_half_h)
         y2 = min(orig_h, curr_y + search_half_h)
         col = saliency[y1:y2, x]
-        if np.max(col) > 1.2:
+        if col.size > 0 and np.max(col) > 1.2:
             best_y = y1 + int(np.argmax(col))
             xs.append(x)
             ys.append(best_y)
@@ -475,17 +488,22 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
     p2 = {'x': float(eval_xs[-1]), 'y': float(eval_ys[-1])}
     path = [[float(x), float(y)] for x, y in zip(eval_xs, eval_ys)]
     
-    chord_len = np.hypot(p2['x'] - p1['x'], p2['y'] - p1['y'])
+    chord_len = math.hypot(p2['x'] - p1['x'], p2['y'] - p1['y']) + 1e-6
     dx = p2['x'] - p1['x']
     dy = p2['y'] - p1['y']
-    dists = [abs(dy * px - dx * py + p2['x'] * p1['y'] - p2['y'] * p1['x']) / (chord_len + 1e-6) for px, py in path]
+    dists = [(dy * px - dx * py + p2['x'] * p1['y'] - p2['y'] * p1['x']) / chord_len for px, py in path]
     
-    max_depth = float(np.max(dists)) if dists else 0.0
-    max_idx = int(np.argmax(dists)) if dists else 0
-    camber_pct = float((max_depth / (chord_len + 1e-6)) * 100.0)
+    max_idx = int(np.argmax(np.abs(dists))) if dists else 0
+    max_depth = abs(dists[max_idx]) if dists else 0.0
+    camber_sign = 1.0 if dists[max_idx] >= 0 else -1.0
+    camber_pct = float((max_depth / chord_len) * 100.0)
     draft_pos_pct = float((max_idx / max(1, len(path) - 1)) * 100.0)
     
-    p0_pt, p1_ctrl, p2_ctrl, p3_pt = compute_4pt_bspline_controls(p1, p2, camber_pct, draft_pos_pct)
+    p0_pt, p1_ctrl, p2_ctrl, p3_pt = compute_4pt_bspline_controls(
+        p1, p2, max(5.0, camber_pct), draft_pos_pct, camber_sign
+    )
+    
+    max_point = {'x': float(eval_xs[max_idx]), 'y': float(eval_ys[max_idx])}
     
     return {
         'success': True,
@@ -501,7 +519,8 @@ def snap_stripe_at_point(image_bytes, click_pt, sail_color='auto', stripe_color=
             'entry': 16.0,
             'exit': 8.0,
             'chord_len': round(chord_len, 1),
-            'normalized_curve': [[(px - p1['x'])/chord_len, (d/chord_len)*100] for (px, py), d in zip(path, dists)]
+            'max_point': max_point,
+            'normalized_curve': [[(px - p1['x'])/chord_len, (abs(d)/chord_len)*100] for (px, py), d in zip(path, dists)]
         }
     }
 
