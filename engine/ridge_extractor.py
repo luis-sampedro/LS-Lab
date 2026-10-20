@@ -72,8 +72,10 @@ def extract_stripe_saliency(img_bgr, sail_mask, is_dark_sail, stripe_color='auto
     lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2Lab)
     b, g, r = cv2.split(img_bgr)
     
-    # 1. Morphological Top-Hat and Black-Hat
-    k_stripe = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 3))
+    # 1. Morphological Top-Hat and Black-Hat with vertical kernels
+    # A vertical structuring element (e.g. 1x15 or 3x19) perfectly isolates thin
+    # horizontal-ish draft stripes by eroding vertically across their 3-8px thickness
+    k_stripe = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 17))
     tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_stripe).astype(np.float32)
     blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_stripe).astype(np.float32)
     

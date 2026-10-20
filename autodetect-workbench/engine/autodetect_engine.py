@@ -197,7 +197,8 @@ def run_autodetect_pipeline(
             'chord_len': round(m['chord_len'] * inv_scale, 1),
             'max_point': max_pt,
             'bowl_valid': m['bowl_valid'],
-            'bowl_orientation': m['bowl_orientation']
+            'bowl_orientation': m['bowl_orientation'],
+            'normalized_curve': m.get('normalized_curve', [])
         }
         
         order_val = s.get('order', 'mid')

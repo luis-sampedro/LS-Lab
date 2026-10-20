@@ -1842,6 +1842,9 @@ function setupCanvasEvents() {
         const mouse = getCanvasCoords(e);
         const imgPt = screenToImage(mouse.x, mouse.y);
         
+        const sbPos = document.getElementById('sb-cursor-pos');
+        if (sbPos) sbPos.innerText = `X: ${Math.round(imgPt.x)} px | Y: ${Math.round(imgPt.y)} px`;
+        
         if (camera.isPanning) {
             camera.panX = mouse.x - camera.startX;
             camera.panY = mouse.y - camera.startY;
@@ -2641,6 +2644,10 @@ function updateHUDMetrics() {
     const badgeDraft = document.getElementById('badge-stripe-draft');
     if (badgeCamber) badgeCamber.innerText = `${active.metrics.camber || '--'}%`;
     if (badgeDraft) badgeDraft.innerText = `${active.metrics.draft_pos || '--'}%`;
+    
+    if (typeof updateStatusBarMetrics === 'function') {
+        updateStatusBarMetrics(active);
+    }
 }
 
 // ===== ANALYTICS STUDIO STATE =====
@@ -3252,26 +3259,379 @@ window.handleLabelPhoto = async function(file) {
     buildReportPreview();
 };
 
+// ---------------- COLOR UTILITY & OFFSCREEN CHART GENERATION ----------------
+function hexToRgba(hex, alpha) {
+    if (!hex) return `rgba(56, 189, 248, ${alpha})`;
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    if (isNaN(num)) return `rgba(56, 189, 248, ${alpha})`;
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function updateStatusBarMetrics(active) {
+    if (!active || !active.metrics) return;
+    const m = active.metrics;
+    const cEl = document.getElementById('sb-metrics-camber');
+    const dEl = document.getElementById('sb-metrics-draft');
+    const tEl = document.getElementById('sb-metrics-twist');
+    const sEl = document.getElementById('sb-active-stripe');
+    if (cEl) cEl.innerText = `Camber: ${m.camber ?? '--'}%`;
+    if (dEl) dEl.innerText = `Draft: ${m.draft_pos ?? '--'}%`;
+    if (tEl) tEl.innerText = `Twist: ${m.twist ?? '--'}°`;
+    if (sEl) sEl.innerText = `Active: ${active.label || 'Stripe'}`;
+}
+
+function getOrGenerateCamberSnapshot() {
+    try {
+        if (typeof camberChart !== 'undefined' && camberChart && typeof camberChart.toBase64Image === 'function') {
+            const img = camberChart.toBase64Image();
+            if (img && img.length > 500) return img;
+        }
+    } catch(e) {}
+
+    if (!scanData.stripes || !scanData.stripes.length) return null;
+    try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 720;
+        offCanvas.height = 200;
+        const ctx = offCanvas.getContext('2d');
+        const isEs = isSpanishLang();
+        
+        const datasets = scanData.stripes.map(s => {
+            let pts = [];
+            if (s.metrics && Array.isArray(s.metrics.normalized_curve) && s.metrics.normalized_curve.length > 0) {
+                pts = s.metrics.normalized_curve.map(pt => ({ x: pt.x, y: pt.y }));
+            } else {
+                const cv = parseFloat(s.metrics?.camber ?? 10.0);
+                const dp = parseFloat(s.metrics?.draft_pos ?? 40.0) / 100.0;
+                for (let i = 0; i <= 40; i++) {
+                    const x = (i / 40) * 100;
+                    const x_norm = x / 100.0;
+                    let y = 0;
+                    if (x_norm <= dp) {
+                        y = cv * Math.sin((Math.PI / 2) * (x_norm / Math.max(0.01, dp)));
+                    } else {
+                        y = cv * Math.cos((Math.PI / 2) * ((x_norm - dp) / Math.max(0.01, 1.0 - dp)));
+                    }
+                    pts.push({ x: parseFloat(x.toFixed(1)), y: parseFloat(Math.max(0, y).toFixed(2)) });
+                }
+            }
+            return {
+                label: `${s.label} (${s.metrics?.camber ?? 0}% @ ${s.metrics?.draft_pos ?? 0}%)`,
+                data: pts,
+                borderColor: s.color || '#38bdf8',
+                backgroundColor: hexToRgba(s.color || '#38bdf8', 0.12),
+                borderWidth: 2.5,
+                pointRadius: 0,
+                fill: true,
+                tension: 0.35
+            };
+        });
+
+        const tempChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9 } } }
+                },
+                scales: {
+                    x: { type: 'linear', min: 0, max: 100, title: { display: true, text: isEs ? '% Cuerda (Gratil = 0% → Baluma = 100%)' : '% Chord (Luff = 0% → Leech = 100%)', font: { size: 9 } } },
+                    y: { min: 0, title: { display: true, text: isEs ? '% Profundidad Camber' : '% Camber Depth', font: { size: 9 } } }
+                }
+            }
+        });
+        const url = offCanvas.toDataURL('image/png');
+        tempChart.destroy();
+        return url;
+    } catch(err) {
+        console.warn('Offscreen camber chart failed:', err);
+        return null;
+    }
+}
+
+function getOrGenerateBarSnapshot() {
+    try {
+        if (typeof draftBarChart !== 'undefined' && draftBarChart && typeof draftBarChart.toBase64Image === 'function') {
+            const img = draftBarChart.toBase64Image();
+            if (img && img.length > 500) return img;
+        }
+    } catch(e) {}
+    if (!scanData.stripes || !scanData.stripes.length) return null;
+    try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 360;
+        offCanvas.height = 180;
+        const ctx = offCanvas.getContext('2d');
+        const isEs = isSpanishLang();
+        const labels = scanData.stripes.map(s => s.label);
+        const camberData = scanData.stripes.map(s => parseFloat(s.metrics?.camber ?? 0));
+        const draftData = scanData.stripes.map(s => parseFloat(s.metrics?.draft_pos ?? 0));
+
+        const tempChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: isEs ? 'Camber Máx %' : 'Max Camber %', data: camberData, backgroundColor: '#0284c7' },
+                    { label: isEs ? 'Pos Calado %' : 'Draft Pos %', data: draftData, backgroundColor: '#f59e0b' }
+                ]
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 9 } } } },
+                scales: {
+                    x: { ticks: { font: { size: 9 } } },
+                    y: { min: 0, ticks: { font: { size: 9 } } }
+                }
+            }
+        });
+        const url = offCanvas.toDataURL('image/png');
+        tempChart.destroy();
+        return url;
+    } catch(err) {
+        return null;
+    }
+}
+
+function getOrGenerateRadarSnapshot() {
+    try {
+        if (typeof radarChart !== 'undefined' && radarChart && typeof radarChart.toBase64Image === 'function') {
+            const img = radarChart.toBase64Image();
+            if (img && img.length > 500) return img;
+        }
+    } catch(e) {}
+    if (!scanData.stripes || !scanData.stripes.length) return null;
+    try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 360;
+        offCanvas.height = 180;
+        const ctx = offCanvas.getContext('2d');
+        const isEs = isSpanishLang();
+
+        const datasets = scanData.stripes.map(s => {
+            const m = s.metrics || {};
+            const cv = parseFloat(m.camber ?? 0);
+            const dp = parseFloat(m.draft_pos ?? 0);
+            const tw = Math.abs(parseFloat(m.twist ?? 0));
+            const en = parseFloat(m.entry ?? 0);
+            const ex = parseFloat(m.exit ?? 0);
+            return {
+                label: s.label,
+                data: [cv * 5, dp * 1.5, tw * 5, en * 2, ex * 3],
+                borderColor: s.color || '#38bdf8',
+                backgroundColor: hexToRgba(s.color || '#38bdf8', 0.15),
+                borderWidth: 2,
+                pointRadius: 2
+            };
+        });
+
+        const tempChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: isEs ? ['Camber x5', 'Calado x1.5', 'Giro x5', 'Entrada x2', 'Salida x3'] : ['Camber x5', 'Draft x1.5', 'Twist x5', 'Entry x2', 'Exit x3'],
+                datasets
+            },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                scales: { r: { min: 0, ticks: { display: false }, pointLabels: { font: { size: 8 } } } }
+            }
+        });
+        const url = offCanvas.toDataURL('image/png');
+        tempChart.destroy();
+        return url;
+    } catch(e) {
+        return null;
+    }
+}
+
+function getOrGenerateScatterSnapshot() {
+    try {
+        if (typeof shapeIndexChart !== 'undefined' && shapeIndexChart && typeof shapeIndexChart.toBase64Image === 'function') {
+            const img = shapeIndexChart.toBase64Image();
+            if (img && img.length > 500) return img;
+        }
+    } catch(e) {}
+    if (!scanData.stripes || !scanData.stripes.length) return null;
+    try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 720;
+        offCanvas.height = 180;
+        const ctx = offCanvas.getContext('2d');
+        const isEs = isSpanishLang();
+
+        const refCamber = parseFloat(document.getElementById('ref-camber')?.value ?? '12.5');
+        const refDraft  = parseFloat(document.getElementById('ref-draft')?.value ?? '40');
+
+        const datasets = scanData.stripes.map(s => ({
+            label: s.label,
+            data: [{ x: parseFloat(s.metrics?.draft_pos ?? 40), y: parseFloat(s.metrics?.camber ?? 12) }],
+            backgroundColor: s.color || '#38bdf8',
+            borderColor: '#ffffff',
+            borderWidth: 1.5,
+            pointRadius: 7
+        }));
+
+        datasets.push({
+            label: isEs ? '🎯 Objetivo' : '🎯 Target',
+            data: [{ x: refDraft, y: refCamber }],
+            backgroundColor: '#10b981',
+            borderColor: '#059669',
+            borderWidth: 2,
+            pointRadius: 9,
+            pointStyle: 'crossRot'
+        });
+
+        const tempChart = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets },
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 9 } } } },
+                scales: {
+                    x: { min: 25, max: 60, title: { display: true, text: isEs ? 'Posición Calado % (Draft Pos)' : 'Draft Position %', font: { size: 9 } } },
+                    y: { min: 4, max: 20, title: { display: true, text: isEs ? 'Profundidad Camber %' : 'Max Camber %', font: { size: 9 } } }
+                }
+            }
+        });
+        const url = offCanvas.toDataURL('image/png');
+        tempChart.destroy();
+        return url;
+    } catch(e) {
+        return null;
+    }
+}
+
+function renderSailPhotoSnapshot() {
+    try {
+        if (canvas && scanData.imageObj && scanData.stripes.length > 0) {
+            const data = canvas.toDataURL('image/jpeg', 0.88);
+            if (data && data.length > 2000) return data;
+        }
+    } catch(e) {}
+
+    if (!scanData.imageObj && !scanData.imageSrc) return null;
+    try {
+        const img = scanData.imageObj || new Image();
+        if (!scanData.imageObj && scanData.imageSrc) {
+            img.src = scanData.imageSrc;
+        }
+        if (!img.naturalWidth && !img.width) return scanData.imageSrc || null;
+
+        const offCanvas = document.createElement('canvas');
+        const maxW = 900;
+        const scale = Math.min(1.0, maxW / (img.naturalWidth || img.width));
+        offCanvas.width = (img.naturalWidth || img.width) * scale;
+        offCanvas.height = (img.naturalHeight || img.height) * scale;
+        const ctx = offCanvas.getContext('2d');
+
+        ctx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+
+        if (Array.isArray(scanData.stripes)) {
+            scanData.stripes.forEach(s => {
+                const color = s.color || '#38bdf8';
+                const p0 = s.p0 || s.luff;
+                const p3 = s.p3 || s.leech;
+                if (!p0 || !p3) return;
+
+                const sx0 = p0.x * scale;
+                const sy0 = p0.y * scale;
+                const sx3 = p3.x * scale;
+                const sy3 = p3.y * scale;
+
+                // Chord line
+                ctx.beginPath();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.moveTo(sx0, sy0);
+                ctx.lineTo(sx3, sy3);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Curve line
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                if (Array.isArray(s.raw_points) && s.raw_points.length > 2) {
+                    ctx.moveTo(s.raw_points[0].x * scale, s.raw_points[0].y * scale);
+                    for (let i = 1; i < s.raw_points.length; i++) {
+                        ctx.lineTo(s.raw_points[i].x * scale, s.raw_points[i].y * scale);
+                    }
+                } else if (s.p1 && s.p2) {
+                    ctx.moveTo(sx0, sy0);
+                    ctx.bezierCurveTo(s.p1.x * scale, s.p1.y * scale, s.p2.x * scale, s.p2.y * scale, sx3, sy3);
+                } else {
+                    ctx.moveTo(sx0, sy0);
+                    ctx.lineTo(sx3, sy3);
+                }
+                ctx.stroke();
+
+                // Luff circle (green)
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.arc(sx0, sy0, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Leech circle (red)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(sx3, sy3, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Stripe label pill
+                const midX = (sx0 + sx3) / 2;
+                const midY = (sy0 + sy3) / 2 - 12;
+                const labelText = `${s.label || 'Stripe'}: ${s.metrics?.camber ?? '--'}%`;
+                ctx.font = 'bold 11px sans-serif';
+                const textWidth = ctx.measureText(labelText).width;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fillRect(midX - textWidth / 2 - 5, midY - 11, textWidth + 10, 16);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(midX - textWidth / 2 - 5, midY - 11, textWidth + 10, 16);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(labelText, midX - textWidth / 2, midY + 1);
+            });
+        }
+
+        return offCanvas.toDataURL('image/jpeg', 0.88);
+    } catch(err) {
+        console.warn('Offscreen sail photo overlay failed:', err);
+        return scanData.imageSrc || null;
+    }
+}
+
+// ---------------- REPORT PRESET & SYNC ----------------
 window.setReportPreset = function(preset) {
     const setCheck = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.checked = val;
     };
+    const allMods = ['rep-mod-summary', 'rep-mod-aero', 'rep-mod-curves', 'rep-mod-barchart', 'rep-mod-radar', 'rep-mod-scatter', 'rep-mod-canvas', 'rep-mod-label', 'rep-mod-rig', 'rep-mod-notes', 'rep-mod-methodology', 'rep-mod-signoff'];
+    
     if (preset === 'full') {
-        ['rep-mod-summary', 'rep-mod-aero', 'rep-mod-curves', 'rep-mod-barchart', 'rep-mod-radar', 'rep-mod-scatter', 'rep-mod-canvas', 'rep-mod-label', 'rep-mod-rig', 'rep-mod-notes', 'rep-mod-methodology'].forEach(id => setCheck(id, true));
+        allMods.forEach(id => setCheck(id, true));
     } else if (preset === 'executive') {
+        allMods.forEach(id => setCheck(id, false));
         setCheck('rep-mod-summary', true);
         setCheck('rep-mod-aero', true);
         setCheck('rep-mod-curves', true);
-        setCheck('rep-mod-barchart', false);
-        setCheck('rep-mod-radar', false);
-        setCheck('rep-mod-scatter', false);
-        setCheck('rep-mod-canvas', false);
-        setCheck('rep-mod-label', true);
-        setCheck('rep-mod-rig', false);
+        setCheck('rep-mod-canvas', true);
         setCheck('rep-mod-notes', true);
-        setCheck('rep-mod-methodology', false);
+        setCheck('rep-mod-signoff', true);
     } else if (preset === 'aero') {
+        allMods.forEach(id => setCheck(id, false));
         setCheck('rep-mod-summary', true);
         setCheck('rep-mod-aero', true);
         setCheck('rep-mod-curves', true);
@@ -3279,12 +3639,17 @@ window.setReportPreset = function(preset) {
         setCheck('rep-mod-radar', true);
         setCheck('rep-mod-scatter', true);
         setCheck('rep-mod-canvas', true);
-        setCheck('rep-mod-label', false);
-        setCheck('rep-mod-rig', false);
-        setCheck('rep-mod-notes', false);
-        setCheck('rep-mod-methodology', false);
+    } else if (preset === 'loft') {
+        allMods.forEach(id => setCheck(id, false));
+        setCheck('rep-mod-summary', true);
+        setCheck('rep-mod-curves', true);
+        setCheck('rep-mod-canvas', true);
+        setCheck('rep-mod-label', true);
+        setCheck('rep-mod-rig', true);
+        setCheck('rep-mod-notes', true);
+        setCheck('rep-mod-signoff', true);
     } else if (preset === 'none') {
-        ['rep-mod-summary', 'rep-mod-aero', 'rep-mod-curves', 'rep-mod-barchart', 'rep-mod-radar', 'rep-mod-scatter', 'rep-mod-canvas', 'rep-mod-label', 'rep-mod-rig', 'rep-mod-notes', 'rep-mod-methodology'].forEach(id => setCheck(id, false));
+        allMods.forEach(id => setCheck(id, false));
     }
     buildReportPreview();
 };
@@ -3294,7 +3659,6 @@ function syncSpecsFromInputs() {
     const sName = document.getElementById('specSailName')?.value || document.getElementById('inputSailName')?.value || '';
     const bName = document.getElementById('specBoatName')?.value || document.getElementById('inputBoatModel')?.value || '';
     
-    // Cross-populate if one is filled
     if (sNum) {
         if (document.getElementById('specSailNumber')) document.getElementById('specSailNumber').value = sNum;
         if (document.getElementById('inputSailNumber')) document.getElementById('inputSailNumber').value = sNum;
@@ -3314,6 +3678,7 @@ function syncSpecsFromInputs() {
     scanData.boatYear = document.getElementById('specBoatYear')?.value || '';
     scanData.sailmaker = document.getElementById('specSailmaker')?.value || '';
     scanData.certificateType = document.getElementById('specCertificate')?.value || 'ORC';
+    scanData.analystName = document.getElementById('specAnalystName')?.value || 'L3S Aero Lab';
     
     scanData.dimensions = {
         hlu: document.getElementById('dim_hlu')?.value || '',
@@ -3336,6 +3701,7 @@ function syncSpecsFromInputs() {
     };
 }
 
+// ---------------- BUILD INDUSTRY PDF REPORT PREVIEW ----------------
 window.buildReportPreview = function() {
     syncSpecsFromInputs();
     const sheet = document.getElementById('print-report-sheet');
@@ -3353,31 +3719,26 @@ window.buildReportPreview = function() {
     const incRig         = document.getElementById('rep-mod-rig')?.checked ?? true;
     const incNotes       = document.getElementById('rep-mod-notes')?.checked ?? true;
     const incMethodology = document.getElementById('rep-mod-methodology')?.checked ?? false;
+    const incSignoff     = document.getElementById('rep-mod-signoff')?.checked ?? true;
     const notes          = document.getElementById('rep-learning-points')?.value || '';
 
-    const dateStr  = new Date().toLocaleDateString(isEs ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const isPort   = (scanData.tack === 'port');
-    const tackLabel = isPort ? (isEs ? 'BABOR' : 'PORT') : (isEs ? 'ESTRIBOR' : 'STBD');
-    const tackColor = isPort ? '#ef4444' : '#10b981';
-    const tackBg    = isPort ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+    const themeColor     = document.getElementById('rep-theme-color')?.value || '#0284c7';
+    const dateStr        = new Date().toLocaleDateString(isEs ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const isPort         = (scanData.tack === 'port');
+    const tackLabel      = isPort ? (isEs ? 'BABOR' : 'PORT') : (isEs ? 'ESTRIBOR' : 'STBD');
+    const tackColor      = isPort ? '#ef4444' : '#10b981';
+    const tackBg         = isPort ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
 
-    // Target reference values from Step 3 toolbar
     const refCamber = parseFloat(document.getElementById('ref-camber')?.value ?? '12.5');
     const refDraft  = parseFloat(document.getElementById('ref-draft')?.value ?? '40');
     const refEntry  = parseFloat(document.getElementById('ref-entry')?.value ?? '18');
 
-    // Helper: capture a Chart.js canvas snapshot
-    const snapChart = (chartObj) => {
-        try { if (chartObj && typeof chartObj.toBase64Image === 'function') return chartObj.toBase64Image(); } catch(e) {}
-        return null;
-    };
-
     // ── PAGE 1 HEADER ───────────────────────────────────────────────────────
     const makeMainHeader = () => `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid ${themeColor}; padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
             <div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-                    <h1 style="font-size: 1.5rem; color: #0284c7; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
+                    <h1 style="font-size: 1.45rem; color: ${themeColor}; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
                         ${isEs ? 'Informe de Rendimiento L3S Sail Scan' : 'L3S Sail Scan Performance Report'}
                     </h1>
                     <span style="font-size: 0.8rem; font-weight: 900; letter-spacing: 2px; color: ${tackColor}; background: ${tackBg}; border: 1.5px solid ${tackColor}; padding: 2px 8px; border-radius: 4px;">${tackLabel}</span>
@@ -3404,9 +3765,9 @@ window.buildReportPreview = function() {
 
     // ── RUNNING HEADER (FOR PAGE 2+) ───────────────────────────────────────
     const makeRunningHeader = (pageTitle) => `
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #64748b;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #64748b;">
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: 800; color: #0284c7; text-transform: uppercase;">L3S Sail Scan</span>
+                <span style="font-weight: 800; color: ${themeColor}; text-transform: uppercase;">L3S Sail Scan</span>
                 <span>•</span>
                 <span>${pageTitle || (isEs ? 'Análisis Aerodinámico' : 'Aerodynamic Analysis')}</span>
             </div>
@@ -3415,8 +3776,6 @@ window.buildReportPreview = function() {
             </div>
         </div>
     `;
-
-    // ── SECTION HTML BUILDERS ──────────────────────────────────────────────
 
     // Group 1: Section 1 (Summary & Table)
     let s1Html = '';
@@ -3430,7 +3789,7 @@ window.buildReportPreview = function() {
                     <thead>
                         <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
                             <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Banda' : 'Stripe'}</th>
-                            <th style="padding: 5px 6px; color: #0284c7;">${isEs ? 'Camber Máx' : 'Max Camber'}</th>
+                            <th style="padding: 5px 6px; color: ${themeColor};">${isEs ? 'Camber Máx' : 'Max Camber'}</th>
                             <th style="padding: 5px 6px; color: #d97706;">${isEs ? 'Pos Calado' : 'Draft Pos'}</th>
                             <th style="padding: 5px 6px; color: #059669;">${isEs ? 'Giro (Twist)' : 'Twist'}</th>
                             <th style="padding: 5px 6px; color: #475569;">${isEs ? 'Entrada °' : 'Entry °'}</th>
@@ -3456,7 +3815,7 @@ window.buildReportPreview = function() {
                                     <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:${s.color}; margin-right:4px;"></span>
                                     ${s.label}
                                 </td>
-                                <td style="padding: 5px 6px; font-weight: 700; color: #0284c7; background: ${cBg};">${m.camber ?? '--'}%</td>
+                                <td style="padding: 5px 6px; font-weight: 700; color: ${themeColor}; background: ${cBg};">${m.camber ?? '--'}%</td>
                                 <td style="padding: 5px 6px; font-weight: 700; color: #d97706; background: ${dBg};">${m.draft_pos ?? '--'}%</td>
                                 <td style="padding: 5px 6px; color: #059669;">${m.twist ?? '--'}°</td>
                                 <td style="padding: 5px 6px;">${m.entry ?? '--'}°</td>
@@ -3468,7 +3827,7 @@ window.buildReportPreview = function() {
                     </tbody>
                 </table>
                 <div style="margin-top: 4px; font-size: 0.68rem; color: #94a3b8;">
-                    ${isEs ? '🟢 En rango objetivo  🟡 Próximo (&lt;3% camber / &lt;7% calado)  🔴 Requiere ajuste' : '🟢 Within target  🟡 Close (&lt;3% camber / &lt;7% draft deviation)  🔴 Review required'}
+                    ${isEs ? '🟢 En rango objetivo  🟡 Próximo (<3% camber / <7% calado)  🔴 Requiere ajuste' : '🟢 Within target  🟡 Close (<3% camber / <7% draft deviation)  🔴 Review required'}
                 </div>
             </div>
         `;
@@ -3511,16 +3870,16 @@ window.buildReportPreview = function() {
     // Group 1: Section 3 (Camber Profile Curves)
     let s3Html = '';
     if (incCurves) {
-        const snap = snapChart(camberChart);
+        const snap = getOrGenerateCamberSnapshot();
         s3Html = `
             <div style="margin-bottom: 1.2rem;">
                 <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
                     3. ${isEs ? 'Perfiles de Camber (% Cuerda vs % Profundidad)' : 'Camber Profile Curves (% Chord vs % Depth)'}
                 </h3>
-                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 110px; display: flex; align-items: center; justify-content: center;">
+                <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 120px; display: flex; align-items: center; justify-content: center;">
                     ${snap
-                        ? `<img src="${snap}" style="width: 100%; max-height: 180px; object-fit: contain;">`
-                        : `<div style="font-size: 0.78rem; color: #94a3b8; text-align: center;">📊 ${isEs ? 'Abre el Paso 3 para capturar el gráfico' : 'Open Step 3 to generate chart snapshot'}</div>`
+                        ? `<img src="${snap}" style="width: 100%; max-height: 190px; object-fit: contain;">`
+                        : `<div style="font-size: 0.78rem; color: #94a3b8; text-align: center;">📊 ${isEs ? 'Trazando curvas de camber...' : 'Tracing camber profile curves...'}</div>`
                     }
                 </div>
             </div>
@@ -3530,8 +3889,8 @@ window.buildReportPreview = function() {
     // Group 2: Section 4 (Bar Chart & Radar)
     let s4Html = '';
     if (incBarChart || incRadar) {
-        const snapB = incBarChart ? snapChart(draftBarChart) : null;
-        const snapR = incRadar ? snapChart(radarChart) : null;
+        const snapB = incBarChart ? getOrGenerateBarSnapshot() : null;
+        const snapR = incRadar ? getOrGenerateRadarSnapshot() : null;
         s4Html = `
             <div style="margin-bottom: 1.2rem; display: grid; grid-template-columns: ${(incBarChart && incRadar) ? '1fr 1fr' : '1fr'}; gap: 0.8rem; align-items: start;">
                 ${incBarChart ? `
@@ -3541,8 +3900,8 @@ window.buildReportPreview = function() {
                     </h3>
                     <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
                         ${snapB
-                            ? `<img src="${snapB}" style="width: 100%; max-height: 150px; object-fit: contain;">`
-                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre Paso 3 primero' : 'Open Step 3 first'}</div>`
+                            ? `<img src="${snapB}" style="width: 100%; max-height: 155px; object-fit: contain;">`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Generando barras...' : 'Generating bar chart...'}</div>`
                         }
                     </div>
                 </div>` : ''}
@@ -3553,8 +3912,8 @@ window.buildReportPreview = function() {
                     </h3>
                     <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
                         ${snapR
-                            ? `<img src="${snapR}" style="width: 100%; max-height: 150px; object-fit: contain;">`
-                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre Paso 3 primero' : 'Open Step 3 first'}</div>`
+                            ? `<img src="${snapR}" style="width: 100%; max-height: 155px; object-fit: contain;">`
+                            : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Generando radar...' : 'Generating radar...'}</div>`
                         }
                     </div>
                 </div>` : ''}
@@ -3565,7 +3924,7 @@ window.buildReportPreview = function() {
     // Group 2: Section 5 (Shape Index Scatter)
     let s5Html = '';
     if (incScatter) {
-        const snap = snapChart(shapeIndexChart);
+        const snap = getOrGenerateScatterSnapshot();
         s5Html = `
             <div style="margin-bottom: 1.2rem;">
                 <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
@@ -3574,8 +3933,8 @@ window.buildReportPreview = function() {
                 </h3>
                 <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; background: #fff; min-height: 100px; display: flex; align-items: center; justify-content: center;">
                     ${snap
-                        ? `<img src="${snap}" style="width: 100%; max-height: 150px; object-fit: contain;">`
-                        : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Abre el Paso 3 para generar el gráfico' : 'Open Step 3 first to generate scatter chart'}</div>`
+                        ? `<img src="${snap}" style="width: 100%; max-height: 155px; object-fit: contain;">`
+                        : `<div style="font-size: 0.72rem; color: #94a3b8; text-align: center;">${isEs ? 'Generando dispersión...' : 'Generating scatter chart...'}</div>`
                     }
                 </div>
             </div>
@@ -3585,17 +3944,15 @@ window.buildReportPreview = function() {
     // Group 2: Section 6 (Sail Photo & Canvas Overlay)
     let s6Html = '';
     if (incCanvas) {
-        let canvasSnap = null;
-        try { if (canvas && scanData.imageObj) canvasSnap = canvas.toDataURL('image/jpeg', 0.85); } catch(e) {}
-        if (!canvasSnap && scanData.imageSrc) canvasSnap = scanData.imageSrc;
+        const canvasSnap = renderSailPhotoSnapshot();
         if (canvasSnap) {
             s6Html = `
                 <div style="margin-bottom: 1.2rem;">
                     <h3 style="font-size: 0.92rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.5rem; font-weight: 700;">
                         6. ${isEs ? 'Fotografía de Vela y Trazado de Bandas' : 'Sail Photo & Traced Draft Stripes Overlay'}
                     </h3>
-                    <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #0b0f17; max-height: 230px; display: flex; align-items: center; justify-content: center;">
-                        <img src="${canvasSnap}" style="max-width: 100%; max-height: 230px; object-fit: contain;">
+                    <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #0b0f17; max-height: 240px; display: flex; align-items: center; justify-content: center;">
+                        <img src="${canvasSnap}" style="max-width: 100%; max-height: 240px; object-fit: contain;">
                     </div>
                 </div>
             `;
@@ -3623,7 +3980,7 @@ window.buildReportPreview = function() {
                         <div>HTW (3/4): <strong>${scanData.dimensions.htw || '1.46'} m</strong></div>
                         <div>HUW (7/8): <strong>${scanData.dimensions.huw || '0.77'} m</strong></div>
                         <div>HB (${isEs ? 'Pena' : 'Head'}): <strong>${scanData.dimensions.hb || '0.108'} m</strong></div>
-                        <div>Loft: <strong>${scanData.sailmaker || 'OneSails'}</strong></div>
+                        <div>Loft: <strong>${scanData.sailmaker || 'Master Loft'}</strong></div>
                     </div>
                 </div>
             </div>
@@ -3654,7 +4011,7 @@ window.buildReportPreview = function() {
                 <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 0.6rem; font-weight: 700;">
                     9. ${isEs ? 'Recomendaciones del Trimmer y Entrenador' : 'Trimmer & Coach Recommendations'}
                 </h3>
-                <div style="font-size: 0.8rem; color: #334155; line-height: 1.45; background: #fafafa; border-left: 3px solid #0284c7; padding: 7px 10px; border-radius: 0 4px 4px 0;">
+                <div style="font-size: 0.8rem; color: #334155; line-height: 1.45; background: #fafafa; border-left: 3px solid ${themeColor}; padding: 7px 10px; border-radius: 0 4px 4px 0;">
                     ${notes.replace(/\n/g, '<br>')}
                 </div>
             </div>
@@ -3670,7 +4027,7 @@ window.buildReportPreview = function() {
                 <h3 style="font-size: 0.92rem; color: #0f172a; padding-bottom: 3px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
                     10. ${isEs ? 'Metodología y Glosario de Variables' : 'Measurement Methodology & Glossary'}
                     <a href="${methodUrl}" target="_blank"
-                       style="font-size: 0.68rem; font-weight: 600; color: #0284c7; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 7px; border-radius: 10px; text-decoration: none; white-space: nowrap;">
+                       style="font-size: 0.68rem; font-weight: 600; color: ${themeColor}; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 7px; border-radius: 10px; text-decoration: none; white-space: nowrap;">
                         📖 ${isEs ? 'Ver Completa →' : 'Full Methodology →'}
                     </a>
                 </h3>
@@ -3681,7 +4038,7 @@ window.buildReportPreview = function() {
                 </p>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 0.72rem;">
                     <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 6px 8px;">
-                        <div style="font-weight: 800; color: #0284c7; margin-bottom: 2px;">📐 Max Camber %</div>
+                        <div style="font-weight: 800; color: ${themeColor}; margin-bottom: 2px;">📐 Max Camber %</div>
                         <div style="color: #334155; line-height: 1.3;">${isEs ? 'Profundidad perpendicular máxima sobre la cuerda.' : 'Maximum perpendicular depth from chord line.'}</div>
                     </div>
                     <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 6px 8px;">
@@ -3697,25 +4054,42 @@ window.buildReportPreview = function() {
         `;
     }
 
+    // Group 3: Section 11 (Signature & Approval Block)
+    let s11Html = '';
+    if (incSignoff) {
+        s11Html = `
+            <div style="margin-top: 1.5rem; border-top: 1.5px solid #cbd5e1; padding-top: 0.8rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; font-size: 0.74rem;">
+                <div style="border-bottom: 1px dashed #94a3b8; padding-bottom: 1.8rem;">
+                    <span style="color: #64748b;">${isEs ? 'Analista / Trimmer:' : 'Lead Trimmer / Analyst:'}</span>
+                    <div style="font-weight: 700; margin-top: 4px; color: #0f172a;">${scanData.analystName || 'L3S Aero Lab'}</div>
+                </div>
+                <div style="border-bottom: 1px dashed #94a3b8; padding-bottom: 1.8rem;">
+                    <span style="color: #64748b;">${isEs ? 'Aprobación Velero / Loft:' : 'Loft Sailmaker Approval:'}</span>
+                    <div style="font-weight: 700; margin-top: 4px; color: #0f172a;">${scanData.sailmaker || 'Master Loft'}</div>
+                </div>
+                <div style="border-bottom: 1px dashed #94a3b8; padding-bottom: 1.8rem;">
+                    <span style="color: #64748b;">${isEs ? 'Firma y Sello Oficial:' : 'Official Seal / Signature:'}</span>
+                    <div style="font-weight: 700; margin-top: 4px; color: ${themeColor};">VERIFIED L3S-PRO</div>
+                </div>
+            </div>
+        `;
+    }
+
     // ── DYNAMIC PAGE PACKING LOGIC ──────────────────────────────────────────
     const group1Content = [s1Html, s2Html, s3Html].filter(Boolean).join('');
     const group2Content = [s4Html, s5Html, s6Html].filter(Boolean).join('');
-    const group3Content = [s7Html, s8Html, s9Html, s10Html].filter(Boolean).join('');
+    const group3Content = [s7Html, s8Html, s9Html, s10Html, s11Html].filter(Boolean).join('');
 
     const pageBuckets = [];
-
-    // Compact mode: if very few modules are enabled, pack all into Page 1
-    const totalModulesCount = [s1Html, s2Html, s3Html, s4Html, s5Html, s6Html, s7Html, s8Html, s9Html, s10Html].filter(Boolean).length;
+    const totalModulesCount = [s1Html, s2Html, s3Html, s4Html, s5Html, s6Html, s7Html, s8Html, s9Html, s10Html, s11Html].filter(Boolean).length;
 
     if (totalModulesCount <= 3) {
-        // Fits comfortably on a single A4 page
         pageBuckets.push({
             title: isEs ? 'Resumen de Rendimiento' : 'Performance Summary',
             isFirst: true,
             content: group1Content + group2Content + group3Content
         });
     } else {
-        // Multi-page division
         if (group1Content) {
             pageBuckets.push({
                 title: isEs ? 'Métricas de Camber' : 'Camber Distribution',
@@ -3753,7 +4127,6 @@ window.buildReportPreview = function() {
         pageCountLbl.innerText = `${totalPages} ${isEs ? (totalPages === 1 ? 'Página' : 'Páginas') : (totalPages === 1 ? 'Page' : 'Pages')} (A4)`;
     }
 
-    // Render individual .report-page containers with running headers & footers
     let fullHtml = '';
     pageBuckets.forEach((p, idx) => {
         const pageNum = idx + 1;
@@ -4312,3 +4685,271 @@ function showToast(msg) {
         setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 }
+
+// ---------------- DESKTOP MENUS, BENCHMARKS, ZOOM & EXPORTS ----------------
+let currentReportZoom = 1.0;
+
+window.setReportZoom = function(delta, absolute) {
+    if (absolute) {
+        currentReportZoom = absolute;
+    } else if (delta === 'fit') {
+        const wrapper = document.getElementById('report-zoom-wrapper');
+        if (wrapper) {
+            const availW = wrapper.clientWidth - 40;
+            currentReportZoom = Math.min(1.2, Math.max(0.4, availW / 820));
+        }
+    } else {
+        currentReportZoom = Math.max(0.4, Math.min(1.8, currentReportZoom + delta));
+    }
+    const sheet = document.getElementById('print-report-sheet');
+    const badge = document.getElementById('lbl-report-zoom');
+    if (sheet) {
+        sheet.style.transform = `scale(${currentReportZoom})`;
+        sheet.style.transformOrigin = 'top center';
+    }
+    if (badge) {
+        badge.innerText = `${Math.round(currentReportZoom * 100)}%`;
+    }
+};
+
+window.downloadReportHtml = function() {
+    const sheet = document.getElementById('print-report-sheet');
+    if (!sheet) return;
+    const isEs = isSpanishLang();
+    const sailName = scanData.sailName || 'Sail';
+    const filename = `L3S_Sail_Report_${sailName.replace(/[^a-z0-9]/gi, '_')}.html`;
+    const fullHtml = `<!DOCTYPE html>
+<html lang="${isEs ? 'es' : 'en'}">
+<head>
+    <meta charset="UTF-8">
+    <title>L3S Sail Scan Report – ${sailName}</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #0f172a; font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .report-page { width: 210mm; min-height: 297mm; background: #ffffff; color: #0f172a; padding: 18mm 16mm; box-sizing: border-box; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 6px; display: flex; flex-direction: column; }
+        .report-page-footer { margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 0.68rem; color: #94a3b8; display: flex; justify-content: space-between; }
+        .report-page-divider { display: none; }
+        @media print {
+            body { background: white; padding: 0; }
+            .report-page { margin: 0; box-shadow: none; border-radius: 0; page-break-after: always; break-after: page; width: 100%; min-height: 100vh; }
+        }
+    </style>
+</head>
+<body>
+    ${sheet.innerHTML}
+</body>
+</html>`;
+    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+window.loadSampleSailBenchmark = async function(sampleName) {
+    try {
+        const isEs = isSpanishLang();
+        const statusEl = document.getElementById('save-toast');
+        if (statusEl) {
+            statusEl.innerText = isEs ? `⏳ Cargando muestra ${sampleName}...` : `⏳ Loading benchmark ${sampleName}...`;
+            statusEl.style.color = '#38bdf8';
+            statusEl.style.display = 'block';
+        }
+
+        const resp = await fetch(`/camber-images/${sampleName}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            scanData.imageSrc = dataUrl;
+            const img = new Image();
+            img.onload = function() {
+                scanData.imageObj = img;
+                scanData.imageWidth = img.naturalWidth || img.width;
+                scanData.imageHeight = img.naturalHeight || img.height;
+                
+                const sbDims = document.getElementById('sb-image-dims');
+                if (sbDims) sbDims.innerText = `Dims: ${scanData.imageWidth} × ${scanData.imageHeight} px`;
+
+                if (sampleName.includes('port')) {
+                    scanData.tack = 'port';
+                } else if (sampleName.includes('stbd')) {
+                    scanData.tack = 'starboard';
+                }
+                setScanTack(scanData.tack);
+
+                if (sampleName.includes('port1')) {
+                    scanData.sailName = 'J1 Light (Port)';
+                    scanData.sailNumber = 'ESP-831';
+                    scanData.boatName = 'TP52 Gladiator';
+                } else if (sampleName.includes('port2')) {
+                    scanData.sailName = 'J2 Medium (Port)';
+                    scanData.sailNumber = 'ESP-831';
+                    scanData.boatName = 'TP52 Gladiator';
+                } else if (sampleName.includes('stbd1')) {
+                    scanData.sailName = 'J1 Light (STBD)';
+                    scanData.sailNumber = 'ESP-831';
+                    scanData.boatName = 'TP52 Gladiator';
+                } else if (sampleName.includes('stbd2')) {
+                    scanData.sailName = 'J2 Medium (STBD)';
+                    scanData.sailNumber = 'ESP-831';
+                    scanData.boatName = 'TP52 Gladiator';
+                } else if (sampleName.includes('test1')) {
+                    scanData.sailName = 'Light Genoa 1';
+                    scanData.sailNumber = 'ESP-104';
+                    scanData.boatName = 'Swan 42';
+                } else if (sampleName.includes('test2')) {
+                    scanData.sailName = 'Solent Jib';
+                    scanData.sailNumber = 'FRA-99';
+                    scanData.boatName = 'Class 40';
+                } else if (sampleName.includes('test3')) {
+                    scanData.sailName = 'Code Zero';
+                    scanData.sailNumber = 'USA-55';
+                    scanData.boatName = 'IRC 52';
+                }
+                
+                syncSpecsFromInputs();
+                unlockAllTabs();
+                switchScanTab('canvas');
+                
+                runAutoDetection();
+                
+                if (statusEl) {
+                    statusEl.innerText = isEs ? `✅ Muestra ${sampleName} analizada!` : `✅ Benchmark ${sampleName} analyzed!`;
+                    statusEl.style.color = '#10b981';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+                }
+            };
+            img.src = dataUrl;
+        };
+        reader.readAsDataURL(blob);
+    } catch(err) {
+        console.error('Failed to load sample benchmark:', err);
+        alert(`Could not load benchmark ${sampleName}. Please ensure the server is running.`);
+    }
+};
+
+window.toggleDesktopMenu = function(menuId, event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById(`dropdown-${menuId}`);
+    const wasOpen = dropdown && dropdown.classList.contains('active');
+    
+    closeDesktopMenus();
+    
+    if (!wasOpen && dropdown) {
+        dropdown.classList.add('active');
+        const menuItem = document.getElementById(`menu-${menuId}`);
+        if (menuItem) menuItem.classList.add('active');
+    }
+};
+
+window.closeDesktopMenus = function() {
+    document.querySelectorAll('.desktop-dropdown.active').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.desktop-menu-item.active').forEach(el => el.classList.remove('active'));
+};
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.desktop-menu-item')) {
+        closeDesktopMenus();
+    }
+});
+
+// Global Keyboard Shortcuts
+document.addEventListener('keydown', function(e) {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+    if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'o' || e.key === 'O') {
+            e.preventDefault();
+            const inp = document.getElementById('sailPhotoInput');
+            if (inp) inp.click();
+        } else if (e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            if (typeof saveScanToFleetDatabase === 'function') saveScanToFleetDatabase();
+        } else if (e.key === 'p' || e.key === 'P') {
+            e.preventDefault();
+            switchScanTab('report');
+        } else if (e.key === 'z' || e.key === 'Z') {
+            e.preventDefault();
+            if (typeof cadUndo === 'function') cadUndo();
+        } else if (e.key === 'y' || e.key === 'Y') {
+            e.preventDefault();
+            if (typeof cadRedo === 'function') cadRedo();
+        } else if (e.key === '0') {
+            e.preventDefault();
+            if (typeof zoomToFit === 'function') zoomToFit();
+        }
+    } else {
+        if (e.key === '+' || e.key === '=') {
+            if (typeof zoomStep === 'function') zoomStep(0.2);
+        } else if (e.key === '-' || e.key === '_') {
+            if (typeof zoomStep === 'function') zoomStep(-0.2);
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (typeof deleteSelectedAnnotation === 'function') deleteSelectedAnnotation();
+        }
+    }
+});
+
+window.exportScanDataJson = function() {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(scanData, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', `l3s_scan_${(scanData.sailName || 'sail').replace(/\s+/g, '_')}.json`);
+    dlAnchor.click();
+};
+
+window.copyAeroMetricsToClipboard = function() {
+    if (!scanData.stripes || !scanData.stripes.length) return;
+    const isEs = isSpanishLang();
+    let text = isEs ? `Métricas L3S Sail Scan – ${scanData.sailName || 'Vela'}
+` : `L3S Sail Scan Aero Metrics – ${scanData.sailName || 'Sail'}
+`;
+    text += `Stripe	Max Camber	Draft Pos	Twist	Entry	Exit
+`;
+    scanData.stripes.forEach(s => {
+        const m = s.metrics || {};
+        text += `${s.label}	${m.camber ?? '--'}%	${m.draft_pos ?? '--'}%	${m.twist ?? '--'}°	${m.entry ?? '--'}°	${m.exit ?? '--'}°
+`;
+    });
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(isEs ? '📋 Métricas copiadas al portapapeles' : '📋 Aero metrics copied to clipboard');
+    });
+};
+
+window.setStudioTheme = function(theme) {
+    const canvasWrap = document.getElementById('canvasWrapper');
+    if (!canvasWrap) return;
+    if (theme === 'slate') {
+        canvasWrap.style.background = '#020617';
+    } else if (theme === 'black') {
+        canvasWrap.style.background = '#000000';
+    } else if (theme === 'navy') {
+        canvasWrap.style.background = '#071026';
+    } else if (theme === 'gray') {
+        canvasWrap.style.background = '#1e293b';
+    }
+    renderCanvas();
+};
+
+window.setStripePalette = function(palette) {
+    if (!scanData.stripes || !scanData.stripes.length) return;
+    const palettes = {
+        'neon': ['#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#a855f7'],
+        'marine': ['#0284c7', '#0369a1', '#38bdf8', '#0ea5e9', '#bae6fd'],
+        'contrast': ['#ef4444', '#f59e0b', '#10b981', '#38bdf8', '#ffffff'],
+        'mono': ['#ffffff', '#cbd5e1', '#94a3b8', '#64748b', '#475569']
+    };
+    const colors = palettes[palette] || palettes['neon'];
+    scanData.stripes.forEach((s, idx) => {
+        s.color = colors[idx % colors.length];
+    });
+    updateStripeLayerTabs();
+    updateToolbarStripeControls();
+    renderCanvas();
+    buildReportPreview();
+};

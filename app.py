@@ -242,6 +242,10 @@ def sail_scan_overview():
     template = 'sail_scan-es.html' if lang == 'es' else 'sail_scan.html'
     return render_template(template, boat_id=boat_id, sail_id=sail_id, scan_type=scan_type)
 
+@app.route('/camber-images/<path:filename>')
+def serve_camber_image(filename):
+    return send_from_directory('camber-images', filename)
+
 @app.route('/api/sail-scan/autodetect', methods=['POST'])
 def api_sail_scan_autodetect():
     try:

@@ -8,7 +8,256 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 
-<div class="sailscan-container" style="display: flex; height: calc(100vh - 70px); background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
+<div class="sailscan-container" style="display: flex; flex-direction: column; height: calc(100vh - 70px); background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
+    <!-- DESKTOP APPLICATION TOP MENUBAR -->
+    <div class="desktop-menubar">
+        <div class="desktop-menu-left">
+            <div class="desktop-brand">
+                <span style="font-size: 1.1rem;">⛵</span>
+                <span class="desktop-brand-name">L3S Sail Scan</span>
+                <span class="desktop-brand-badge">PRO v4.2</span>
+            </div>
+
+            <!-- FILE MENU -->
+            <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
+                <span>File</span>
+                <div class="desktop-dropdown" id="dropdown-file">
+                    <div class="desktop-dropdown-item" onclick="document.getElementById('sailPhotoInput').click()">
+                        <span>📂 Open Sail Image...</span>
+                        <span class="shortcut">Ctrl+O</span>
+                    </div>
+                    <div class="desktop-dropdown-item desktop-dropdown-submenu">
+                        <span>🧪 Load Benchmark Sample</span>
+                        <span style="font-size: 0.75rem;">▶</span>
+                        <div class="desktop-dropdown-sub">
+                            <div class="desktop-dropdown-header">Test Sails (camber-images)</div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('port1.jpeg')"><span>🔴 port1.jpeg (Port Light)</span></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('port2.jpeg')"><span>🔴 port2.jpeg (Port Medium)</span></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('stbd1.jpeg')"><span>🟢 stbd1.jpeg (STBD Light)</span></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('stbd2.jpeg')"><span>🟢 stbd2.jpeg (STBD Medium)</span></div>
+                            <div class="desktop-dropdown-divider"></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('test1.jpg')"><span>⛵ test1.jpg (Swan 42 Genoa)</span></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('test2.jpg')"><span>⛵ test2.jpg (Class 40 Solent)</span></div>
+                            <div class="desktop-dropdown-item" onclick="loadSampleSailBenchmark('test3.jpg')"><span>⛵ test3.jpg (IRC 52 Code 0)</span></div>
+                        </div>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="saveScanToFleetDatabase()">
+                        <span>💾 Save to Fleet Database</span>
+                        <span class="shortcut">Ctrl+S</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="saveSailScanProject()">
+                        <span>💾 Save Project (.l3s)</span>
+                        <span class="shortcut">LS PRO</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="exportScanDataJson()">
+                        <span>📤 Export Camber JSON</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="exportAnalyticsCSV()">
+                        <span>📊 Export Aero CSV</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="exportAnnotatedCanvas()">
+                        <span>🖼️ Export Traced Sail PNG</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="switchScanTab('report')">
+                        <span>🖨️ Export / Print PDF Report</span>
+                        <span class="shortcut">Ctrl+P</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="window.location.reload()">
+                        <span>🔄 New Scan / Reset</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDIT MENU -->
+            <div class="desktop-menu-item" id="menu-edit" onclick="toggleDesktopMenu('edit', event)">
+                <span>Edit</span>
+                <div class="desktop-dropdown" id="dropdown-edit">
+                    <div class="desktop-dropdown-item" onclick="cadUndo()">
+                        <span>↩️ Undo</span>
+                        <span class="shortcut">Ctrl+Z</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="cadRedo()">
+                        <span>↪️ Redo</span>
+                        <span class="shortcut">Ctrl+Y</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="addNewStripeLayer()">
+                        <span>➕ Add Draft Stripe Layer</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedAnnotation()">
+                        <span>🗑️ Delete Selected Object</span>
+                        <span class="shortcut">Del</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="duplicateActiveStripe()">
+                        <span>📑 Duplicate Active Stripe</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="invertActiveStripeDirection()">
+                        <span>🔄 Flip Luff (P0) ↔ Leech (P3)</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="copyAeroMetricsToClipboard()">
+                        <span>📋 Copy Aero Metrics to Clipboard</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW MENU -->
+            <div class="desktop-menu-item" id="menu-view" onclick="toggleDesktopMenu('view', event)">
+                <span>View</span>
+                <div class="desktop-dropdown" id="dropdown-view">
+                    <div class="desktop-dropdown-item" onclick="zoomToFit()">
+                        <span>🔍 Zoom to Fit Screen</span>
+                        <span class="shortcut">Ctrl+0</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="zoomActual()">
+                        <span>📐 1:1 Actual Pixels</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="zoomStep(0.2)">
+                        <span>➕ Zoom In</span>
+                        <span class="shortcut">+</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="zoomStep(-0.2)">
+                        <span>➖ Zoom Out</span>
+                        <span class="shortcut">-</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="toggleTackDirection()">
+                        <span>⛵ Toggle Tack (Port ↔ Starboard)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="toggleControlPolygon()">
+                        <span>🔘 Toggle 4-Pt B-Spline Control Arms</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="toggleMinimap()">
+                        <span>🗺️ Minimap Navigator</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="toggleLayersPanel()">
+                        <span>📑 Layers & Objects Flyout</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOOLS MENU -->
+            <div class="desktop-menu-item" id="menu-tools" onclick="toggleDesktopMenu('tools', event)">
+                <span>Tools</span>
+                <div class="desktop-dropdown" id="dropdown-tools">
+                    <div class="desktop-dropdown-item" onclick="runAutoDetection()">
+                        <span>🔄 Run Auto-Detect CV Engine</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTool('crop')">
+                        <span>✂️ Crop Sail Image</span>
+                        <span class="shortcut">C</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="toggleFilterPopover()">
+                        <span>🎨 Image Enhancement Filters</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="toggleMagicSnapMode()">
+                        <span>✨ Magic Ridge Snap</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="openScaleCalibrationModal()">
+                        <span>📐 Metric Scale Calibrator (px ➔ m)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="openToolbarCustomizer()">
+                        <span>🛠️ Customize Studio Toolbar</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="switchScanTab('compare')">
+                        <span>📊 Ghost Aero Comparison Tool</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS MENU -->
+            <div class="desktop-menu-item" id="menu-settings" onclick="toggleDesktopMenu('settings', event)">
+                <span>Settings</span>
+                <div class="desktop-dropdown" id="dropdown-settings">
+                    <div class="desktop-dropdown-header">Target Reference Parameters</div>
+                    <div class="desktop-dropdown-item" onclick="switchScanTab('analytics')">
+                        <span>🎯 Target Camber Ref (12.5%)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="switchScanTab('analytics')">
+                        <span>🎯 Target Draft Pos Ref (40.0%)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="switchScanTab('analytics')">
+                        <span>🎯 Target Entry Angle (18.0°)</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Units & Measurement</div>
+                    <div class="desktop-dropdown-item">
+                        <span>📏 Metric System (Meters / cm)</span>
+                        <span style="color: #10b981;">✓</span>
+                    </div>
+                    <div class="desktop-dropdown-item">
+                        <span>📐 Angular Measure (Degrees °)</span>
+                        <span style="color: #10b981;">✓</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMISATION MENU -->
+            <div class="desktop-menu-item" id="menu-customisation" onclick="toggleDesktopMenu('customisation', event)">
+                <span>Customisation</span>
+                <div class="desktop-dropdown" id="dropdown-customisation">
+                    <div class="desktop-dropdown-header">Stripe Color Palette</div>
+                    <div class="desktop-dropdown-item" onclick="setStripePalette('neon')">
+                        <span>🎨 Neon Pro (Cyan, Green, Amber, Pink)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setStripePalette('marine')">
+                        <span>🎨 Marine Classic (Ocean, Sky, Navy)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setStripePalette('contrast')">
+                        <span>🎨 High Contrast (Red, Yellow, Cyan)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setStripePalette('mono')">
+                        <span>🎨 Monochrome Technical</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Studio Canvas Background</div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('slate')"><span>🔲 Midnight Slate (#020617)</span></div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('black')"><span>🔲 Pure Black (#000000)</span></div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('navy')"><span>🔲 Oceanic Navy (#071026)</span></div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('gray')"><span>🔲 Neutral Workbench (#1e293b)</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Language / Idioma</div>
+                    <div class="desktop-dropdown-item" onclick="window.location.href='/sail-scan?lang=es'"><span>🇪🇸 Cambiar a Español</span></div>
+                    <div class="desktop-dropdown-item" onclick="window.location.href='/sail-scan?lang=en'"><span>🇬🇧 Switch to English</span></div>
+                </div>
+            </div>
+
+            <!-- HELP MENU -->
+            <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
+                <span>Help</span>
+                <div class="desktop-dropdown" id="dropdown-help">
+                    <div class="desktop-dropdown-item" onclick="window.open('/methodology', '_blank')">
+                        <span>📖 Measurement Methodology Guide</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="alert('L3S Keyboard Shortcuts:\n\nCtrl+O : Open Sail Image\nCtrl+S : Save to Fleet Database\nCtrl+P : Open PDF Report\nCtrl+Z : Undo\nCtrl+Y : Redo\nCtrl+0 : Zoom to Fit\n+ / - : Zoom In / Out\nDel : Delete Selected\nV : Select Tool\nH / Space : Pan Hand\nC : Crop Tool\nR : Distance Ruler\nA : Protractor Angle')">
+                        <span>⌨️ Keyboard Shortcuts Reference</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="alert('L3S Sail Scan v4.2 PRO\nLS Lab Antigravity Aerodynamics Engine\nComputer Vision Camber, Draft & Twist Analysis\n© 2026 LS Lab')">
+                        <span>ℹ️ About L3S Sail Scan</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT QUICK ACTIONS & INDICATORS -->
+        <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 8px;">
+            <span id="desktop-tack-badge" onclick="toggleTackDirection()" style="font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #10b981; background: rgba(16, 185, 129, 0.15); color: #34d399; cursor: pointer;" title="Click to toggle Tack (Port / Starboard)">STBD</span>
+            <span id="desktop-boat-lbl" style="font-size: 0.75rem; color: #94a3b8; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Grand Prix</span>
+            <button type="button" onclick="switchScanTab('report')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span>🖨️</span> PDF Report
+            </button>
+            <button type="button" onclick="saveScanToFleetDatabase()" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span>💾</span> Save
+            </button>
+        </div>
+    </div>
+
+    <div class="desktop-main-workspace" style="display: flex; flex: 1; min-height: 0; overflow: hidden; width: 100%;">
     
     <!-- Sidebar / Progressive Wizard Navigation -->
     <div class="wizard-sidebar" style="width: 330px; min-width: 330px; background: #111827; border-right: 1px solid #1f2937; display: flex; flex-direction: column; z-index: 10;">
@@ -950,6 +1199,27 @@
                 </div>
             </div>
         </div>
+            <!-- Studio Desktop Status Bar -->
+            <div id="studio-desktop-statusbar" class="desktop-statusbar">
+                <div class="statusbar-left">
+                    <span class="status-indicator">● READY</span>
+                    <span id="sb-cursor-pos">X: -- px | Y: -- px</span>
+                    <span id="sb-image-dims">Dims: --</span>
+                    <span id="sb-scale">Scale: 1 px = 0.005 m</span>
+                </div>
+                <div class="statusbar-center">
+                    <span id="sb-active-stripe" style="color: #38bdf8; font-weight: 700;">Active: Stripe 1 (Mid)</span>
+                    <span id="sb-metrics-camber" style="color: #38bdf8;">Camber: --%</span>
+                    <span id="sb-metrics-draft" style="color: #f59e0b;">Draft: --%</span>
+                    <span id="sb-metrics-twist" style="color: #10b981;">Twist: --°</span>
+                </div>
+                <div class="statusbar-right">
+                    <span id="sb-tack" class="status-badge-tack" onclick="toggleTackDirection()" style="cursor: pointer;" title="Click to toggle Tack">STBD</span>
+                    <span id="sb-tool">Tool: Select (V)</span>
+                    <span id="sb-zoom" onclick="zoomToFit()" style="cursor: pointer;" title="Click to Fit">100%</span>
+                </div>
+            </div>
+        </div>
 
         <!-- PANEL 3: Aero Analytics Studio (Overleaf Split View) -->
         <div id="panel-analytics" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; flex-direction: column; overflow: hidden;">
@@ -1224,40 +1494,62 @@
         </div>
 
         <!-- PANEL 5: Industry PDF Report Builder (Overleaf 50/50 Split View) -->
-        <div id="panel-report" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; padding: 1rem 1.5rem; flex-direction: column; overflow: hidden;">
+        <div id="panel-report" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; padding: 0.8rem 1.2rem; flex-direction: column; overflow: hidden;">
             
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 8px;">
                 <div>
-                    <h3 style="color: #f8fafc; font-size: 1.3rem; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                    <h3 style="color: #f8fafc; font-size: 1.25rem; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 8px;">
                         <span>Step 5: Industry Sailing Performance Report</span>
-                        <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">Overleaf Split View</span>
+                        <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #0284c7; padding: 2px 8px; border-radius: 12px; font-weight: 700; text-transform: uppercase;">Overleaf Split View</span>
                     </h3>
-                    <p style="color: #94a3b8; font-size: 0.8rem; margin: 2px 0 0 0;">Configure sail specs, ORC dimensions, top label &amp; notes on the left — live printable A4 PDF document preview on the right.</p>
+                    <p style="color: #94a3b8; font-size: 0.78rem; margin: 2px 0 0 0;">Left: Live print configuration dialog modifying document content · Right: Overleaf-style live A4 PDF document preview with zoom.</p>
                 </div>
-                <button onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                    <span>🖨️</span> Export / Print PDF Report
-                </button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" onclick="downloadReportHtml()" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 7px 14px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <span>📥</span> Download HTML
+                    </button>
+                    <button type="button" onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 7px 18px; border-radius: 6px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                        <span>🖨️</span> Export / Print PDF (Ctrl+P)
+                    </button>
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; flex: 1; min-height: 0; height: 100%; overflow: hidden;">
+            <!-- OVERLEAF 50/50 SPLIT WORKSPACE -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1; min-height: 0; height: 100%; overflow: hidden;">
                 
-                <!-- Left Column: Editor Controls -->
-                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.25rem;">
+                <!-- LEFT COLUMN: PRINT DIALOG CONTROLS -->
+                <div style="background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1.1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;">
                     
-                    <!-- 1. Module Selection -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 4px;">
-                            <h4 style="color: #38bdf8; margin: 0; font-size: 0.9rem; font-weight: 700;">1. Module Selection</h4>
+                    <!-- Presets & Appearance Bar -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; text-transform: uppercase;">📑 Report Presets</span>
                             <div style="display: flex; gap: 4px;">
-                                <button type="button" onclick="setReportPreset('full')" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="All modules distributed over clean A4 pages">Full</button>
-                                <button type="button" onclick="setReportPreset('executive')" style="background: #0f172a; border: 1px solid #f59e0b; color: #f59e0b; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="Compact 1-Page Summary">Exec (1p)</button>
-                                <button type="button" onclick="setReportPreset('aero')" style="background: #0f172a; border: 1px solid #a78bfa; color: #a78bfa; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="Aero curves, charts & radar">Aero</button>
-                                <button type="button" onclick="setReportPreset('none')" style="background: #0f172a; border: 1px solid #64748b; color: #94a3b8; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="Uncheck all">Clear</button>
+                                <button type="button" onclick="setReportPreset('full')" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;">Full Multi-Page</button>
+                                <button type="button" onclick="setReportPreset('executive')" style="background: #0f172a; border: 1px solid #f59e0b; color: #f59e0b; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;">Exec 1-Page</button>
+                                <button type="button" onclick="setReportPreset('loft')" style="background: #0f172a; border: 1px solid #10b981; color: #10b981; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;">Loft Spec</button>
+                                <button type="button" onclick="setReportPreset('aero')" style="background: #0f172a; border: 1px solid #a78bfa; color: #a78bfa; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;">Aero Only</button>
+                                <button type="button" onclick="setReportPreset('none')" style="background: #0f172a; border: 1px solid #64748b; color: #94a3b8; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;">Clear</button>
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.75rem; color: #cbd5e1; border-top: 1px solid #334155; padding-top: 6px;">
+                            <span>Accent Color:</span>
+                            <select id="rep-theme-color" onchange="buildReportPreview()" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px;">
+                                <option value="#0284c7" selected>Ocean Blue (#0284c7)</option>
+                                <option value="#0ea5e9">Cyan Marine (#0ea5e9)</option>
+                                <option value="#059669">Forest Racing (#059669)</option>
+                                <option value="#d97706">Sunset Amber (#d97706)</option>
+                                <option value="#0f172a">Dark Carbon (#0f172a)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 1. Module Selection Checkboxes -->
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">1. Included PDF Sections</h4>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-summary" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 1. Executive Summary &amp; Camber Table</label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-aero" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">⚡</span> 2. Aero Parameter Cards (Step 3)</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-aero" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">⚡</span> 2. Aero Parameter Cards</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-curves" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 3. Camber Profile Curves Chart</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-barchart" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">■</span> 4a. Camber &amp; Draft Bar Chart</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-radar" checked onchange="buildReportPreview()" style="accent-color: #a78bfa;"> <span style="color: #a78bfa;">■</span> 4b. Shape Fingerprint Radar</label>
@@ -1267,41 +1559,42 @@
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-rig" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 8. Wind &amp; Rig Tuning Settings</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-notes" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 9. Trimmer &amp; Coach Recommendations</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-methodology" onchange="buildReportPreview()" style="accent-color: #64748b;"> <span style="color: #94a3b8;">📖</span> 10. Methodology &amp; Variable Glossary</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-mod-signoff" checked onchange="buildReportPreview()" style="accent-color: #10b981;"> <span style="color: #10b981;">✍️</span> 11. Loft QA Sign-off &amp; Signature</label>
                         </div>
                     </div>
 
                     <!-- 2. Sail Identity & Boat Info -->
                     <div>
-                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">2. Sail Identity &amp; Boat Info</h4>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">2. Sail Identity &amp; Specifications</h4>
                         <div style="display: flex; flex-direction: column; gap: 8px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                                 <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Sail Number / Code</label>
-                                    <input type="text" id="specSailNumber" placeholder="e.g. ESP-831" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Sail Number / Code</label>
+                                    <input type="text" id="specSailNumber" placeholder="e.g. ESP-831" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Sail Name / Description</label>
-                                    <input type="text" id="specSailName" placeholder="e.g. J1 Medium-Heavy" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
-                                </div>
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Boat Name / Model</label>
-                                    <input type="text" id="specBoatName" placeholder="e.g. TP52 Gladiator / Moth" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Boat Year</label>
-                                    <input type="text" id="specBoatYear" placeholder="e.g. 2024 / 2025" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Sail Name / Description</label>
+                                    <input type="text" id="specSailName" placeholder="e.g. J1 Medium-Heavy" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
                                 </div>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                                 <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Sailmaker / Loft</label>
-                                    <input type="text" id="specSailmaker" placeholder="e.g. North Sails / Quantum / OneSails" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Boat Name / Model</label>
+                                    <input type="text" id="specBoatName" placeholder="e.g. TP52 Gladiator" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Certificate / Rule</label>
-                                    <select id="specCertificate" onchange="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 6px 10px; border-radius: 4px; color: white; font-size: 0.8rem;">
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Sailmaker / Loft</label>
+                                    <input type="text" id="specSailmaker" placeholder="e.g. North Sails / Quantum" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <div>
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Lead Analyst / Trimmer</label>
+                                    <input type="text" id="specAnalystName" placeholder="e.g. L3S Aero Lab" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 2px;">Certificate / Rule</label>
+                                    <select id="specCertificate" onchange="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.78rem;">
                                         <option value="ORC">ORC Official</option>
                                         <option value="IRC">IRC</option>
                                         <option value="OneDesign">One Design Class</option>
@@ -1309,129 +1602,319 @@
                                     </select>
                                 </div>
                             </div>
-                            </div>
-                            <!-- Tack / Side Quick Selector in Report -->
-                            <div style="border-top: 1px solid #1e293b; padding-top: 8px; margin-top: 2px;">
-                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 5px;">Tack / Side (Amura)</label>
+                            <div style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 2px;">
+                                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 4px;">Tack (Amura)</label>
                                 <div style="display: flex; gap: 6px;">
-                                    <button type="button" id="rep-btn-tack-stbd" onclick="setScanTack('starboard'); buildReportPreview();" style="flex: 1; padding: 5px 8px; border-radius: 5px; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🟢 STBD</button>
-                                    <button type="button" id="rep-btn-tack-port" onclick="setScanTack('port'); buildReportPreview();" style="flex: 1; padding: 5px 8px; border-radius: 5px; border: 1px solid #475569; background: #0f172a; color: #94a3b8; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🔴 PORT</button>
+                                    <button type="button" id="rep-btn-tack-stbd" onclick="setScanTack('starboard'); buildReportPreview();" style="flex: 1; padding: 4px 8px; border-radius: 4px; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🟢 STBD (Estribor)</button>
+                                    <button type="button" id="rep-btn-tack-port" onclick="setScanTack('port'); buildReportPreview();" style="flex: 1; padding: 4px 8px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #94a3b8; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🔴 PORT (Babor)</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. Top Sail Label Photo (Jib Top Badge) -->
+                    <!-- 3. Official ORC Measurements -->
                     <div>
-                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">3. Top Sail Label Photo (Jib Badge)</h4>
-                        <div style="background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; display: flex; gap: 12px; align-items: center;">
-                            <div id="label-photo-box" style="width: 80px; height: 80px; border-radius: 6px; border: 1px dashed #475569; background: #1e293b; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;" onclick="document.getElementById('labelImageInput').click()">
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">3. Official Measurements (ORC Parameters)</h4>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HLU (Luff m)</label>
+                                <input type="number" step="0.01" id="dim_hlu" placeholder="18.14" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HLP (Perp m)</label>
+                                <input type="number" step="0.01" id="dim_hlp" placeholder="5.25" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HQW (1/4 m)</label>
+                                <input type="number" step="0.01" id="dim_hqw" placeholder="3.93" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HHW (1/2 m)</label>
+                                <input type="number" step="0.01" id="dim_hhw" placeholder="2.68" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HTW (3/4 m)</label>
+                                <input type="number" step="0.01" id="dim_htw" placeholder="1.46" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HUW (7/8 m)</label>
+                                <input type="number" step="0.01" id="dim_huw" placeholder="0.77" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700;">HB (Head m)</label>
+                                <input type="number" step="0.001" id="dim_hb" placeholder="0.108" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px; border-radius: 4px; color: white; font-size: 0.75rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Top Sail Label Photo -->
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">4. Top Sail Label Badge Photo</h4>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155; display: flex; gap: 10px; align-items: center;">
+                            <div id="label-photo-box" style="width: 70px; height: 70px; border-radius: 4px; border: 1px dashed #475569; background: #1e293b; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;" onclick="document.getElementById('labelImageInput').click()">
                                 <img id="labelPhotoImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
                                 <span id="labelPhotoPlaceholder" style="font-size: 0.65rem; color: #64748b; text-align: center; padding: 4px;">Upload Label</span>
                             </div>
                             <input type="file" id="labelImageInput" accept="image/*" onchange="handleLabelPhoto(this.files[0])" style="display: none;">
-                            
-                            <div style="flex: 1; font-size: 0.75rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 6px;">
-                                <div>Attach photo of the top measurement badge.</div>
+                            <div style="flex: 1; font-size: 0.72rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; gap: 6px;">
-                                    <button type="button" onclick="document.getElementById('labelImageInput').click()" style="background: #334155; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Choose Photo...</button>
-                                    <button type="button" onclick="loadSampleJibLabel()" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Load Sample (831 ESP)</button>
-                                </div>
-                                <div id="label-ocr-status" style="display: none; font-size: 0.7rem; color: #38bdf8; font-weight: 600; background: rgba(56, 189, 248, 0.1); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
-                                    🔍 Scanning label with OCR...
+                                    <button type="button" onclick="document.getElementById('labelImageInput').click()" style="background: #334155; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer;">Choose Photo...</button>
+                                    <button type="button" onclick="loadSampleJibLabel()" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Sample (ESP-831)</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 4. Official ORC Dimensions -->
+                    <!-- 5. Wind & Rig Tuning -->
                     <div>
-                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">4. Official Sail Measurements (ORC Parameters)</h4>
-                        <div style="background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">5. Wind &amp; Rig Tuning Conditions</h4>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HLU (Luff m)</label>
-                                <input type="number" step="0.01" id="dim_hlu" placeholder="18.14" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
+                                <label style="display: block; font-size: 0.68rem; color: #94a3b8;">TWS (kn)</label>
+                                <input type="number" step="0.5" id="rig_tws" placeholder="14.5" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px 6px; border-radius: 4px; color: white; font-size: 0.75rem;">
                             </div>
                             <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HLP (Perp m)</label>
-                                <input type="number" step="0.01" id="dim_hlp" placeholder="5.25" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
+                                <label style="display: block; font-size: 0.68rem; color: #94a3b8;">TWA (°)</label>
+                                <input type="number" step="1" id="rig_twa" placeholder="42" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px 6px; border-radius: 4px; color: white; font-size: 0.75rem;">
                             </div>
                             <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HQW (1/4 m)</label>
-                                <input type="number" step="0.01" id="dim_hqw" placeholder="3.93" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
+                                <label style="display: block; font-size: 0.68rem; color: #94a3b8;">Cunningham</label>
+                                <input type="text" id="rig_cunningham" placeholder="Mark 3" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px 6px; border-radius: 4px; color: white; font-size: 0.75rem;">
                             </div>
                             <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HHW (1/2 m)</label>
-                                <input type="number" step="0.01" id="dim_hhw" placeholder="2.68" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HTW (3/4 m)</label>
-                                <input type="number" step="0.01" id="dim_htw" placeholder="1.46" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HUW (7/8 m)</label>
-                                <input type="number" step="0.01" id="dim_huw" placeholder="0.77" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-bottom: 2px;">HB (Head m)</label>
-                                <input type="number" step="0.001" id="dim_hb" placeholder="0.108" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 6px; border-radius: 4px; color: white; font-size: 0.75rem; font-weight: 600;">
+                                <label style="display: block; font-size: 0.68rem; color: #94a3b8;">Sheet / Car</label>
+                                <input type="text" id="rig_sheet" placeholder="Hole 2" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 4px 6px; border-radius: 4px; color: white; font-size: 0.75rem;">
                             </div>
                         </div>
                     </div>
 
-                    <!-- 5. Wind & Rig Tuning Settings -->
+                    <!-- 6. Trimmer Notes -->
                     <div>
-                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">5. Wind &amp; Rig Tuning Settings</h4>
-                        <div style="background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div>
-                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">TWS Wind Speed (kn)</label>
-                                <input type="number" step="0.5" id="rig_tws" placeholder="14.5" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">TWA Wind Angle (°)</label>
-                                <input type="number" step="1" id="rig_twa" placeholder="42" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Cunningham / Halyard</label>
-                                <input type="text" id="rig_cunningham" placeholder="e.g. Mark 4" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 2px;">Sheet / Lead Position</label>
-                                <input type="text" id="rig_sheet" placeholder="e.g. Hole 3" oninput="buildReportPreview()" style="width: 100%; background: #1e293b; border: 1px solid #475569; padding: 5px 8px; border-radius: 4px; color: white; font-size: 0.75rem;">
-                            </div>
-                        </div>
+                        <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">6. Trimmer &amp; Coach Recommendations</h4>
+                        <textarea id="rep-learning-points" rows="3" placeholder="Enter trim notes (e.g. Draft 3% too far aft, ease halyard to shift draft forward, increase outhaul...)" oninput="buildReportPreview()" style="width: 100%; background: #0f172a; border: 1px solid #334155; padding: 6px; border-radius: 4px; color: white; font-size: 0.75rem; resize: vertical;"></textarea>
                     </div>
 
-                    <!-- 6. Trimmer & Coach Recommendations -->
-                    <div>
-                        <h4 style="color: #38bdf8; margin: 0 0 0.6rem 0; font-size: 0.9rem; font-weight: 700;">6. Trimmer &amp; Coach Recommendations</h4>
-                        <textarea id="rep-learning-points" rows="4" placeholder="Enter key tuning notes (e.g. Draft is 3% too far aft, ease halyard to move draft forward, increase outhaul...)" oninput="buildReportPreview()" style="width: 100%; background: #0f172a; border: 1px solid #334155; padding: 8px; border-radius: 6px; color: white; font-size: 0.8rem; resize: vertical;"></textarea>
-                    </div>
-
-                    <button onclick="window.print()" style="width: 100%; background: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                        🖨️ Export / Print PDF Report
+                    <button type="button" onclick="window.print()" style="width: 100%; background: #10b981; color: white; border: none; padding: 9px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                        🖨️ Export / Print PDF Report (Ctrl+P)
                     </button>
                 </div>
 
-                <!-- Right Column: Live PDF Document Sheet Preview -->
-                <div style="background: #0b0f17; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
-                    <div id="report-page-count-badge" style="margin-bottom: 12px; font-size: 0.75rem; color: #94a3b8; background: #1e293b; padding: 4px 14px; border-radius: 20px; border: 1px solid #334155; display: flex; align-items: center; gap: 8px;">
-                        <span>📄 Live A4 Preview:</span>
-                        <strong id="lbl-page-count" style="color: #38bdf8;">1 Page</strong>
-                        <span style="color: #64748b;">•</span>
-                        <span style="color: #cbd5e1;">Divided by A4 Standards</span>
+                <!-- RIGHT COLUMN: OVERLEAF LIVE PDF PREVIEW -->
+                <div style="background: #070b14; border: 1px solid #1f2937; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);">
+                    
+                    <!-- Overleaf Preview Top Toolbar -->
+                    <div style="background: #0f172a; border-bottom: 1px solid #1e293b; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 700; font-size: 0.8rem; color: #38bdf8;">📄 Live A4 PDF Preview</span>
+                            <span id="lbl-page-count" style="font-size: 0.7rem; background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 2px 8px; border-radius: 10px;">1 Page (A4)</span>
+                        </div>
+
+                        <!-- Zoom Controls -->
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <button type="button" onclick="setReportZoom(-0.15)" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 2px 7px; border-radius: 4px; font-weight: 700; cursor: pointer;">−</button>
+                            <span id="lbl-report-zoom" onclick="setReportZoom(0, 1.0)" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; min-width: 44px; text-align: center; cursor: pointer;" title="Reset to 100%">100%</span>
+                            <button type="button" onclick="setReportZoom(0.15)" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 2px 7px; border-radius: 4px; font-weight: 700; cursor: pointer;">+</button>
+                            <button type="button" onclick="setReportZoom('fit')" style="background: #1e293b; border: 1px solid #334155; color: #94a3b8; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="Fit Width">Fit</button>
+                        </div>
+
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" onclick="downloadReportHtml()" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; cursor: pointer;" title="Save standalone HTML report file">
+                                📥 HTML
+                            </button>
+                            <button type="button" onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer;" title="Print or Save as PDF">
+                                🖨️ Print
+                            </button>
+                        </div>
                     </div>
-                    <div style="width: 100%; max-width: 820px;" id="print-report-sheet">
-                        <!-- Populated dynamically by buildReportPreview() with .report-page elements -->
+
+                    <!-- Scrollable Preview Viewport -->
+                    <div id="report-zoom-wrapper" style="flex: 1; overflow-y: auto; overflow-x: auto; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; background: #0b0f19;">
+                        <div id="print-report-sheet" style="width: 100%; max-width: 820px; transition: transform 0.15s ease-out;">
+                            <!-- Populated dynamically by buildReportPreview() -->
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>        </div>
 
+    </div>
     </div>
 </div>
 
 <style>
+/* Desktop Menubar Styling */
+.desktop-menubar {
+    height: 38px;
+    background: #090e1a;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.8rem;
+    user-select: none;
+    z-index: 100;
+    flex-shrink: 0;
+}
+.desktop-menu-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 4px;
+}
+.desktop-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 12px;
+    border-right: 1px solid #1e293b;
+    margin-right: 6px;
+    text-decoration: none;
+}
+.desktop-brand-name {
+    font-weight: 800;
+    font-size: 0.88rem;
+    color: #38bdf8;
+    letter-spacing: -0.3px;
+}
+.desktop-brand-badge {
+    font-size: 0.62rem;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-family: monospace;
+}
+.desktop-menu-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 9px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+.desktop-menu-item:hover, .desktop-menu-item.active {
+    background: #1e293b;
+    color: #ffffff;
+}
+.desktop-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 5px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.85);
+    min-width: 250px;
+    padding: 5px 0;
+    z-index: 2000;
+}
+.desktop-dropdown.active {
+    display: block;
+}
+.desktop-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+}
+.desktop-dropdown-item:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
+.desktop-dropdown-item .shortcut {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    margin-left: 18px;
+    font-family: monospace;
+}
+.desktop-dropdown-item:hover .shortcut {
+    color: #e0f2fe;
+}
+.desktop-dropdown-divider {
+    height: 1px;
+    background: #1e293b;
+    margin: 4px 0;
+}
+.desktop-dropdown-header {
+    padding: 4px 14px 2px;
+    font-size: 0.66rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.desktop-dropdown-submenu {
+    position: relative;
+}
+.desktop-dropdown-submenu:hover > .desktop-dropdown-sub {
+    display: block;
+}
+.desktop-dropdown-sub {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 2px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.85);
+    min-width: 230px;
+    padding: 5px 0;
+    z-index: 2001;
+}
+
+/* Desktop Statusbar */
+.desktop-statusbar {
+    height: 28px;
+    min-height: 28px;
+    background: #080d1a;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    z-index: 30;
+    user-select: none;
+}
+.desktop-statusbar .statusbar-left,
+.desktop-statusbar .statusbar-center,
+.desktop-statusbar .statusbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.desktop-statusbar .status-indicator {
+    color: #10b981;
+    font-weight: 700;
+}
+.desktop-statusbar .status-badge-tack {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid #10b981;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 0.65rem;
+}
+
 .tab-btn {
     display: flex;
     align-items: center;
