@@ -123,7 +123,77 @@ function initStudio() {
     if (canvas) {
         ctx = canvas.getContext('2d');
     }
+    unlockAllTabs();
+    if (!scanData.stripes || scanData.stripes.length === 0) {
+        initializeDefaultBenchmarkStripes();
+    }
 }
+
+// Global curve point normalization helper (handles both [x, y] arrays and {x, y} objects)
+window.extractCurvePoint = function(pt) {
+    if (!pt) return { x: 0, y: 0 };
+    if (typeof pt.x !== 'undefined' && typeof pt.y !== 'undefined') {
+        const x = (Number(pt.x) <= 1.0 && Number(pt.x) >= 0) ? Number(pt.x) * 100 : Number(pt.x);
+        return { x: parseFloat(Number(x).toFixed(1)) || 0, y: parseFloat(Number(pt.y).toFixed(3)) || 0 };
+    }
+    if (Array.isArray(pt)) {
+        const x = (Number(pt[0]) <= 1.0 && Number(pt[0]) >= 0) ? Number(pt[0]) * 100 : Number(pt[0]);
+        return { x: parseFloat(Number(x).toFixed(1)) || 0, y: parseFloat(Number(pt[1]).toFixed(3)) || 0 };
+    }
+    return { x: 0, y: 0 };
+};
+
+// Initialize default benchmark stripes so steps 2, 3, 4, 5 are immediately usable
+window.initializeDefaultBenchmarkStripes = function() {
+    if (scanData.stripes && scanData.stripes.length > 0) return;
+    
+    const benchmarkDefs = [
+        { label: 'Stripe #1 (Bottom)', type: 'bottom', color: '#38bdf8', camber: 10.2, draft: 42.0, entry: 17.5, exit: 12.0, twist: 0.0, chord: 950 },
+        { label: 'Stripe #2 (Mid)', type: 'mid', color: '#10b981', camber: 12.5, draft: 45.0, entry: 19.0, exit: 13.5, twist: 4.5, chord: 820 },
+        { label: 'Stripe #3 (Top)', type: 'top', color: '#f59e0b', camber: 9.4, draft: 48.0, entry: 16.0, exit: 11.0, twist: 9.8, chord: 640 }
+    ];
+    
+    scanData.stripes = benchmarkDefs.map((def, idx) => {
+        const normCurve = [];
+        const dp = def.draft / 100.0;
+        const cv = def.camber;
+        for (let i = 0; i <= 40; i++) {
+            const u = i / 40.0;
+            let d = 0;
+            if (u <= dp) {
+                d = cv * Math.sin((Math.PI / 2) * (u / Math.max(0.01, dp)));
+            } else {
+                d = cv * Math.cos((Math.PI / 2) * ((u - dp) / Math.max(0.01, 1.0 - dp)));
+            }
+            normCurve.push({ x: parseFloat((u * 100).toFixed(1)), y: parseFloat(Math.max(0, d).toFixed(2)) });
+        }
+        
+        const yBase = 220 + idx * 180;
+        return {
+            id: `stripe_${def.type}`,
+            name: `${def.type.toUpperCase()} Stripe`,
+            label: def.label,
+            type: def.type,
+            color: def.color,
+            p0: { x: 120, y: yBase },
+            p1: { x: 120 + def.chord * 0.28, y: yBase - 60 },
+            p2: { x: 120 + def.chord * (dp + 0.1), y: yBase - 90 },
+            p3: { x: 120 + def.chord, y: yBase - 20 },
+            path: [],
+            metrics: {
+                camber: def.camber,
+                draft_pos: def.draft,
+                entry: def.entry,
+                exit: def.exit,
+                twist: def.twist,
+                chord_len: def.chord,
+                max_point: { x: 120 + def.chord * dp, y: yBase - 90 },
+                normalized_curve: normCurve
+            }
+        };
+    });
+    scanData.activeStripeIndex = 1;
+};
 
 function setupDropzone() {
     const dropzone = document.getElementById('dropzone');
@@ -171,13 +241,18 @@ function loadUrlParams() {
 
 window.switchScanTab = function(tabName) {
     document.querySelectorAll('.wizard-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn, .step-tab-btn').forEach(b => b.classList.remove('active'));
     
     const panel = document.getElementById(`panel-${tabName}`);
     const btn = document.getElementById(`btn-tab-${tabName}`);
     
     if (panel) panel.classList.add('active');
     if (btn) btn.classList.add('active');
+    
+    // Ensure default benchmark stripes if switching to downstream steps with no data
+    if ((!scanData.stripes || scanData.stripes.length === 0) && tabName !== 'upload') {
+        initializeDefaultBenchmarkStripes();
+    }
     
     if (tabName === 'canvas') {
         resizeCanvasToFit();
@@ -192,7 +267,7 @@ window.switchScanTab = function(tabName) {
 };
 
 function unlockAllTabs() {
-    ['canvas', 'analytics', 'compare', 'report'].forEach(tab => {
+    ['upload', 'canvas', 'analytics', 'compare', 'report'].forEach(tab => {
         const btn = document.getElementById(`btn-tab-${tab}`);
         if (btn) {
             btn.classList.remove('disabled');
@@ -654,7 +729,7 @@ window.setStudioTool = function(toolName) {
     currentTool = toolName;
     
     // Update toolbar button highlights
-    document.querySelectorAll('.cad-vtool-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.cad-vtool-btn, .cad-ribbon-tool-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById(`tool-${toolName}`);
     if (activeBtn) activeBtn.classList.add('active');
     
@@ -1254,7 +1329,7 @@ function computeStripeMetricsFromBSpline(stripe) {
             bestTFrac = uFrac;
             maxPt = { x: px, y: py };
         }
-        normalizedCurve.push([uFrac, (camberDist / chordLen) * 100]);
+        normalizedCurve.push({ x: parseFloat((uFrac * 100).toFixed(1)), y: parseFloat(((camberDist / chordLen) * 100).toFixed(3)) });
     }
     
     const camberPct = (maxDist / chordLen) * 100;
@@ -2699,7 +2774,7 @@ function renderCamberChart() {
             const curve = stripe.metrics?.normalized_curve || [];
             return {
                 label: stripe.label,
-                data: curve.map(pt => ({ x: parseFloat((pt[0] * 100).toFixed(1)), y: parseFloat(pt[1].toFixed(3)) })),
+                data: curve.map(pt => extractCurvePoint(pt)),
                 borderColor: stripe.color || '#38bdf8',
                 backgroundColor: fill ? `${stripe.color || '#38bdf8'}22` : 'transparent',
                 fill: fill,
@@ -3130,7 +3205,7 @@ window.zoomFitAnalyticsAxes = function() {
     if (!scanData.stripes.length) return;
     let allY = [];
     scanData.stripes.forEach(s => {
-        (s.metrics?.normalized_curve || []).forEach(pt => allY.push(pt[1]));
+        (s.metrics?.normalized_curve || []).forEach(pt => allY.push(extractCurvePoint(pt).y));
     });
     if (!allY.length) return;
     const yMin = Math.floor(Math.min(...allY) * 100) / 100;
@@ -3162,35 +3237,186 @@ window.exportAnalyticsCSV = function() {
 
 
 
+let ghostData = null;
+
 function updateCompareView() {
-    if (!compareChart) {
-        const canvasEl = document.getElementById('compareChartCanvas');
-        if (!canvasEl) return;
-        const ctxChart = canvasEl.getContext('2d');
-        
-        const datasets = scanData.stripes.map(s => ({
+    const canvasEl = document.getElementById('compareChartCanvas');
+    if (!canvasEl) return;
+    const ctxChart = canvasEl.getContext('2d');
+    
+    if (compareChart) {
+        compareChart.destroy();
+        compareChart = null;
+    }
+    
+    if (!scanData.stripes || scanData.stripes.length === 0) {
+        initializeDefaultBenchmarkStripes();
+    }
+    
+    const datasets = scanData.stripes.map(s => {
+        const curve = s.metrics?.normalized_curve || [];
+        return {
             label: `Current: ${s.label}`,
-            data: (s.metrics?.normalized_curve || []).map(pt => ({ x: pt[0] * 100, y: pt[1] })),
+            data: curve.map(pt => extractCurvePoint(pt)),
             borderColor: s.color || '#38bdf8',
+            backgroundColor: `${s.color || '#38bdf8'}15`,
+            borderWidth: 2.5,
             tension: 0.35,
-            pointRadius: 0
-        }));
-        
-        compareChart = new Chart(ctxChart, {
-            type: 'line',
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { type: 'linear', min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
-                },
-                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            pointRadius: 0,
+            fill: false
+        };
+    });
+    
+    if (ghostData && ghostData.stripes) {
+        ghostData.stripes.forEach((gs) => {
+            const gPts = [];
+            const gCv = gs.camber;
+            const gDp = gs.draft / 100.0;
+            for (let i = 0; i <= 40; i++) {
+                const u = i / 40.0;
+                let d = 0;
+                if (u <= gDp) {
+                    d = gCv * Math.sin((Math.PI / 2) * (u / Math.max(0.01, gDp)));
+                } else {
+                    d = gCv * Math.cos((Math.PI / 2) * ((u - gDp) / Math.max(0.01, 1.0 - gDp)));
+                }
+                gPts.push({ x: parseFloat((u * 100).toFixed(1)), y: parseFloat(Math.max(0, d).toFixed(2)) });
             }
+            datasets.push({
+                label: `Ghost: ${gs.label} (${gs.camber}% @ ${gs.draft}%)`,
+                data: gPts,
+                borderColor: gs.color || '#f43f5e',
+                borderDash: [6, 4],
+                borderWidth: 2,
+                pointRadius: 2,
+                pointBackgroundColor: gs.color || '#f43f5e',
+                fill: false,
+                tension: 0.35
+            });
         });
     }
+    
+    compareChart = new Chart(ctxChart, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'linear', min: 0, max: 100,
+                    title: { display: true, text: '% Chord (0% Luff → 100% Leech)', color: '#94a3b8' },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                y: {
+                    min: 0,
+                    title: { display: true, text: '% Camber Depth', color: '#94a3b8' },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    ticks: { color: '#94a3b8' }
+                }
+            },
+            plugins: {
+                legend: { labels: { color: '#f8fafc', font: { size: 11 }, usePointStyle: true } }
+            }
+        }
+    });
+    
+    renderCompareDeltaTable();
 }
+
+function renderCompareDeltaTable() {
+    const tableBody = document.getElementById('compareDeltaTableBody');
+    if (!tableBody) return;
+    
+    if (!scanData.stripes || scanData.stripes.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 14px; text-align: center; color: #64748b;">No stripes available</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    scanData.stripes.forEach((stripe, i) => {
+        const m = stripe.metrics || {};
+        const curCamber = parseFloat(m.camber ?? 0);
+        const curDraft = parseFloat(m.draft_pos ?? 0);
+        
+        let targetCamber = '--';
+        let targetDraft = '--';
+        let deltaCamber = '--';
+        let deltaDraft = '--';
+        let deltaClass = 'color: #94a3b8;';
+        
+        if (ghostData && ghostData.stripes && ghostData.stripes[i]) {
+            const gs = ghostData.stripes[i];
+            targetCamber = `${gs.camber}%`;
+            targetDraft = `${gs.draft}%`;
+            const dC = curCamber - gs.camber;
+            const dD = curDraft - gs.draft;
+            const signC = dC >= 0 ? '+' : '';
+            const signD = dD >= 0 ? '+' : '';
+            deltaCamber = `${signC}${dC.toFixed(1)}%`;
+            deltaDraft = `${signD}${dD.toFixed(1)}%`;
+            deltaClass = dC >= 0 ? 'color: #38bdf8; font-weight: 700;' : 'color: #f59e0b; font-weight: 700;';
+        }
+        
+        html += `
+            <tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 8px 12px; font-weight: 600; color: ${stripe.color || '#38bdf8'};"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${stripe.color || '#38bdf8'}; margin-right: 6px;"></span>${stripe.label}</td>
+                <td style="padding: 8px 12px; color: #f8fafc; font-weight: 700;">${curCamber}%</td>
+                <td style="padding: 8px 12px; color: #94a3b8;">${targetCamber}</td>
+                <td style="padding: 8px 12px; ${deltaClass}">${deltaCamber}</td>
+                <td style="padding: 8px 12px; color: #f8fafc; font-weight: 700;">${curDraft}%</td>
+                <td style="padding: 8px 12px; color: #94a3b8;">${targetDraft}</td>
+                <td style="padding: 8px 12px; color: #cbd5e1;">${deltaDraft}</td>
+            </tr>
+        `;
+    });
+    tableBody.innerHTML = html;
+}
+
+window.applyGhostOverlay = function() {
+    const sel = document.getElementById('compareAnalysisSelect');
+    const val = sel ? sel.value : 'target1';
+    const isEs = isSpanishLang();
+    
+    if (val === 'heavy') {
+        ghostData = {
+            name: isEs ? 'Objetivo Viento Fuerte (Plano)' : 'Heavy Air Flat Target',
+            stripes: [
+                { label: isEs ? 'Fantasma Fondo' : 'Ghost Bottom', camber: 8.5, draft: 45.0, color: '#f43f5e' },
+                { label: isEs ? 'Fantasma Medio' : 'Ghost Mid', camber: 9.8, draft: 46.0, color: '#ec4899' },
+                { label: isEs ? 'Fantasma Alto' : 'Ghost Top', camber: 7.2, draft: 49.0, color: '#d946ef' }
+            ]
+        };
+    } else if (val === 'light') {
+        ghostData = {
+            name: isEs ? 'Objetivo Viento Ligero (Potencia)' : 'Light Air Deep Power Target',
+            stripes: [
+                { label: isEs ? 'Fantasma Fondo' : 'Ghost Bottom', camber: 12.0, draft: 38.0, color: '#f43f5e' },
+                { label: isEs ? 'Fantasma Medio' : 'Ghost Mid', camber: 14.8, draft: 40.0, color: '#ec4899' },
+                { label: isEs ? 'Fantasma Alto' : 'Ghost Top', camber: 11.2, draft: 43.0, color: '#d946ef' }
+            ]
+        };
+    } else {
+        ghostData = {
+            name: isEs ? 'Objetivo Diseño North 3Di RAW' : 'Design Target (North 3Di)',
+            stripes: [
+                { label: isEs ? 'Fantasma Fondo' : 'Ghost Bottom', camber: 11.5, draft: 40.0, color: '#f43f5e' },
+                { label: isEs ? 'Fantasma Medio' : 'Ghost Mid', camber: 13.5, draft: 42.0, color: '#ec4899' },
+                { label: isEs ? 'Fantasma Alto' : 'Ghost Top', camber: 10.0, draft: 45.0, color: '#d946ef' }
+            ]
+        };
+    }
+    
+    updateCompareView();
+    showToast(isEs ? `👻 Superposición fantasma activa: ${ghostData.name}` : `👻 Ghost overlay active: ${ghostData.name}`);
+};
+
+window.clearGhostOverlay = function() {
+    ghostData = null;
+    updateCompareView();
+    showToast(isSpanishLang() ? 'Superposición fantasma borrada' : 'Ghost overlay cleared');
+};
 
 window.handleLabelPhoto = async function(file) {
     if (!file) return;
@@ -3304,7 +3530,7 @@ function getOrGenerateCamberSnapshot() {
         const datasets = scanData.stripes.map(s => {
             let pts = [];
             if (s.metrics && Array.isArray(s.metrics.normalized_curve) && s.metrics.normalized_curve.length > 0) {
-                pts = s.metrics.normalized_curve.map(pt => ({ x: pt.x, y: pt.y }));
+                pts = s.metrics.normalized_curve.map(pt => extractCurvePoint(pt));
             } else {
                 const cv = parseFloat(s.metrics?.camber ?? 10.0);
                 const dp = parseFloat(s.metrics?.draft_pos ?? 40.0) / 100.0;

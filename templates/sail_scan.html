@@ -10,14 +10,50 @@
 
 <div class="sailscan-container" style="display: flex; flex-direction: column; height: calc(100vh - 70px); background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
     <!-- DESKTOP APPLICATION TOP MENUBAR -->
-    <div class="desktop-menubar">
-        <div class="desktop-menu-left">
-            <div class="desktop-brand">
-                <span style="font-size: 1.1rem;">⛵</span>
+    <!-- 1. TOP HORIZONTAL STEP NAVIGATION BAR (~40px height) -->
+    <div class="desktop-steps-bar">
+        <div class="desktop-steps-left">
+            <div class="desktop-steps-brand">
+                <span style="font-size: 1.15rem;">⛵</span>
                 <span class="desktop-brand-name">L3S Sail Scan</span>
                 <span class="desktop-brand-badge">PRO v4.2</span>
             </div>
+            <nav class="desktop-steps-nav">
+                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn active" onclick="switchScanTab('upload')">
+                    <span class="step-num">1</span>
+                    <span class="step-label">Upload &amp; Setup</span>
+                </button>
+                <button type="button" id="btn-tab-canvas" class="step-tab-btn tab-btn" onclick="switchScanTab('canvas')">
+                    <span class="step-num">2</span>
+                    <span class="step-label">Lines Studio</span>
+                </button>
+                <button type="button" id="btn-tab-analytics" class="step-tab-btn tab-btn" onclick="switchScanTab('analytics')">
+                    <span class="step-num">3</span>
+                    <span class="step-label">Aero Analytics</span>
+                </button>
+                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn" onclick="switchScanTab('compare')">
+                    <span class="step-num">4</span>
+                    <span class="step-label">Ghost Compare</span>
+                </button>
+                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn" onclick="switchScanTab('report')">
+                    <span class="step-num">5</span>
+                    <span class="step-label">PDF Report</span>
+                </button>
+            </nav>
+        </div>
+        <div class="desktop-steps-right">
+            <div id="active-profile-pill" class="steps-profile-pill">
+                <span style="color: #64748b;">Boat:</span> <strong id="lbl-active-boat" style="color: #38bdf8;">Grand Prix</strong>
+                <span style="color: #475569; margin: 0 4px;">•</span>
+                <span style="color: #64748b;">Sail:</span> <strong id="lbl-active-sail" style="color: #f59e0b;">J1 Medium</strong>
+            </div>
+            <span id="scan-tack-badge" class="steps-tack-pill" onclick="toggleTackDirection()" title="Click to toggle Tack (STBD / PORT)">STBD</span>
+        </div>
+    </div>
 
+    <!-- 2. DESKTOP APPLICATION TOOLBAR & MENUBAR (~36px height) -->
+    <div class="desktop-menubar">
+        <div class="desktop-menu-left">
             <!-- FILE MENU -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
                 <span>File</span>
@@ -134,7 +170,7 @@
                         <span>🗺️ Minimap Navigator</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleLayersPanel()">
-                        <span>📑 Layers & Objects Flyout</span>
+                        <span>📑 Layers &amp; Objects Flyout</span>
                     </div>
                 </div>
             </div>
@@ -184,7 +220,7 @@
                         <span>🎯 Target Entry Angle (18.0°)</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-header">Units & Measurement</div>
+                    <div class="desktop-dropdown-header">Units &amp; Measurement</div>
                     <div class="desktop-dropdown-item">
                         <span>📏 Metric System (Meters / cm)</span>
                         <span style="color: #10b981;">✓</span>
@@ -233,11 +269,28 @@
                     <div class="desktop-dropdown-item" onclick="window.open('/methodology', '_blank')">
                         <span>📖 Measurement Methodology Guide</span>
                     </div>
-                    <div class="desktop-dropdown-item" onclick="alert('L3S Keyboard Shortcuts:\n\nCtrl+O : Open Sail Image\nCtrl+S : Save to Fleet Database\nCtrl+P : Open PDF Report\nCtrl+Z : Undo\nCtrl+Y : Redo\nCtrl+0 : Zoom to Fit\n+ / - : Zoom In / Out\nDel : Delete Selected\nV : Select Tool\nH / Space : Pan Hand\nC : Crop Tool\nR : Distance Ruler\nA : Protractor Angle')">
+                    <div class="desktop-dropdown-item" onclick="alert('L3S Keyboard Shortcuts:
+
+Ctrl+O : Open Sail Image
+Ctrl+S : Save to Fleet Database
+Ctrl+P : Open PDF Report
+Ctrl+Z : Undo
+Ctrl+Y : Redo
+Ctrl+0 : Zoom to Fit
++ / - : Zoom In / Out
+Del : Delete Selected
+V : Select Tool
+H / Space : Pan Hand
+C : Crop Tool
+R : Distance Ruler
+A : Protractor Angle')">
                         <span>⌨️ Keyboard Shortcuts Reference</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="alert('L3S Sail Scan v4.2 PRO\nLS Lab Antigravity Aerodynamics Engine\nComputer Vision Camber, Draft & Twist Analysis\n© 2026 LS Lab')">
+                    <div class="desktop-dropdown-item" onclick="alert('L3S Sail Scan v4.2 PRO
+LS Lab Antigravity Aerodynamics Engine
+Computer Vision Camber, Draft &amp; Twist Analysis
+© 2026 LS Lab')">
                         <span>ℹ️ About L3S Sail Scan</span>
                     </div>
                 </div>
@@ -246,114 +299,22 @@
 
         <!-- RIGHT QUICK ACTIONS & INDICATORS -->
         <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 8px;">
-            <span id="desktop-tack-badge" onclick="toggleTackDirection()" style="font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #10b981; background: rgba(16, 185, 129, 0.15); color: #34d399; cursor: pointer;" title="Click to toggle Tack (Port / Starboard)">STBD</span>
-            <span id="desktop-boat-lbl" style="font-size: 0.75rem; color: #94a3b8; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Grand Prix</span>
-            <button type="button" onclick="switchScanTab('report')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <button type="button" id="btn-save-db" onclick="saveScanToFleetDatabase()" style="background: #0284c7; color: white; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span>⛵</span> Save DB
+            </button>
+            <button type="button" id="btn-save-project" onclick="saveSailScanProject()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
+                💾 Save Project <span style="font-size: 0.6rem; background: #f59e0b; color: #0f172a; padding: 1px 4px; border-radius: 3px; font-weight: 800;">PRO</span>
+            </button>
+            <button type="button" onclick="switchScanTab('report')" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                 <span>🖨️</span> PDF Report
             </button>
-            <button type="button" onclick="saveScanToFleetDatabase()" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                <span>💾</span> Save
-            </button>
+            <span id="save-toast" style="display: none; font-size: 0.75rem; color: #10b981; font-weight: 700;">✅ Saved!</span>
         </div>
     </div>
 
+    <!-- MAIN FULL-WIDTH WORKSPACE (NO VERTICAL SIDEBAR) -->
     <div class="desktop-main-workspace" style="display: flex; flex: 1; min-height: 0; overflow: hidden; width: 100%;">
-    
-    <!-- Sidebar / Progressive Wizard Navigation -->
-    <div class="wizard-sidebar" style="width: 330px; min-width: 330px; background: #111827; border-right: 1px solid #1f2937; display: flex; flex-direction: column; z-index: 10;">
-        <div style="padding: 1.2rem; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <h2 style="font-size: 1.15rem; font-weight: 700; color: #38bdf8; margin: 0;">L3S Sail Scan</h2>
-                    <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-family: monospace;">v4.0 PRO</span>
-                </div>
-                <p style="font-size: 0.75rem; color: #9ca3af; margin: 3px 0 0 0;">Computer Vision Sail Aerodynamics</p>
-            </div>
-        </div>
-
-        <!-- Active Boat & Sail Badge -->
-        <div id="active-profile-pill" style="padding: 0.6rem 1rem; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid #1f2937; font-size: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                <span style="color: #64748b;">Boat:</span> <strong id="lbl-active-boat" style="color: #38bdf8;">Guest Mode</strong>
-                <span style="color: #475569; margin: 0 4px;">•</span>
-                <span style="color: #64748b;">Sail:</span> <strong id="lbl-active-sail" style="color: #f59e0b;">Unassigned</strong>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span id="scan-tack-badge" style="font-size: 0.65rem; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; font-weight: 700;">STBD</span>
-                <span id="scan-type-badge" style="font-size: 0.65rem; background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700;">FOOT</span>
-            </div>
-        </div>
-
-        <nav class="wizard-nav" style="flex: 1; padding: 0.85rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem;">
-            <button id="btn-tab-upload" class="tab-btn active" onclick="switchScanTab('upload')">
-                <span class="tab-num">1</span>
-                <div class="tab-info">
-                    <span class="tab-title">1. Upload & Scan Config</span>
-                    <span class="tab-sub">Select type, boat & color profiles</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-canvas" class="tab-btn disabled" onclick="switchScanTab('canvas')" disabled>
-                <span class="tab-num">2</span>
-                <div class="tab-info">
-                    <span class="tab-title">2. Line Processing Studio</span>
-                    <span class="tab-sub">Auto-detect stripes & curve editor</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-analytics" class="tab-btn disabled" onclick="switchScanTab('analytics')" disabled>
-                <span class="tab-num">3</span>
-                <div class="tab-info">
-                    <span class="tab-title">3. Camber & Aero Analytics</span>
-                    <span class="tab-sub">Camber %, draft, twist & polars</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-compare" class="tab-btn disabled" onclick="switchScanTab('compare')" disabled>
-                <span class="tab-num">4</span>
-                <div class="tab-info">
-                    <span class="tab-title">4. Ghost & History Compare</span>
-                    <span class="tab-sub">Compare past scans & target shapes</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-report" class="tab-btn disabled" onclick="switchScanTab('report')" disabled>
-                <span class="tab-num">5</span>
-                <div class="tab-info">
-                    <span class="tab-title">5. Industry PDF Report</span>
-                    <span class="tab-sub">Overleaf Split View • Specs & Print</span>
-                </div>
-            </button>
-        </nav>
-
-        <!-- Quick Database Save Action -->
-        <div style="padding: 0.75rem 1rem; border-top: 1px solid #1f2937; background: #0f172a; display: flex; flex-direction: column; gap: 6px;">
-            <button id="btn-save-db" onclick="saveScanToFleetDatabase()" style="width: 100%; background: #0284c7; color: white; border: 1px solid #38bdf8; padding: 9px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <span>⛵</span> Save to Boat & Sail Database
-            </button>
-            <button id="btn-save-project" onclick="saveSailScanProject()" style="width: 100%; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; padding: 9px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
-                💾 Save Project <span style="font-size: 0.65rem; background: #f59e0b; color: #0f172a; padding: 2px 6px; border-radius: 10px; font-weight: 800; text-transform: uppercase;">LS PRO</span>
-            </button>
-            <div id="save-toast" style="display: none; margin-top: 4px; font-size: 0.75rem; color: #10b981; text-align: center; font-weight: 600;">
-                ✅ Saved successfully!
-            </div>
-            <a href="/methodology" target="_blank"
-               style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #1e293b; background: #0b0f17; color: #64748b; font-size: 0.72rem; text-decoration: none; transition: color 0.15s, border-color 0.15s;"
-               onmouseover="this.style.color='#94a3b8'; this.style.borderColor='#334155';"
-               onmouseout="this.style.color='#64748b'; this.style.borderColor='#1e293b';"
-               title="How L3S calculates camber, draft, twist, entry &amp; exit angles">
-                📖 <span>Measurement Methodology</span>
-            </a>
-        </div>
-
-        <div style="padding: 0.75rem 1rem; border-top: 1px solid #1f2937; background: #0b0f17; font-size: 0.72rem; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
-            <span>L3S Studio Engine v4.0</span>
-            <span id="auth-user-tag" style="color: #38bdf8;">Guest</span>
-        </div>
-    </div>
-
-    <!-- Main Content Panels -->
-    <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         
         <!-- PANEL 1: Upload & Scan Config -->
         <div id="panel-upload" class="wizard-panel active" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; overflow-y: auto;">
@@ -515,418 +476,194 @@
         </div>
 
         <!-- PANEL 2: Full Pro CAD Image Editor & Interactive Studio Canvas -->
+        <!-- PANEL 2: Full Pro CAD Image Editor & Interactive Studio Canvas -->
         <div id="panel-canvas" class="wizard-panel" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; position: relative;">
             
-            <!-- 1. Top CAD Control & Transform Bar -->
-            <div id="cad-top-bar" style="background: #0f172a; border-bottom: 1px solid #1e293b; padding: 0.4rem 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; z-index: 30;">
+            <!-- Unified Professional CAD Studio Ribbon -->
+            <div id="cad-studio-ribbon" class="cad-studio-ribbon">
                 
-                <!-- Left: History & Image Transformations -->
-                <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                    <!-- Undo / Redo -->
-                    <button type="button" class="btn-canvas-tool" id="btn-cad-undo" onclick="cadUndo()" title="Undo (Ctrl+Z)">
-                        <span>↩️</span>
-                    </button>
-                    <button type="button" class="btn-canvas-tool" id="btn-cad-redo" onclick="cadRedo()" title="Redo (Ctrl+Y)">
-                        <span>↪️</span>
-                    </button>
-                    
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 3px;"></div>
-
-                    <!-- Rotate & Flip -->
-                    <button type="button" class="btn-canvas-tool" onclick="rotateImage(-90)" title="Rotate 90° CCW">
-                        <span>↺</span> -90°
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="rotateImage(90)" title="Rotate 90° CW">
-                        <span>↻</span> +90°
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="flipImage('h')" title="Flip Horizontal">
-                        <span>↔️</span> Flip H
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="flipImage('v')" title="Flip Vertical">
-                        <span>↕️</span> Flip V
-                    </button>
-
-                    <!-- Crop Toggle -->
-                    <button type="button" class="btn-canvas-tool" id="btn-top-crop" onclick="setStudioTool('crop')" title="Crop Image (C)">
-                        <span>✂️</span> Crop
-                    </button>
-
-                    <!-- Filters Popover Button -->
-                    <button type="button" class="btn-canvas-tool" id="btn-filters-toggle" onclick="toggleFilterPopover()" title="Adjust Brightness, Contrast, Exposure">
-                        <span>🎨</span> Filters
-                    </button>
-
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 3px;"></div>
-
-                    <!-- Pro Zoom & Pan Controls -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <button type="button" onclick="zoomStep(-0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 2px 6px; font-weight: 700;">−</button>
-                        <span id="cad-zoom-badge" onclick="zoomToFit()" style="font-size: 0.75rem; color: #38bdf8; font-weight: 700; padding: 0 6px; cursor: pointer; min-width: 48px; text-align: center;" title="Click to Fit Screen">100%</span>
-                        <button type="button" onclick="zoomStep(0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 2px 6px; font-weight: 700;">+</button>
-                    </div>
-
-                    <button type="button" class="btn-canvas-tool" onclick="zoomToFit()" title="Fit Image to Screen">
-                        <span>🔍</span> Fit
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="zoomActual()" title="1:1 Actual Pixels">
-                        <span>📐</span> 1:1
-                    </button>
-                </div>
-
-                <!-- Center: Stripe Layers Controls -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-weight: 700; font-size: 0.78rem; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                        <span>🎯</span> Stripe:
-                    </span>
-                    <div id="stripe-layer-tabs" style="display: flex; gap: 4px;">
-                        <!-- Dynamically populated -->
-                    </div>
-                    <button type="button" onclick="addNewStripeLayer()" class="btn-canvas-tool" style="border-color: #10b981; color: #10b981; padding: 3px 8px;" title="Add draft stripe layer">+ Layer</button>
-                </div>
-
-                <!-- Right: Options Menu, Navigator, Layers & AI CV Tools -->
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    
-                    <!-- Color Status Badge -->
-                    <div id="canvas-detected-color-badge" style="display: inline-flex; align-items: center; gap: 5px; background: #1e293b; padding: 3px 7px; border-radius: 4px; border: 1px solid #334155; font-size: 0.72rem;">
-                        <span id="canvas-dot-sail" style="width: 7px; height: 7px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
-                        <span id="canvas-lbl-sail" style="color: #cbd5e1;">Cloth</span>
-                        <span style="color: #475569;">|</span>
-                        <span id="canvas-dot-stripe" style="width: 7px; height: 7px; border-radius: 50%; background: #38bdf8; display: inline-block;"></span>
-                        <span id="canvas-lbl-stripe" style="color: #38bdf8;">Stripe</span>
-                    </div>
-
-                    <button type="button" id="btn-magic-snap" onclick="toggleMagicSnapMode()" class="btn-canvas-tool" style="background: #1e293b; color: #a855f7; border-color: #a855f7; font-weight: 700;">
-                        <span>✨</span> Snap: <span id="magic-snap-lbl">OFF</span>
-                    </button>
-
-                    <button type="button" onclick="runAutoDetection()" class="btn-canvas-tool" style="background: #0284c7; color: white; border: none; font-weight: 600;">
-                        🔄 Re-detect
-                    </button>
-
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 2px;"></div>
-
-                    <!-- Minimap Toggle Button -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-minimap" onclick="toggleMinimap()" title="Toggle Picture-in-Picture Minimap Navigator">
-                        <span>🗺️</span> Minimap
-                    </button>
-
-                    <!-- Layers Panel Toggle -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-layers" onclick="toggleLayersPanel()" title="Toggle Layers & Objects Flyout">
-                        <span>📑</span> Layers (<span id="cad-layers-count">0</span>)
-                    </button>
-
-                    <!-- Options Dropdown Opener -->
-                    <div style="position: relative;">
-                        <button type="button" class="btn-canvas-tool" id="btn-cad-options" onclick="toggleOptionsMenu()" style="background: #334155; color: white; font-weight: 700;">
-                            <span>⚙️</span> Options ▾
-                        </button>
-
-                        <!-- Options Dropdown Menu -->
-                        <div id="cad-options-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); min-width: 220px; padding: 8px; z-index: 100; flex-direction: column; gap: 4px;">
-                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid #1e293b;">View Overlays</div>
-                            
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Grid Overlay</span>
-                                <select id="opt-grid-size" onchange="setGridOption(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px;">
-                                    <option value="0">Off</option>
-                                    <option value="20">20 px</option>
-                                    <option value="50" selected>50 px</option>
-                                    <option value="100">100 px</option>
-                                </select>
-                            </label>
-
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Rule of Thirds</span>
-                                <input type="checkbox" id="opt-thirds" onchange="toggleViewOption('thirds', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Center Crosshairs</span>
-                                <input type="checkbox" id="opt-crosshairs" onchange="toggleViewOption('crosshairs', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Snap to Grid</span>
-                                <input type="checkbox" id="opt-snap" onchange="toggleViewOption('snap', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 6px 8px 4px; border-bottom: 1px solid #1e293b; border-top: 1px solid #1e293b; margin-top: 4px;">Configuration</div>
-
-                            <button type="button" onclick="openScaleCalibrationModal(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #38bdf8; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                📐 Calibrate Metric Scale (px ➔ m)...
+                <!-- GROUP 1: HISTORY & TRANSFORM -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">HISTORY &amp; TRANSFORM</div>
+                    <div class="ribbon-group-items">
+                        <button type="button" class="btn-canvas-tool" id="btn-cad-undo" onclick="cadUndo()" title="Undo (Ctrl+Z)"><span>↩️</span></button>
+                        <button type="button" class="btn-canvas-tool" id="btn-cad-redo" onclick="cadRedo()" title="Redo (Ctrl+Y)"><span>↪️</span></button>
+                        <div class="ribbon-vdiv"></div>
+                        <button type="button" class="btn-canvas-tool" onclick="rotateImage(-90)" title="Rotate -90° CCW"><span>↺</span> -90°</button>
+                        <button type="button" class="btn-canvas-tool" onclick="rotateImage(90)" title="Rotate +90° CW"><span>↻</span> +90°</button>
+                        <button type="button" class="btn-canvas-tool" onclick="flipImage('h')" title="Flip Horizontal"><span>↔️</span> H</button>
+                        <button type="button" class="btn-canvas-tool" onclick="flipImage('v')" title="Flip Vertical"><span>↕️</span> V</button>
+                        <div class="ribbon-vdiv"></div>
+                        <div style="position: relative;">
+                            <button type="button" class="btn-canvas-tool" id="btn-filters-toggle" onclick="toggleFilterPopover()" title="Adjust Brightness &amp; Contrast">
+                                <span>🎨</span> Filters
                             </button>
-
-                            <button type="button" onclick="openToolbarCustomizer(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #f8fafc; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                🛠️ Customize Toolbar Tools...
-                            </button>
-
-                            <button type="button" onclick="exportAnnotatedCanvas(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #10b981; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                💾 Export High-Res PNG with Annotations
-                            </button>
+                            <!-- Image Filters Popover -->
+                            <div id="cad-filters-popover" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.8); width: 280px; padding: 14px; z-index: 1000; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
+                                    <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">🎨 Image Enhancement Filters</span>
+                                    <button type="button" onclick="toggleFilterPopover()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.85rem;">✕</button>
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Brightness</span><span id="lbl-filter-brightness">100%</span></div>
+                                    <input type="range" id="filter-brightness" min="40" max="220" value="100" oninput="applyImageFilter('brightness', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Contrast</span><span id="lbl-filter-contrast">100%</span></div>
+                                    <input type="range" id="filter-contrast" min="40" max="220" value="100" oninput="applyImageFilter('contrast', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Exposure / Glare</span><span id="lbl-filter-exposure">0</span></div>
+                                    <input type="range" id="filter-exposure" min="-60" max="60" value="0" oninput="applyImageFilter('exposure', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label style="font-size: 0.75rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="checkbox" id="filter-invert" onchange="applyImageFilter('invert', this.checked)" style="accent-color: #38bdf8;"> Invert Colors
+                                    </label>
+                                </div>
+                                <button type="button" onclick="resetImageFilters()" style="background: #1e293b; color: #cbd5e1; border: 1px solid #475569; padding: 5px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-top: 4px;">🔄 Reset Filters</button>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                </div>
-            </div>
+                <div class="ribbon-divider"></div>
 
-            <!-- 2. Image Filters Popover (Adjust Brightness/Contrast/Exposure) -->
-            <div id="cad-filters-popover" style="display: none; position: absolute; top: 46px; left: 160px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.8); width: 280px; padding: 14px; z-index: 100; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
-                    <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">🎨 Image Enhancement Filters</span>
-                    <button type="button" onclick="toggleFilterPopover()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.85rem;">✕</button>
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Brightness</span>
-                        <span id="lbl-filter-brightness">100%</span>
-                    </div>
-                    <input type="range" id="filter-brightness" min="40" max="220" value="100" oninput="applyImageFilter('brightness', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Contrast</span>
-                        <span id="lbl-filter-contrast">100%</span>
-                    </div>
-                    <input type="range" id="filter-contrast" min="40" max="220" value="100" oninput="applyImageFilter('contrast', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Exposure / Glare Compensation</span>
-                        <span id="lbl-filter-exposure">0</span>
-                    </div>
-                    <input type="range" id="filter-exposure" min="-60" max="60" value="0" oninput="applyImageFilter('exposure', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <label style="font-size: 0.75rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                        <input type="checkbox" id="filter-invert" onchange="applyImageFilter('invert', this.checked)" style="accent-color: #38bdf8;"> Invert Colors (High Visibility)
-                    </label>
-                </div>
-                <button type="button" onclick="resetImageFilters()" style="background: #1e293b; color: #cbd5e1; border: 1px solid #475569; padding: 5px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-top: 4px;">
-                    🔄 Reset Filters
-                </button>
-            </div>
-
-            <!-- 3. Contextual Tool Property Bar (Sub-Bar) -->
-            <div id="cad-property-bar" style="background: #111827; border-bottom: 1px solid #1f2937; padding: 0.35rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; z-index: 25; flex-wrap: wrap; gap: 10px;">
-                <!-- Left: Active Tool Indicator & Stroke Styles -->
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <span id="cad-active-tool-pill" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #0284c7; color: #38bdf8; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;">
-                        Tool: 👆 Select (V)
-                    </span>
-
-                    <!-- Stroke Color Picker & Swatches -->
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span>Color:</span>
-                        <input type="color" id="propStrokeColor" value="#38bdf8" onchange="setToolProp('strokeColor', this.value)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; background: transparent;">
-                        <div style="display: flex; gap: 3px;">
-                            <span onclick="setToolProp('strokeColor', '#38bdf8')" style="width: 14px; height: 14px; background: #38bdf8; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#ef4444')" style="width: 14px; height: 14px; background: #ef4444; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#10b981')" style="width: 14px; height: 14px; background: #10b981; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#f59e0b')" style="width: 14px; height: 14px; background: #f59e0b; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#ffffff')" style="width: 14px; height: 14px; background: #ffffff; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#a855f7')" style="width: 14px; height: 14px; background: #a855f7; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                        </div>
-                    </div>
-
-                    <!-- Line Thickness -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Width:</span>
-                        <select id="propLineWidth" onchange="setToolProp('lineWidth', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="1">1 px (Fine)</option>
-                            <option value="2" selected>2 px (Medium)</option>
-                            <option value="4">4 px (Bold)</option>
-                            <option value="6">6 px (Heavy)</option>
-                            <option value="10">10 px (Ultra)</option>
+                <!-- GROUP 2: CAD TOOLS -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">CAD TOOLS</div>
+                    <div class="ribbon-group-items">
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn active" id="tool-select" onclick="setStudioTool('select')" title="Select &amp; Move (V)"><span>👆</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-pan" onclick="setStudioTool('pan')" title="Pan Hand (H / Space)"><span>🖐️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-crop" onclick="setStudioTool('crop')" title="Crop Tool (C)"><span>✂️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-ruler" onclick="setStudioTool('ruler')" title="Distance Ruler (R)"><span>📏</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-spline" onclick="setStudioTool('spline')" title="Curvature Spline (S)"><span>〰️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-angle" onclick="setStudioTool('angle')" title="Angle Protractor (A)"><span>📐</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-caliper" onclick="setStudioTool('caliper')" title="Draft Caliper (D)"><span>⛵</span></button>
+                        <div class="ribbon-vdiv"></div>
+                        <input type="color" id="propStrokeColor" value="#38bdf8" onchange="setToolProp('strokeColor', this.value)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; background: transparent;" title="Line Color">
+                        <select id="propLineWidth" onchange="setToolProp('lineWidth', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px;" title="Line Width">
+                            <option value="1">1px</option>
+                            <option value="2" selected>2px</option>
+                            <option value="4">4px</option>
+                            <option value="6">6px</option>
                         </select>
-                    </div>
-
-                    <!-- Line Style (Solid/Dashed) -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Style:</span>
-                        <select id="propLineStyle" onchange="setToolProp('lineStyle', this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="solid">Solid —</option>
-                            <option value="dashed">Dashed - -</option>
-                            <option value="dotted">Dotted · ·</option>
-                        </select>
-                    </div>
-
-                    <!-- Fill Opacity -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Fill:</span>
-                        <select id="propFillOpacity" onchange="setToolProp('fillOpacity', parseFloat(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="0" selected>None (0%)</option>
-                            <option value="0.2">Glass (20%)</option>
-                            <option value="0.5">Tint (50%)</option>
-                            <option value="0.8">Solid (80%)</option>
-                        </select>
-                    </div>
-
-                    <!-- Font Size for Text Annotations -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Text Size:</span>
-                        <select id="propFontSize" onchange="setToolProp('fontSize', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="12">12 px</option>
-                            <option value="15" selected>15 px</option>
-                            <option value="18">18 px</option>
-                            <option value="24">24 px</option>
-                        </select>
+                        <button type="button" onclick="deleteSelectedAnnotation()" class="btn-canvas-tool" style="color: #ef4444; border-color: #ef4444; padding: 2px 6px;" title="Delete Selected Object (Del)">🗑️</button>
                     </div>
                 </div>
 
-                <!-- Right: Active Scale Metric & Clear Tool -->
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="cad-scale-display" style="color: #94a3b8; font-size: 0.72rem;" title="Current measurement scale">
-                        Scale: <strong>1 px = 0.005 m</strong> (Calibrated)
-                    </span>
-                    <button type="button" onclick="deleteSelectedAnnotation()" class="btn-canvas-tool" style="color: #ef4444; border-color: #ef4444; padding: 2px 6px;" title="Delete selected object (Del)">
-                        🗑️ Delete
-                    </button>
-                </div>
-            </div>
+                <div class="ribbon-divider"></div>
 
-            <!-- 3b. Dedicated 4-Point 3-Degree B-Spline Aerodynamics Toolbar -->
-            <div id="cad-stripe-bar" style="background: #0d1527; border-bottom: 1px solid #1e293b; padding: 0.3rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; z-index: 24; flex-wrap: wrap; gap: 8px;">
-                <!-- Left: Stripe Selector, Type & Color -->
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                        <span>⛵</span> <strong>4-Pt B-Spline Stripe:</strong>
-                    </span>
-
-                    <!-- Active Stripe Dropdown -->
-                    <select id="toolbar-stripe-select" onchange="selectStripeByIndex(parseInt(this.value))" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; max-width: 220px;">
-                        <!-- Dynamically populated -->
-                    </select>
-
-                    <!-- Stripe Position / Type -->
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #94a3b8;">Type:</span>
-                        <select id="toolbar-stripe-type" onchange="changeActiveStripeType(this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px;">
-                            <option value="foot">Foot / Bottom (25%)</option>
-                            <option value="lower_quarter">Lower Quarter (37.5%)</option>
+                <!-- GROUP 3: ACTIVE STRIPE & CAMBER -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">ACTIVE STRIPE &amp; CAMBER</div>
+                    <div class="ribbon-group-items">
+                        <select id="toolbar-stripe-select" onchange="selectStripeByIndex(parseInt(this.value))" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; max-width: 140px;">
+                            <!-- Dynamically populated -->
+                        </select>
+                        <select id="toolbar-stripe-type" onchange="changeActiveStripeType(this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
+                            <option value="foot">Bottom (25%)</option>
+                            <option value="lower_quarter">Lower Qtr (37.5%)</option>
                             <option value="mid" selected>Mid-Chord (50%)</option>
-                            <option value="upper_quarter">Upper Quarter (62.5%)</option>
+                            <option value="upper_quarter">Upper Qtr (62.5%)</option>
                             <option value="top">Top Leech (75%)</option>
-                            <option value="custom">Custom Profile</option>
                         </select>
-                    </div>
+                        <input type="color" id="toolbar-stripe-color" value="#38bdf8" onchange="changeActiveStripeColor(this.value)" style="width: 20px; height: 20px; padding: 0; border: 1px solid #475569; border-radius: 3px; cursor: pointer; background: transparent;" title="Stripe Color">
+                        
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <span style="font-size: 0.68rem; color: #94a3b8; padding-right: 3px;">Camber:</span>
+                            <button type="button" onclick="nudgeStripeCamber(-0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;" title="Decrease 0.5%">−</button>
+                            <span id="badge-stripe-camber" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; min-width: 32px; text-align: center;">12.0%</span>
+                            <button type="button" onclick="nudgeStripeCamber(0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;" title="Increase 0.5%">+</button>
+                        </div>
 
-                    <!-- Stripe Color Picker -->
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #94a3b8;">Color:</span>
-                        <input type="color" id="toolbar-stripe-color" value="#38bdf8" onchange="changeActiveStripeColor(this.value)" style="width: 20px; height: 20px; padding: 0; border: 1px solid #475569; border-radius: 3px; cursor: pointer; background: transparent;">
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <span style="font-size: 0.68rem; color: #94a3b8; padding-right: 3px;">Draft:</span>
+                            <button type="button" onclick="nudgeStripeDraft(-1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;" title="Draft Forward 1%">◀</button>
+                            <span id="badge-stripe-draft" style="font-size: 0.72rem; color: #f59e0b; font-weight: 700; min-width: 30px; text-align: center;">45%</span>
+                            <button type="button" onclick="nudgeStripeDraft(1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;" title="Draft Aft 1%">▶</button>
+                        </div>
+
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-polygon" onclick="toggleControlPolygon()" title="Show/Hide Control Arms &amp; Tangents" style="border-color: #38bdf8; color: #38bdf8; padding: 3px 6px;">
+                            <span>🔘</span> Arms: <span id="lbl-polygon-status">ON</span>
+                        </button>
+                        <button type="button" class="btn-canvas-tool" onclick="invertActiveStripeDirection()" title="Flip Direction" style="padding: 3px 6px;"><span>🔄</span> Flip</button>
+                        <button type="button" class="btn-canvas-tool" onclick="openNewStripeModal()" style="border-color: #10b981; color: #10b981; padding: 3px 7px;" title="Add Stripe">+ Stripe</button>
                     </div>
                 </div>
 
-                <!-- Center & Right: 4-Point 3-Deg B-Spline Aerodynamic Controls -->
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    
-                    <!-- Toggle 4-Pt Control Polygon -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-polygon" onclick="toggleControlPolygon()" title="Show/Hide 4-Point B-Spline Control Arms & Tangents" style="border-color: #38bdf8; color: #38bdf8;">
-                        <span>🔘</span> Arms: <span id="lbl-polygon-status">ON</span>
-                    </button>
+                <div class="ribbon-divider"></div>
 
-                    <!-- Invert Direction P0 <-> P3 -->
-                    <button type="button" class="btn-canvas-tool" onclick="invertActiveStripeDirection()" title="Flip Luff (P0) and Leech (P3) Direction">
-                        <span>🔄</span> Flip Luff/Leech
-                    </button>
+                <!-- GROUP 4: VIEW, OVERLAYS & CV ENGINE -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">VIEW &amp; CV ENGINE</div>
+                    <div class="ribbon-group-items">
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <button type="button" onclick="zoomStep(-0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;">−</button>
+                            <span id="cad-zoom-badge" onclick="zoomToFit()" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; padding: 0 4px; cursor: pointer; min-width: 42px; text-align: center;">100%</span>
+                            <button type="button" onclick="zoomStep(0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;">+</button>
+                        </div>
+                        <button type="button" class="btn-canvas-tool" onclick="zoomToFit()" title="Fit Screen" style="padding: 3px 6px;"><span>🔍</span> Fit</button>
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-minimap" onclick="toggleMinimap()" title="Toggle Minimap" style="padding: 3px 6px;"><span>🗺️</span> Minimap</button>
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-layers" onclick="toggleLayersPanel()" title="Toggle Layers" style="padding: 3px 6px;"><span>📑</span> Layers (<span id="cad-layers-count">0</span>)</button>
 
-                    <!-- Camber Nudge -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <span style="font-size: 0.7rem; color: #94a3b8; padding-right: 4px;">Camber:</span>
-                        <button type="button" onclick="nudgeStripeCamber(-0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Decrease Camber Depth by 0.5%">−</button>
-                        <span id="badge-stripe-camber" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; min-width: 36px; text-align: center;">12.0%</span>
-                        <button type="button" onclick="nudgeStripeCamber(0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Increase Camber Depth by 0.5%">+</button>
+                        <!-- Overlays Dropdown -->
+                        <div style="position: relative;">
+                            <button type="button" class="btn-canvas-tool" id="btn-cad-options" onclick="toggleOptionsMenu()" style="background: #334155; color: white; font-weight: 700; padding: 3px 7px;">
+                                <span>⚙️</span> Overlays ▾
+                            </button>
+                            <div id="cad-options-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); min-width: 220px; padding: 8px; z-index: 1000; flex-direction: column; gap: 4px;">
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid #1e293b;">View Overlays</div>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Grid Overlay</span>
+                                    <select id="opt-grid-size" onchange="setGridOption(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px;">
+                                        <option value="0">Off</option>
+                                        <option value="20">20 px</option>
+                                        <option value="50" selected>50 px</option>
+                                        <option value="100">100 px</option>
+                                    </select>
+                                </label>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Rule of Thirds</span>
+                                    <input type="checkbox" id="opt-thirds" onchange="toggleViewOption('thirds', this.checked)" style="accent-color: #38bdf8;">
+                                </label>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Center Crosshairs</span>
+                                    <input type="checkbox" id="opt-crosshairs" onchange="toggleViewOption('crosshairs', this.checked)" style="accent-color: #38bdf8;">
+                                </label>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Snap to Grid</span>
+                                    <input type="checkbox" id="opt-snap" onchange="toggleViewOption('snap', this.checked)" style="accent-color: #38bdf8;">
+                                </label>
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 6px 8px 4px; border-bottom: 1px solid #1e293b; border-top: 1px solid #1e293b; margin-top: 4px;">Configuration</div>
+                                <button type="button" onclick="openScaleCalibrationModal(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #38bdf8; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;">
+                                    📐 Calibrate Metric Scale...
+                                </button>
+                                <button type="button" onclick="exportAnnotatedCanvas(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #10b981; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;">
+                                    💾 Export High-Res PNG
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Glow Re-detect Button -->
+                        <button type="button" onclick="runAutoDetection()" class="btn-canvas-tool" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; font-weight: 700; padding: 4px 10px; box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);" title="Run Computer Vision Auto-Detection">
+                            🔄 Re-detect CV
+                        </button>
                     </div>
-
-                    <!-- Draft Position Nudge -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <span style="font-size: 0.7rem; color: #94a3b8; padding-right: 4px;">Draft Pos:</span>
-                        <button type="button" onclick="nudgeStripeDraft(-1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Shift Draft Forward by 1%">◀</button>
-                        <span id="badge-stripe-draft" style="font-size: 0.72rem; color: #f59e0b; font-weight: 700; min-width: 34px; text-align: center;">45%</span>
-                        <button type="button" onclick="nudgeStripeDraft(1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Shift Draft Aft by 1%">▶</button>
-                    </div>
-
-                    <!-- Duplicate & Delete -->
-                    <button type="button" class="btn-canvas-tool" onclick="duplicateActiveStripe()" title="Duplicate Active Stripe into New Layer">
-                        <span>📑</span> Duplicate
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="openNewStripeModal()" style="border-color: #10b981; color: #10b981;" title="Add New 4-Point B-Spline Stripe">
-                        <span>+</span> New Stripe
-                    </button>
                 </div>
+
             </div>
 
-            <!-- 4. Studio Main Workspace (Left 2D Toolbar + Canvas Container + Right Layers Panel) -->
+            <!-- Canvas Workspace -->
             <div style="flex: 1; display: flex; position: relative; overflow: hidden; min-height: 0;">
                 
-                <!-- Left Vertical 2D CAD Toolbar (Floating / Docked) -->
-                <div id="cad-vertical-toolbar" style="width: 46px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border-right: 1px solid #1e293b; display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 5px; z-index: 20; box-shadow: 2px 0 10px rgba(0,0,0,0.5);">
-                    
-                    <!-- Selection & View Navigation -->
-                    <button type="button" class="cad-vtool-btn active" id="tool-select" onclick="setStudioTool('select')" title="Select & Move Objects (V)">
-                        <span>👆</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-pan" onclick="setStudioTool('pan')" title="Hand / Pan View (H or Space)">
-                        <span>🖐️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-zoom" onclick="setStudioTool('zoom')" title="Box Zoom Tool (Z)">
-                        <span>🔍</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-crop" onclick="setStudioTool('crop')" title="Crop Image (C)">
-                        <span>✂️</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- 2D Measurement CAD Tools -->
-                    <button type="button" class="cad-vtool-btn" id="tool-ruler" onclick="setStudioTool('ruler')" title="Distance Ruler & Tape (R)">
-                        <span>📏</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-angle" onclick="setStudioTool('angle')" title="Angle Protractor (A)">
-                        <span>📐</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-caliper" onclick="setStudioTool('caliper')" title="Sail Draft Caliper (D)">
-                        <span>⛵</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- 2D Drawing & Shape Tools -->
-                    <button type="button" class="cad-vtool-btn" id="tool-spline" onclick="setStudioTool('spline')" title="Curvature Spline / Bezier (S)">
-                        <span>〰️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-pen" onclick="setStudioTool('pen')" title="Freehand Pen / Brush (P)">
-                        <span>✏️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-arrow" onclick="setStudioTool('arrow')" title="Dimension Arrow / Callout (W)">
-                        <span>↗️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-rect" onclick="setStudioTool('rect')" title="Rectangle (B)">
-                        <span>⬜</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-ellipse" onclick="setStudioTool('ellipse')" title="Circle / Ellipse (O)">
-                        <span>⭕</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-text" onclick="setStudioTool('text')" title="Text Box / Label (T)">
-                        <span>🔤</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- Eyedropper & Utilities -->
-                    <button type="button" class="cad-vtool-btn" id="tool-eyedropper" onclick="setStudioTool('eyedropper')" title="Color Eyedropper / Pipette">
-                        <span>🧪</span>
-                    </button>
-                </div>
-
                 <!-- Center Canvas Work Area -->
                 <div style="flex: 1; position: relative; background: #020617; overflow: hidden; display: flex; align-items: center; justify-content: center;" id="canvasWrapper">
                     
                     <canvas id="sailStudioCanvas" style="display: block; cursor: crosshair;"></canvas>
 
                     <!-- Floating Crop Action Controls (Active only in Crop mode) -->
-                    <div id="crop-action-bar" style="display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 14px; z-index: 50; display: flex; gap: 10px; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+                    <div id="crop-action-bar" style="display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 14px; z-index: 50; gap: 10px; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
                         <span style="font-weight: 700; font-size: 0.8rem; color: #38bdf8;">✂️ Crop Mode</span>
                         <select id="crop-aspect-preset" onchange="setCropAspect(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;">
                             <option value="free">Free Aspect</option>
@@ -944,28 +681,23 @@
                     </div>
 
                     <!-- Floating Real-time HUD Telemetry -->
-                    <div id="cad-hud" style="position: absolute; bottom: 1.25rem; left: 1.25rem; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(12px); border: 1px solid #334155; border-radius: 8px; padding: 0.75rem 1.25rem; display: flex; gap: 1.5rem; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 10; pointer-events: auto;">
+                    <div id="cad-hud" style="position: absolute; bottom: 1.25rem; left: 1.25rem; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); border: 1px solid #334155; border-radius: 8px; padding: 0.65rem 1.1rem; display: flex; gap: 1.4rem; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 10; pointer-events: auto;">
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Max Camber</div>
-                            <div id="hud-camber" style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">-- %</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Max Camber</div>
+                            <div id="hud-camber" style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">-- %</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Draft Position</div>
-                            <div id="hud-draft" style="font-size: 1.25rem; font-weight: 800; color: #f59e0b;">-- %</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Draft Position</div>
+                            <div id="hud-draft" style="font-size: 1.15rem; font-weight: 800; color: #f59e0b;">-- %</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Twist Angle</div>
-                            <div id="hud-twist" style="font-size: 1.25rem; font-weight: 800; color: #10b981;">-- °</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Twist Angle</div>
+                            <div id="hud-twist" style="font-size: 1.15rem; font-weight: 800; color: #10b981;">-- °</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Entry / Exit</div>
-                            <div id="hud-entry-exit" style="font-size: 1rem; font-weight: 700; color: #f8fafc;">-- / --</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Entry / Exit</div>
+                            <div id="hud-entry-exit" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc;">-- / --</div>
                         </div>
-                    </div>
-
-                    <!-- Canvas Mode Hint Overlay Pill -->
-                    <div id="canvas-hint-pill" style="position: absolute; top: 1.25rem; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); border: 1px solid #38bdf8; border-radius: 20px; padding: 5px 16px; font-size: 0.75rem; color: #f8fafc; pointer-events: none; z-index: 10;">
-                        💡 <strong>Hint:</strong> Use left CAD tools (Ruler, Spline, Caliper, Arrow) to annotate and measure this sail!
                     </div>
 
                     <!-- Floating Picture-in-Picture Minimap Navigator -->
@@ -987,18 +719,13 @@
                         <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">📑 Layers &amp; Stripes</span>
                         <button type="button" onclick="toggleLayersPanel()" style="background: none; border: none; color: #94a3b8; cursor: pointer;">✕</button>
                     </div>
-
-                    <!-- Quick Add Stripe Header Button -->
                     <div style="padding: 8px 10px; background: #111827; border-bottom: 1px solid #1e293b; display: flex; gap: 6px;">
                         <button type="button" onclick="openNewStripeModal()" style="flex: 1; background: #0284c7; color: white; border: none; padding: 6px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
                             <span>+</span> New B-Spline Stripe
                         </button>
                     </div>
-                    
                     <div style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;" id="cad-layers-list">
-                        <!-- Populated dynamically with stripes and annotations -->
                     </div>
-
                     <div style="padding: 8px; border-top: 1px solid #1e293b; display: flex; gap: 6px;">
                         <button type="button" onclick="clearAllAnnotations()" style="flex: 1; background: #334155; color: #ef4444; border: 1px solid #ef4444; padding: 5px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">
                             🗑️ Clear All CAD
@@ -1006,6 +733,27 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Studio Desktop Status Bar -->
+            <div id="studio-desktop-statusbar" class="desktop-statusbar">
+                <div class="statusbar-left">
+                    <span class="status-indicator">● READY</span>
+                    <span id="sb-cursor-pos">X: -- px | Y: -- px</span>
+                    <span id="sb-image-dims">Dims: --</span>
+                    <span id="sb-scale">Scale: 1 px = 0.005 m</span>
+                </div>
+                <div class="statusbar-center">
+                    <span id="sb-active-stripe" style="color: #38bdf8; font-weight: 700;">Active: Stripe 1 (Mid)</span>
+                    <span id="sb-metrics-camber" style="color: #38bdf8;">Camber: --%</span>
+                    <span id="sb-metrics-draft" style="color: #f59e0b;">Draft: --%</span>
+                    <span id="sb-metrics-twist" style="color: #10b981;">Twist: --°</span>
+                </div>
+                <div class="statusbar-right">
+                    <span id="sb-tack" class="status-badge-tack" onclick="toggleTackDirection()" style="cursor: pointer;" title="Click to toggle Tack">STBD</span>
+                    <span id="sb-tool">Tool: Select (V)</span>
+                    <span id="sb-zoom" onclick="zoomToFit()" style="cursor: pointer;" title="Click to Fit">100%</span>
+                </div>
             </div>
         </div>
 
@@ -1489,8 +1237,79 @@
 
 
         <!-- PANEL 4: Ghost & History Compare -->
-        <div id="panel-compare" class="wizard-panel" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; overflow-y: auto;">
-            <!-- ... -->
+        <!-- PANEL 4: Ghost & History Compare -->
+        <div id="panel-compare" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; padding: 1.5rem; overflow-y: auto;">
+            <div style="max-width: 1200px; margin: 0 auto; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2 style="color: #f8fafc; font-size: 1.45rem; margin: 0 0 0.35rem 0; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>👻</span> Step 4: Ghost &amp; History Shape Comparison
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Superimpose past sailing sessions, tuning polars, or target design curves to evaluate aerodynamic trim variations.</p>
+                    </div>
+                </div>
+
+                <!-- Ghost Target Configuration Card -->
+                <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.2rem; align-items: center;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600;">Select Comparison Target Profile</label>
+                            <select id="compareAnalysisSelect" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 9px 12px; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                                <option value="target1">🎯 North Sails 3Di RAW Design Polar (Mid: 13.5% @ 42%)</option>
+                                <option value="heavy">💨 Heavy Air Flat Upwind Target (Mid: 9.8% @ 46%)</option>
+                                <option value="light">🌊 Light Air Deep Power Target (Mid: 14.8% @ 40%)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: flex-end; justify-content: flex-start;">
+                            <button type="button" onclick="applyGhostOverlay()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #0f172a; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                                <span>👻</span> Superimpose Ghost Overlay
+                            </button>
+                            <button type="button" onclick="clearGhostOverlay()" style="background: #334155; color: #cbd5e1; border: 1px solid #475569; padding: 9px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                                Clear Ghost
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Chart & Difference Table Grid -->
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                    
+                    <!-- Chart Container -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                            <h3 style="color: #38bdf8; font-size: 1rem; margin: 0; font-weight: 700;">📈 Camber &amp; Draft Profile Comparison</h3>
+                            <span style="font-size: 0.72rem; color: #94a3b8;">Solid: Current Scan • Dashed: Ghost Target</span>
+                        </div>
+                        <div style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="compareChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Delta Table -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem;">
+                        <h3 style="color: #10b981; font-size: 1rem; margin: 0 0 0.8rem 0; font-weight: 700;">📋 Aerodynamic Delta Table (Current vs. Ghost)</h3>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                <thead>
+                                    <tr style="background: #0f172a; border-bottom: 2px solid #334155;">
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Stripe</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #38bdf8;">Current Camber</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Target Camber</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #f59e0b;">Δ Camber</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #38bdf8;">Current Draft</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Target Draft</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #a78bfa;">Δ Draft</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareDeltaTableBody">
+                                    <tr><td colspan="7" style="padding: 14px; text-align: center; color: #64748b;">Click "Superimpose Ghost Overlay" to populate deltas</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
 
         <!-- PANEL 5: Industry PDF Report Builder (Overleaf 50/50 Split View) -->
@@ -1742,6 +1561,151 @@
 </div>
 
 <style>
+/* Desktop Horizontal Steps Bar */
+.desktop-steps-bar {
+    height: 40px;
+    min-height: 40px;
+    background: #0c1222;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.85rem;
+    user-select: none;
+    z-index: 101;
+    flex-shrink: 0;
+}
+.desktop-steps-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+}
+.desktop-steps-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 12px;
+    border-right: 1px solid #1e293b;
+}
+.desktop-steps-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+.step-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px 10px;
+    border-radius: 5px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+.step-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+}
+.step-tab-btn.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+.step-tab-btn .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1e293b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #94a3b8;
+}
+.step-tab-btn.active .step-num {
+    background: #38bdf8;
+    color: #0f172a;
+}
+.desktop-steps-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.steps-profile-pill {
+    padding: 3px 10px;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+.steps-tack-pill {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1.5px solid #10b981;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Unified CAD Studio Ribbon */
+.cad-studio-ribbon {
+    background: #0d1424;
+    border-bottom: 1px solid #1e293b;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 30;
+}
+.ribbon-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3px;
+}
+.ribbon-group-header {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.ribbon-group-items {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ribbon-divider {
+    width: 1px;
+    background: #1e293b;
+    margin: 2px 4px;
+}
+.ribbon-vdiv {
+    width: 1px;
+    height: 18px;
+    background: #334155;
+    margin: 0 2px;
+}
+.cad-ribbon-tool-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 0.9rem !important;
+}
+
 /* Desktop Menubar Styling */
 .desktop-menubar {
     height: 38px;

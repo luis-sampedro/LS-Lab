@@ -7,15 +7,51 @@
 
 <div class="sailscan-container" style="display: flex; flex-direction: column; height: calc(100vh - 70px); background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
     <!-- BARRA DE MENÚ SUPERIOR DE ESCRITORIO (ES) -->
-    <div class="desktop-menubar">
-        <div class="desktop-menu-left">
-            <div class="desktop-brand">
-                <span style="font-size: 1.1rem;">⛵</span>
+    <!-- 1. BARRA HORIZONTAL SUPERIOR DE PASOS (~40px altura) -->
+    <div class="desktop-steps-bar">
+        <div class="desktop-steps-left">
+            <div class="desktop-steps-brand">
+                <span style="font-size: 1.15rem;">⛵</span>
                 <span class="desktop-brand-name">L3S Sail Scan</span>
                 <span class="desktop-brand-badge">PRO v4.2</span>
             </div>
+            <nav class="desktop-steps-nav">
+                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn active" onclick="switchScanTab('upload')">
+                    <span class="step-num">1</span>
+                    <span class="step-label">1. Carga y Config</span>
+                </button>
+                <button type="button" id="btn-tab-canvas" class="step-tab-btn tab-btn" onclick="switchScanTab('canvas')">
+                    <span class="step-num">2</span>
+                    <span class="step-label">2. Estudio de Líneas</span>
+                </button>
+                <button type="button" id="btn-tab-analytics" class="step-tab-btn tab-btn" onclick="switchScanTab('analytics')">
+                    <span class="step-num">3</span>
+                    <span class="step-label">3. Analítica Aero</span>
+                </button>
+                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn" onclick="switchScanTab('compare')">
+                    <span class="step-num">4</span>
+                    <span class="step-label">4. Comparar Fantasma</span>
+                </button>
+                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn" onclick="switchScanTab('report')">
+                    <span class="step-num">5</span>
+                    <span class="step-label">5. Informe PDF</span>
+                </button>
+            </nav>
+        </div>
+        <div class="desktop-steps-right">
+            <div id="active-profile-pill" class="steps-profile-pill">
+                <span style="color: #64748b;">Barco:</span> <strong id="lbl-active-boat" style="color: #38bdf8;">Grand Prix</strong>
+                <span style="color: #475569; margin: 0 4px;">•</span>
+                <span style="color: #64748b;">Vela:</span> <strong id="lbl-active-sail" style="color: #f59e0b;">J1 Medio</strong>
+            </div>
+            <span id="scan-tack-badge" class="steps-tack-pill" onclick="toggleTackDirection()" title="Click para alternar Amura (Estribor / Babor)">ESTR</span>
+        </div>
+    </div>
 
-            <!-- MENU ARCHIVO -->
+    <!-- 2. BARRA DE HERRAMIENTAS Y MENÚS DESKTOP (~36px altura) -->
+    <div class="desktop-menubar">
+        <div class="desktop-menu-left">
+            <!-- MENÚ ARCHIVO -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
                 <span>Archivo</span>
                 <div class="desktop-dropdown" id="dropdown-file">
@@ -58,17 +94,17 @@
                         <span>🖼️ Exportar Vela Trazada PNG</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="switchScanTab('report')">
-                        <span>🖨️ Exportar / Imprimir PDF</span>
+                        <span>🖨️ Exportar / Imprimir Informe PDF</span>
                         <span class="shortcut">Ctrl+P</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="window.location.reload()">
-                        <span>🔄 Nuevo Análisis / Reiniciar</span>
+                        <span>🔄 Nuevo Escaneo / Reiniciar</span>
                     </div>
                 </div>
             </div>
 
-            <!-- MENU EDICIÓN -->
+            <!-- MENÚ EDICIÓN -->
             <div class="desktop-menu-item" id="menu-edit" onclick="toggleDesktopMenu('edit', event)">
                 <span>Edición</span>
                 <div class="desktop-dropdown" id="dropdown-edit">
@@ -82,26 +118,26 @@
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="addNewStripeLayer()">
-                        <span>➕ Añadir Capa de Banda</span>
+                        <span>➕ Añadir Capa de Franja</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="deleteSelectedAnnotation()">
-                        <span>🗑️ Eliminar Seleccionado</span>
+                        <span>🗑️ Eliminar Elemento Seleccionado</span>
                         <span class="shortcut">Supr</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="duplicateActiveStripe()">
-                        <span>📑 Duplicar Banda Activa</span>
+                        <span>📑 Duplicar Franja Activa</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="invertActiveStripeDirection()">
                         <span>🔄 Invertir Gratil (P0) ↔ Baluma (P3)</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="copyAeroMetricsToClipboard()">
-                        <span>📋 Copiar Métricas al Portapapeles</span>
+                        <span>📋 Copiar Métricas Aero al Portapapeles</span>
                     </div>
                 </div>
             </div>
 
-            <!-- MENU VER -->
+            <!-- MENÚ VER -->
             <div class="desktop-menu-item" id="menu-view" onclick="toggleDesktopMenu('view', event)">
                 <span>Ver</span>
                 <div class="desktop-dropdown" id="dropdown-view">
@@ -122,55 +158,55 @@
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="toggleTackDirection()">
-                        <span>⛵ Cambiar Amura (Babor ↔ Estribor)</span>
+                        <span>⛵ Alternar Amura (Babor ↔ Estribor)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleControlPolygon()">
                         <span>🔘 Alternar Brazos de Control B-Spline</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleMinimap()">
-                        <span>🗺️ Minimapa Navegador</span>
+                        <span>🗺️ Navegador Minimapa</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleLayersPanel()">
-                        <span>📑 Panel Flotante de Capas</span>
+                        <span>📑 Panel de Capas y Objetos</span>
                     </div>
                 </div>
             </div>
 
-            <!-- MENU HERRAMIENTAS -->
+            <!-- MENÚ HERRAMIENTAS -->
             <div class="desktop-menu-item" id="menu-tools" onclick="toggleDesktopMenu('tools', event)">
                 <span>Herramientas</span>
                 <div class="desktop-dropdown" id="dropdown-tools">
                     <div class="desktop-dropdown-item" onclick="runAutoDetection()">
-                        <span>🔄 Ejecutar Motor Auto-Detección (CV)</span>
+                        <span>🔄 Ejecutar Motor Auto-Detección CV</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setStudioTool('crop')">
-                        <span>✂️ Recortar Imagen de Vela</span>
+                        <span>✂️ Recortar Imagen</span>
                         <span class="shortcut">C</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleFilterPopover()">
-                        <span>🎨 Filtros de Brillo / Contraste / Exposición</span>
+                        <span>🎨 Filtros de Realce de Imagen</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="toggleMagicSnapMode()">
-                        <span>✨ Ajuste Inteligente a la Cresta (Snap)</span>
+                        <span>✨ Ajuste Automático a Franja</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="openScaleCalibrationModal()">
-                        <span>📐 Calibrador de Escala Métrica (px ➔ m)</span>
+                        <span>📐 Calibrar Escala Métrica (px ➔ m)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="openToolbarCustomizer()">
                         <span>🛠️ Personalizar Barra de Herramientas</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="switchScanTab('compare')">
-                        <span>📊 Comparativa Ghost con Escaneos Previos</span>
+                        <span>📊 Herramienta de Comparación Fantasma</span>
                     </div>
                 </div>
             </div>
 
-            <!-- MENU CONFIGURACIÓN -->
+            <!-- MENÚ AJUSTES -->
             <div class="desktop-menu-item" id="menu-settings" onclick="toggleDesktopMenu('settings', event)">
-                <span>Configuración</span>
+                <span>Ajustes</span>
                 <div class="desktop-dropdown" id="dropdown-settings">
-                    <div class="desktop-dropdown-header">Valores Objetivo de Referencia</div>
+                    <div class="desktop-dropdown-header">Parámetros Objetivo de Diseño</div>
                     <div class="desktop-dropdown-item" onclick="switchScanTab('analytics')">
                         <span>🎯 Camber Objetivo Ref (12.5%)</span>
                     </div>
@@ -178,44 +214,44 @@
                         <span>🎯 Posición Calado Ref (40.0%)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="switchScanTab('analytics')">
-                        <span>🎯 Ángulo de Entrada Ref (18.0°)</span>
+                        <span>🎯 Ángulo Entrada Ref (18.0°)</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-header">Unidades de Medición</div>
+                    <div class="desktop-dropdown-header">Unidades de Medida</div>
                     <div class="desktop-dropdown-item">
                         <span>📏 Sistema Métrico (Metros / cm)</span>
                         <span style="color: #10b981;">✓</span>
                     </div>
                     <div class="desktop-dropdown-item">
-                        <span>📐 Medición Angular (Grados °)</span>
+                        <span>📐 Medida Angular (Grados °)</span>
                         <span style="color: #10b981;">✓</span>
                     </div>
                 </div>
             </div>
 
-            <!-- MENU PERSONALIZACIÓN -->
+            <!-- MENÚ PERSONALIZACIÓN -->
             <div class="desktop-menu-item" id="menu-customisation" onclick="toggleDesktopMenu('customisation', event)">
                 <span>Personalización</span>
                 <div class="desktop-dropdown" id="dropdown-customisation">
-                    <div class="desktop-dropdown-header">Paleta de Bandas de Calado</div>
+                    <div class="desktop-dropdown-header">Paleta de Colores de Franjas</div>
                     <div class="desktop-dropdown-item" onclick="setStripePalette('neon')">
                         <span>🎨 Neón Pro (Cian, Verde, Ámbar, Rosa)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setStripePalette('marine')">
-                        <span>🎨 Náutica Clásica (Azul Marino, Océano)</span>
+                        <span>🎨 Marino Clásico (Océano, Cielo, Marino)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setStripePalette('contrast')">
                         <span>🎨 Alto Contraste (Rojo, Amarillo, Cian)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setStripePalette('mono')">
-                        <span>🎨 Monocromo Técnico</span>
+                        <span>🎨 Técnico Monocromo</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-header">Fondo de Lienzo de Edición</div>
-                    <div class="desktop-dropdown-item" onclick="setStudioTheme('slate')"><span>🔲 Pizarra Oscura (#020617)</span></div>
+                    <div class="desktop-dropdown-header">Fondo del Lienzo de Estudio</div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('slate')"><span>🔲 Pizarra Medianoche (#020617)</span></div>
                     <div class="desktop-dropdown-item" onclick="setStudioTheme('black')"><span>🔲 Negro Puro (#000000)</span></div>
                     <div class="desktop-dropdown-item" onclick="setStudioTheme('navy')"><span>🔲 Azul Oceánico (#071026)</span></div>
-                    <div class="desktop-dropdown-item" onclick="setStudioTheme('gray')"><span>🔲 Gris Taller Neutro (#1e293b)</span></div>
+                    <div class="desktop-dropdown-item" onclick="setStudioTheme('gray')"><span>🔲 Banco Neutral (#1e293b)</span></div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-header">Idioma / Language</div>
                     <div class="desktop-dropdown-item" onclick="window.location.href='/sail-scan?lang=es'"><span>🇪🇸 Español (Activo)</span></div>
@@ -223,18 +259,35 @@
                 </div>
             </div>
 
-            <!-- MENU AYUDA -->
+            <!-- MENÚ AYUDA -->
             <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
                 <span>Ayuda</span>
                 <div class="desktop-dropdown" id="dropdown-help">
                     <div class="desktop-dropdown-item" onclick="window.open('/methodology', '_blank')">
-                        <span>📖 Guía de Metodología de Medición</span>
+                        <span>📖 Guía Metodológica de Medición</span>
                     </div>
-                    <div class="desktop-dropdown-item" onclick="alert('Atajos de Teclado L3S:\n\nCtrl+O : Abrir Foto de Vela\nCtrl+S : Guardar en Base de Datos\nCtrl+P : Abrir Informe PDF\nCtrl+Z : Deshacer\nCtrl+Y : Rehacer\nCtrl+0 : Ajustar a Pantalla\n+ / - : Acercar / Alejar\nSupr : Eliminar Objeto\nV : Herramienta Seleccionar\nH / Espacio : Mover Lienzo (Mano)\nC : Recortar Vela\nR : Regla Métrica\nA : Transportador de Ángulos')">
+                    <div class="desktop-dropdown-item" onclick="alert('Atajos de Teclado L3S:
+
+Ctrl+O : Abrir Imagen
+Ctrl+S : Guardar en BD
+Ctrl+P : Abrir Informe PDF
+Ctrl+Z : Deshacer
+Ctrl+Y : Rehacer
+Ctrl+0 : Ajustar Zoom
++ / - : Acercar / Alejar
+Supr : Eliminar Seleccionado
+V : Herramienta Seleccionar
+H / Espacio : Mano / Mover
+C : Recortar
+R : Regla de Distancia
+A : Transportador de Ángulos')">
                         <span>⌨️ Referencia de Atajos de Teclado</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="alert('L3S Sail Scan v4.2 PRO\nMotor de Aerodinámica LS Lab Antigravity\nAnálisis de Camber, Calado y Giro de Velas\n© 2026 LS Lab')">
+                    <div class="desktop-dropdown-item" onclick="alert('L3S Sail Scan v4.2 PRO
+Motor Aerodinámico Antigravity LS Lab
+Análisis de Camber, Calado y Torsión por Visión Artificial
+© 2026 LS Lab')">
                         <span>ℹ️ Acerca de L3S Sail Scan</span>
                     </div>
                 </div>
@@ -243,107 +296,22 @@
 
         <!-- ACCIONES RÁPIDAS DERECHA -->
         <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 8px;">
-            <span id="desktop-tack-badge" onclick="toggleTackDirection()" style="font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #10b981; background: rgba(16, 185, 129, 0.15); color: #34d399; cursor: pointer;" title="Clic para alternar Amura (Babor / Estribor)">STBD</span>
-            <span id="desktop-boat-lbl" style="font-size: 0.75rem; color: #94a3b8; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Grand Prix</span>
-            <button type="button" onclick="switchScanTab('report')" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <button type="button" id="btn-save-db" onclick="saveScanToFleetDatabase()" style="background: #0284c7; color: white; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <span>⛵</span> Guardar BD
+            </button>
+            <button type="button" id="btn-save-project" onclick="saveSailScanProject()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
+                💾 Guardar Proyecto <span style="font-size: 0.6rem; background: #f59e0b; color: #0f172a; padding: 1px 4px; border-radius: 3px; font-weight: 800;">PRO</span>
+            </button>
+            <button type="button" onclick="switchScanTab('report')" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                 <span>🖨️</span> Informe PDF
             </button>
-            <button type="button" onclick="saveScanToFleetDatabase()" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                <span>💾</span> Guardar
-            </button>
+            <span id="save-toast" style="display: none; font-size: 0.75rem; color: #10b981; font-weight: 700;">✅ ¡Guardado!</span>
         </div>
     </div>
 
+    <!-- ÁREA DE TRABAJO A ANCHO COMPLETO (SIN BARRA LATERAL) -->
     <div class="desktop-main-workspace" style="display: flex; flex: 1; min-height: 0; overflow: hidden; width: 100%;">
-    
-    <!-- Sidebar / Progressive Wizard Navigation -->
-    <div class="wizard-sidebar" style="width: 330px; min-width: 330px; background: #111827; border-right: 1px solid #1f2937; display: flex; flex-direction: column; z-index: 10;">
-        <div style="padding: 1.2rem; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <h2 style="font-size: 1.15rem; font-weight: 700; color: #38bdf8; margin: 0;">L3S Sail Scan</h2>
-                    <span style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-family: monospace;">v4.0 PRO</span>
-                </div>
-                <p style="font-size: 0.75rem; color: #9ca3af; margin: 3px 0 0 0;">Aerodinámica de Velas por Visión Artificial</p>
-            </div>
-        </div>
-
-        <!-- Active Boat & Sail Badge -->
-        <div id="active-profile-pill" style="padding: 0.6rem 1rem; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid #1f2937; font-size: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                <span style="color: #64748b;">Barco:</span> <strong id="lbl-active-boat" style="color: #38bdf8;">Modo Invitado</strong>
-                <span style="color: #475569; margin: 0 4px;">•</span>
-                <span style="color: #64748b;">Vela:</span> <strong id="lbl-active-sail" style="color: #f59e0b;">Sin asignar</strong>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span id="scan-tack-badge" style="font-size: 0.65rem; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; font-weight: 700;">STBD</span>
-                <span id="scan-type-badge" style="font-size: 0.65rem; background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700;">PUJAMEN</span>
-            </div>
-        </div>
-
-        <nav class="wizard-nav" style="flex: 1; padding: 0.85rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem;">
-            <button id="btn-tab-upload" class="tab-btn active" onclick="switchScanTab('upload')">
-                <span class="tab-num">1</span>
-                <div class="tab-info">
-                    <span class="tab-title">1. Carga y Configuración</span>
-                    <span class="tab-sub">Tipo de escaneo, barco y colores</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-canvas" class="tab-btn disabled" onclick="switchScanTab('canvas')" disabled>
-                <span class="tab-num">2</span>
-                <div class="tab-info">
-                    <span class="tab-title">2. Estudio de Procesamiento</span>
-                    <span class="tab-sub">Autodetección de líneas y curvas</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-analytics" class="tab-btn disabled" onclick="switchScanTab('analytics')" disabled>
-                <span class="tab-num">3</span>
-                <div class="tab-info">
-                    <span class="tab-title">3. Análisis de Camber y Giro</span>
-                    <span class="tab-sub">Camber %, calado, twist y polares</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-compare" class="tab-btn disabled" onclick="switchScanTab('compare')" disabled>
-                <span class="tab-num">4</span>
-                <div class="tab-info">
-                    <span class="tab-title">4. Comparación y Fantasmas</span>
-                    <span class="tab-sub">Comparar con sesiones o diseño</span>
-                </div>
-            </button>
-
-            <button id="btn-tab-report" class="tab-btn disabled" onclick="switchScanTab('report')" disabled>
-                <span class="tab-num">5</span>
-                <div class="tab-info">
-                    <span class="tab-title">5. Informe Técnico PDF</span>
-                    <span class="tab-sub">Vista Dividida Overleaf • Ficha y Print</span>
-                </div>
-            </button>
-        </nav>
-
-        <!-- Quick Database Save Action -->
-        <div style="padding: 0.75rem 1rem; border-top: 1px solid #1f2937; background: #0f172a; display: flex; flex-direction: column; gap: 6px;">
-            <button id="btn-save-db" onclick="saveScanToFleetDatabase()" style="width: 100%; background: #0284c7; color: white; border: 1px solid #38bdf8; padding: 9px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <span>⛵</span> Guardar en Base de Datos de Velas
-            </button>
-            <button id="btn-save-project" onclick="saveSailScanProject()" style="width: 100%; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; padding: 9px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
-                💾 Guardar Proyecto <span style="font-size: 0.65rem; background: #f59e0b; color: #0f172a; padding: 2px 6px; border-radius: 10px; font-weight: 800; text-transform: uppercase;">LS PRO</span>
-            </button>
-            <div id="save-toast" style="display: none; margin-top: 4px; font-size: 0.75rem; color: #10b981; text-align: center; font-weight: 600;">
-                ✅ ¡Guardado con éxito!
-            </div>
-        </div>
-
-        <div style="padding: 0.75rem 1rem; border-top: 1px solid #1f2937; background: #0b0f17; font-size: 0.72rem; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
-            <span>L3S Studio Engine v4.0</span>
-            <span id="auth-user-tag" style="color: #38bdf8;">Invitado</span>
-        </div>
-    </div>
-
-    <!-- Main Content Panels -->
-    <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         
         <!-- PANEL 1: Upload & Scan Config -->
         <div id="panel-upload" class="wizard-panel active" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; overflow-y: auto;">
@@ -554,425 +522,192 @@
         </div>
 
         <!-- PANEL 2: Full Pro CAD Image Editor & Interactive Studio Canvas (ES) -->
+        <!-- PANEL 2: Estudio Profesional CAD de Procesamiento de Líneas -->
         <div id="panel-canvas" class="wizard-panel" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; position: relative;">
             
-            <!-- 1. Top CAD Control & Transform Bar -->
-            <div id="cad-top-bar" style="background: #0f172a; border-bottom: 1px solid #1e293b; padding: 0.4rem 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; z-index: 30;">
+            <!-- Barra CAD Studio Ribbon Unificada -->
+            <div id="cad-studio-ribbon" class="cad-studio-ribbon">
                 
-                <!-- Left: History & Image Transformations -->
-                <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                    <!-- Undo / Redo -->
-                    <button type="button" class="btn-canvas-tool" id="btn-cad-undo" onclick="cadUndo()" title="Deshacer (Ctrl+Z)">
-                        <span>↩️</span>
-                    </button>
-                    <button type="button" class="btn-canvas-tool" id="btn-cad-redo" onclick="cadRedo()" title="Rehacer (Ctrl+Y)">
-                        <span>↪️</span>
-                    </button>
-                    
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 3px;"></div>
-
-                    <!-- Rotate & Flip -->
-                    <button type="button" class="btn-canvas-tool" onclick="rotateImage(-90)" title="Girar 90° Antihorario">
-                        <span>↺</span> -90°
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="rotateImage(90)" title="Girar 90° Horario">
-                        <span>↻</span> +90°
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="flipImage('h')" title="Voltear Horizontal">
-                        <span>↔️</span> Voltear H
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="flipImage('v')" title="Voltear Vertical">
-                        <span>↕️</span> Voltear V
-                    </button>
-
-                    <!-- Crop Toggle -->
-                    <button type="button" class="btn-canvas-tool" id="btn-top-crop" onclick="setStudioTool('crop')" title="Recortar Imagen (C)">
-                        <span>✂️</span> Recortar
-                    </button>
-
-                    <!-- Filters Popover Button -->
-                    <button type="button" class="btn-canvas-tool" id="btn-filters-toggle" onclick="toggleFilterPopover()" title="Ajustar Brillo, Contraste, Exposición">
-                        <span>🎨</span> Filtros
-                    </button>
-
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 3px;"></div>
-
-                    <!-- Pro Zoom & Pan Controls -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <button type="button" onclick="zoomStep(-0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 2px 6px; font-weight: 700;">−</button>
-                        <span id="cad-zoom-badge" onclick="zoomToFit()" style="font-size: 0.75rem; color: #38bdf8; font-weight: 700; padding: 0 6px; cursor: pointer; min-width: 48px; text-align: center;" title="Clic para Ajustar a Pantalla">100%</span>
-                        <button type="button" onclick="zoomStep(0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 2px 6px; font-weight: 700;">+</button>
+                <!-- GRUPO 1: HISTORIAL Y TRANSFORMACIÓN -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">HISTORIAL Y TRANSFORMACIÓN</div>
+                    <div class="ribbon-group-items">
+                        <button type="button" class="btn-canvas-tool" id="btn-cad-undo" onclick="cadUndo()" title="Deshacer (Ctrl+Z)"><span>↩️</span></button>
+                        <button type="button" class="btn-canvas-tool" id="btn-cad-redo" onclick="cadRedo()" title="Rehacer (Ctrl+Y)"><span>↪️</span></button>
+                        <div class="ribbon-vdiv"></div>
+                        <button type="button" class="btn-canvas-tool" onclick="rotateImage(-90)" title="Girar -90°"><span>↺</span> -90°</button>
+                        <button type="button" class="btn-canvas-tool" onclick="rotateImage(90)" title="Girar +90°"><span>↻</span> +90°</button>
+                        <button type="button" class="btn-canvas-tool" onclick="flipImage('h')" title="Voltear Horizontal"><span>↔️</span> H</button>
+                        <button type="button" class="btn-canvas-tool" onclick="flipImage('v')" title="Voltear Vertical"><span>↕️</span> V</button>
+                        <div class="ribbon-vdiv"></div>
+                        <div style="position: relative;">
+                            <button type="button" class="btn-canvas-tool" id="btn-filters-toggle" onclick="toggleFilterPopover()" title="Ajustar Brillo y Contraste">
+                                <span>🎨</span> Filtros
+                            </button>
+                            <div id="cad-filters-popover" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.8); width: 280px; padding: 14px; z-index: 1000; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
+                                    <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">🎨 Filtros de Realce de Imagen</span>
+                                    <button type="button" onclick="toggleFilterPopover()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.85rem;">✕</button>
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Brillo</span><span id="lbl-filter-brightness">100%</span></div>
+                                    <input type="range" id="filter-brightness" min="40" max="220" value="100" oninput="applyImageFilter('brightness', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Contraste</span><span id="lbl-filter-contrast">100%</span></div>
+                                    <input type="range" id="filter-contrast" min="40" max="220" value="100" oninput="applyImageFilter('contrast', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;"><span>Compensación de Destellos</span><span id="lbl-filter-exposure">0</span></div>
+                                    <input type="range" id="filter-exposure" min="-60" max="60" value="0" oninput="applyImageFilter('exposure', this.value)" style="width: 100%; accent-color: #38bdf8;">
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label style="font-size: 0.75rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="checkbox" id="filter-invert" onchange="applyImageFilter('invert', this.checked)" style="accent-color: #38bdf8;"> Invertir Colores
+                                    </label>
+                                </div>
+                                <button type="button" onclick="resetImageFilters()" style="background: #1e293b; color: #cbd5e1; border: 1px solid #475569; padding: 5px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-top: 4px;">🔄 Restablecer Filtros</button>
+                            </div>
+                        </div>
                     </div>
-
-                    <button type="button" class="btn-canvas-tool" onclick="zoomToFit()" title="Ajustar a Pantalla">
-                        <span>🔍</span> Ajustar
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="zoomActual()" title="Píxeles Reales 1:1">
-                        <span>📐</span> 1:1
-                    </button>
                 </div>
 
-                <!-- Center: Stripe Layers Controls -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-weight: 700; font-size: 0.78rem; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                        <span>🎯</span> Franja:
-                    </span>
-                    <div id="stripe-layer-tabs" style="display: flex; gap: 4px;">
-                        <!-- Dynamically populated -->
+                <div class="ribbon-divider"></div>
+
+                <!-- GRUPO 2: HERRAMIENTAS CAD -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">HERRAMIENTAS CAD</div>
+                    <div class="ribbon-group-items">
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn active" id="tool-select" onclick="setStudioTool('select')" title="Seleccionar y Mover (V)"><span>👆</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-pan" onclick="setStudioTool('pan')" title="Mano de Desplazamiento (H / Espacio)"><span>🖐️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-crop" onclick="setStudioTool('crop')" title="Herramienta Recortar (C)"><span>✂️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-ruler" onclick="setStudioTool('ruler')" title="Regla de Medición (R)"><span>📏</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-spline" onclick="setStudioTool('spline')" title="Spline de Curvatura (S)"><span>〰️</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-angle" onclick="setStudioTool('angle')" title="Transportador de Ángulos (A)"><span>📐</span></button>
+                        <button type="button" class="cad-vtool-btn cad-ribbon-tool-btn" id="tool-caliper" onclick="setStudioTool('caliper')" title="Calibre de Calado (D)"><span>⛵</span></button>
+                        <div class="ribbon-vdiv"></div>
+                        <input type="color" id="propStrokeColor" value="#38bdf8" onchange="setToolProp('strokeColor', this.value)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; background: transparent;" title="Color del Trazo">
+                        <select id="propLineWidth" onchange="setToolProp('lineWidth', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px;" title="Grosor de Línea">
+                            <option value="1">1px</option>
+                            <option value="2" selected>2px</option>
+                            <option value="4">4px</option>
+                            <option value="6">6px</option>
+                        </select>
+                        <button type="button" onclick="deleteSelectedAnnotation()" class="btn-canvas-tool" style="color: #ef4444; border-color: #ef4444; padding: 2px 6px;" title="Eliminar Seleccionado (Supr)">🗑️</button>
                     </div>
-                    <button type="button" onclick="addNewStripeLayer()" class="btn-canvas-tool" style="border-color: #10b981; color: #10b981; padding: 3px 8px;" title="Añadir capa de franja">+ Capa</button>
                 </div>
 
-                <!-- Right: Options Menu, Navigator, Layers & AI CV Tools -->
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    
-                    <!-- Color Status Badge -->
-                    <div id="canvas-detected-color-badge" style="display: inline-flex; align-items: center; gap: 5px; background: #1e293b; padding: 3px 7px; border-radius: 4px; border: 1px solid #334155; font-size: 0.72rem;">
-                        <span id="canvas-dot-sail" style="width: 7px; height: 7px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
-                        <span id="canvas-lbl-sail" style="color: #cbd5e1;">Tejido</span>
-                        <span style="color: #475569;">|</span>
-                        <span id="canvas-dot-stripe" style="width: 7px; height: 7px; border-radius: 50%; background: #38bdf8; display: inline-block;"></span>
-                        <span id="canvas-lbl-stripe" style="color: #38bdf8;">Franja</span>
-                    </div>
+                <div class="ribbon-divider"></div>
 
-                    <button type="button" id="btn-magic-snap" onclick="toggleMagicSnapMode()" class="btn-canvas-tool" style="background: #1e293b; color: #a855f7; border-color: #a855f7; font-weight: 700;">
-                        <span>✨</span> Snap: <span id="magic-snap-lbl">OFF</span>
-                    </button>
+                <!-- GRUPO 3: FRANJA ACTIVA Y CAMBER -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">FRANJA ACTIVA Y CAMBER</div>
+                    <div class="ribbon-group-items">
+                        <select id="toolbar-stripe-select" onchange="selectStripeByIndex(parseInt(this.value))" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; max-width: 140px;">
+                        </select>
+                        <select id="toolbar-stripe-type" onchange="changeActiveStripeType(this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
+                            <option value="foot">Inferior (25%)</option>
+                            <option value="lower_quarter">Cuarto Inf (37.5%)</option>
+                            <option value="mid" selected>Media Cuerda (50%)</option>
+                            <option value="upper_quarter">Cuarto Sup (62.5%)</option>
+                            <option value="top">Superior (75%)</option>
+                        </select>
+                        <input type="color" id="toolbar-stripe-color" value="#38bdf8" onchange="changeActiveStripeColor(this.value)" style="width: 20px; height: 20px; padding: 0; border: 1px solid #475569; border-radius: 3px; cursor: pointer; background: transparent;" title="Color de Franja">
+                        
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <span style="font-size: 0.68rem; color: #94a3b8; padding-right: 3px;">Camber:</span>
+                            <button type="button" onclick="nudgeStripeCamber(-0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;">−</button>
+                            <span id="badge-stripe-camber" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; min-width: 32px; text-align: center;">12.0%</span>
+                            <button type="button" onclick="nudgeStripeCamber(0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;">+</button>
+                        </div>
 
-                    <button type="button" onclick="runAutoDetection()" class="btn-canvas-tool" style="background: #0284c7; color: white; border: none; font-weight: 600;">
-                        🔄 Redetectar
-                    </button>
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <span style="font-size: 0.68rem; color: #94a3b8; padding-right: 3px;">Calado:</span>
+                            <button type="button" onclick="nudgeStripeDraft(-1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;">◀</button>
+                            <span id="badge-stripe-draft" style="font-size: 0.72rem; color: #f59e0b; font-weight: 700; min-width: 30px; text-align: center;">45%</span>
+                            <button type="button" onclick="nudgeStripeDraft(1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 0 3px; font-weight: 700;">▶</button>
+                        </div>
 
-                    <div style="height: 18px; width: 1px; background: #334155; margin: 0 2px;"></div>
-
-                    <!-- Minimap Toggle Button -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-minimap" onclick="toggleMinimap()" title="Mostrar Navegador Minimap">
-                        <span>🗺️</span> Minimap
-                    </button>
-
-                    <!-- Layers Panel Toggle -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-layers" onclick="toggleLayersPanel()" title="Panel de Capas y Objetos">
-                        <span>📑</span> Capas (<span id="cad-layers-count">0</span>)
-                    </button>
-
-                    <!-- Options Dropdown Opener -->
-                    <div style="position: relative;">
-                        <button type="button" class="btn-canvas-tool" id="btn-cad-options" onclick="toggleOptionsMenu()" style="background: #334155; color: white; font-weight: 700;">
-                            <span>⚙️</span> Opciones ▾
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-polygon" onclick="toggleControlPolygon()" title="Mostrar/Ocultar Brazos B-Spline" style="border-color: #38bdf8; color: #38bdf8; padding: 3px 6px;">
+                            <span>🔘</span> Brazos: <span id="lbl-polygon-status">ON</span>
                         </button>
+                        <button type="button" class="btn-canvas-tool" onclick="invertActiveStripeDirection()" title="Invertir Dirección" style="padding: 3px 6px;"><span>🔄</span> Girar</button>
+                        <button type="button" class="btn-canvas-tool" onclick="openNewStripeModal()" style="border-color: #10b981; color: #10b981; padding: 3px 7px;" title="Añadir Franja">+ Franja</button>
+                    </div>
+                </div>
 
-                        <!-- Options Dropdown Menu -->
-                        <div id="cad-options-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); min-width: 220px; padding: 8px; z-index: 100; flex-direction: column; gap: 4px;">
-                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid #1e293b;">Guías y Rejilla</div>
-                            
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Rejilla de fondo</span>
-                                <select id="opt-grid-size" onchange="setGridOption(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px;">
-                                    <option value="0">Desactivada</option>
-                                    <option value="20">20 px</option>
-                                    <option value="50" selected>50 px</option>
-                                    <option value="100">100 px</option>
-                                </select>
-                            </label>
+                <div class="ribbon-divider"></div>
 
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Regla de Tercios</span>
-                                <input type="checkbox" id="opt-thirds" onchange="toggleViewOption('thirds', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Retícula Central</span>
-                                <input type="checkbox" id="opt-crosshairs" onchange="toggleViewOption('crosshairs', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                <span>Ajustar a Rejilla (Snap)</span>
-                                <input type="checkbox" id="opt-snap" onchange="toggleViewOption('snap', this.checked)" style="accent-color: #38bdf8;">
-                            </label>
-
-                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 6px 8px 4px; border-bottom: 1px solid #1e293b; border-top: 1px solid #1e293b; margin-top: 4px;">Configuración</div>
-
-                            <button type="button" onclick="openScaleCalibrationModal(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #38bdf8; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                📐 Calibrar Escala Métrica (px ➔ m)...
-                            </button>
-
-                            <button type="button" onclick="openToolbarCustomizer(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #f8fafc; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                🛠️ Personalizar Barra de Herramientas...
-                            </button>
-
-                            <button type="button" onclick="exportAnnotatedCanvas(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #10b981; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
-                                💾 Exportar PNG de Alta Resolución
-                            </button>
+                <!-- GRUPO 4: VISTA, SUPERPOSICIÓN Y MOTOR CV -->
+                <div class="ribbon-group">
+                    <div class="ribbon-group-header">VISTA Y MOTOR CV</div>
+                    <div class="ribbon-group-items">
+                        <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
+                            <button type="button" onclick="zoomStep(-0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;">−</button>
+                            <span id="cad-zoom-badge" onclick="zoomToFit()" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; padding: 0 4px; cursor: pointer; min-width: 42px; text-align: center;">100%</span>
+                            <button type="button" onclick="zoomStep(0.2)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;">+</button>
                         </div>
-                    </div>
+                        <button type="button" class="btn-canvas-tool" onclick="zoomToFit()" title="Ajustar a Pantalla" style="padding: 3px 6px;"><span>🔍</span> Ajustar</button>
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-minimap" onclick="toggleMinimap()" title="Alternar Minimapa" style="padding: 3px 6px;"><span>🗺️</span> Minimapa</button>
+                        <button type="button" class="btn-canvas-tool" id="btn-toggle-layers" onclick="toggleLayersPanel()" title="Alternar Capas" style="padding: 3px 6px;"><span>📑</span> Capas (<span id="cad-layers-count">0</span>)</button>
 
-                </div>
-            </div>
-
-            <!-- 2. Image Filters Popover (Adjust Brightness/Contrast/Exposure) -->
-            <div id="cad-filters-popover" style="display: none; position: absolute; top: 46px; left: 160px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.8); width: 280px; padding: 14px; z-index: 100; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
-                    <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">🎨 Filtros de Imagen y Realce</span>
-                    <button type="button" onclick="toggleFilterPopover()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.85rem;">✕</button>
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Brillo</span>
-                        <span id="lbl-filter-brightness">100%</span>
-                    </div>
-                    <input type="range" id="filter-brightness" min="40" max="220" value="100" oninput="applyImageFilter('brightness', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Contraste</span>
-                        <span id="lbl-filter-contrast">100%</span>
-                    </div>
-                    <input type="range" id="filter-contrast" min="40" max="220" value="100" oninput="applyImageFilter('contrast', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1;">
-                        <span>Compensación de Destellos</span>
-                        <span id="lbl-filter-exposure">0</span>
-                    </div>
-                    <input type="range" id="filter-exposure" min="-60" max="60" value="0" oninput="applyImageFilter('exposure', this.value)" style="width: 100%; accent-color: #38bdf8;">
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <label style="font-size: 0.75rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                        <input type="checkbox" id="filter-invert" onchange="applyImageFilter('invert', this.checked)" style="accent-color: #38bdf8;"> Invertir Colores (Alto Contraste)
-                    </label>
-                </div>
-                <button type="button" onclick="resetImageFilters()" style="background: #1e293b; color: #cbd5e1; border: 1px solid #475569; padding: 5px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; margin-top: 4px;">
-                    🔄 Restablecer Filtros
-                </button>
-            </div>
-
-            <!-- 3. Contextual Tool Property Bar (Sub-Bar) -->
-            <div id="cad-property-bar" style="background: #111827; border-bottom: 1px solid #1f2937; padding: 0.35rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; z-index: 25; flex-wrap: wrap; gap: 10px;">
-                <!-- Left: Active Tool Indicator & Stroke Styles -->
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <span id="cad-active-tool-pill" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #0284c7; color: #38bdf8; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;">
-                        Herramienta: 👆 Seleccionar (V)
-                    </span>
-
-                    <!-- Stroke Color Picker & Swatches -->
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span>Color:</span>
-                        <input type="color" id="propStrokeColor" value="#38bdf8" onchange="setToolProp('strokeColor', this.value)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; background: transparent;">
-                        <div style="display: flex; gap: 3px;">
-                            <span onclick="setToolProp('strokeColor', '#38bdf8')" style="width: 14px; height: 14px; background: #38bdf8; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#ef4444')" style="width: 14px; height: 14px; background: #ef4444; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#10b981')" style="width: 14px; height: 14px; background: #10b981; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#f59e0b')" style="width: 14px; height: 14px; background: #f59e0b; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#ffffff')" style="width: 14px; height: 14px; background: #ffffff; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
-                            <span onclick="setToolProp('strokeColor', '#a855f7')" style="width: 14px; height: 14px; background: #a855f7; border-radius: 3px; cursor: pointer; display: inline-block;"></span>
+                        <div style="position: relative;">
+                            <button type="button" class="btn-canvas-tool" id="btn-cad-options" onclick="toggleOptionsMenu()" style="background: #334155; color: white; font-weight: 700; padding: 3px 7px;">
+                                <span>⚙️</span> Opciones ▾
+                            </button>
+                            <div id="cad-options-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #0f172a; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); min-width: 220px; padding: 8px; z-index: 1000; flex-direction: column; gap: 4px;">
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-bottom: 1px solid #1e293b;">Superposiciones</div>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Cuadrícula</span>
+                                    <select id="opt-grid-size" onchange="setGridOption(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px;">
+                                        <option value="0">Desactivada</option>
+                                        <option value="20">20 px</option>
+                                        <option value="50" selected>50 px</option>
+                                        <option value="100">100 px</option>
+                                    </select>
+                                </label>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Regla de los Tercios</span>
+                                    <input type="checkbox" id="opt-thirds" onchange="toggleViewOption('thirds', this.checked)" style="accent-color: #38bdf8;">
+                                </label>
+                                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; padding: 4px 8px; cursor: pointer; border-radius: 4px;">
+                                    <span>Cruz Central</span>
+                                    <input type="checkbox" id="opt-crosshairs" onchange="toggleViewOption('crosshairs', this.checked)" style="accent-color: #38bdf8;">
+                                </label>
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding: 6px 8px 4px; border-bottom: 1px solid #1e293b; border-top: 1px solid #1e293b; margin-top: 4px;">Configuración</div>
+                                <button type="button" onclick="openScaleCalibrationModal(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #38bdf8; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;">
+                                    📐 Calibrar Escala Métrica...
+                                </button>
+                                <button type="button" onclick="exportAnnotatedCanvas(); toggleOptionsMenu();" style="width: 100%; text-align: left; background: none; border: none; color: #10b981; font-size: 0.78rem; padding: 5px 8px; border-radius: 4px; cursor: pointer;">
+                                    💾 Exportar PNG Alta Resolución
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Line Thickness -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Grosor:</span>
-                        <select id="propLineWidth" onchange="setToolProp('lineWidth', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="1">1 px (Fino)</option>
-                            <option value="2" selected>2 px (Medio)</option>
-                            <option value="4">4 px (Grueso)</option>
-                            <option value="6">6 px (Pesado)</option>
-                            <option value="10">10 px (Ultra)</option>
-                        </select>
-                    </div>
-
-                    <!-- Line Style (Solid/Dashed) -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Estilo:</span>
-                        <select id="propLineStyle" onchange="setToolProp('lineStyle', this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="solid">Sólido —</option>
-                            <option value="dashed">Discontinuo - -</option>
-                            <option value="dotted">Puntos · ·</option>
-                        </select>
-                    </div>
-
-                    <!-- Fill Opacity -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Relleno:</span>
-                        <select id="propFillOpacity" onchange="setToolProp('fillOpacity', parseFloat(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="0" selected>Ninguno (0%)</option>
-                            <option value="0.2">Cristal (20%)</option>
-                            <option value="0.5">Medio (50%)</option>
-                            <option value="0.8">Sólido (80%)</option>
-                        </select>
-                    </div>
-
-                    <!-- Font Size for Text Annotations -->
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <span>Texto:</span>
-                        <select id="propFontSize" onchange="setToolProp('fontSize', parseInt(this.value))" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 5px; border-radius: 4px;">
-                            <option value="12">12 px</option>
-                            <option value="15" selected>15 px</option>
-                            <option value="18">18 px</option>
-                            <option value="24">24 px</option>
-                        </select>
+                        <button type="button" onclick="runAutoDetection()" class="btn-canvas-tool" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: 1px solid #38bdf8; font-weight: 700; padding: 4px 10px; box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);" title="Ejecutar Detección Automática CV">
+                            🔄 Re-detectar CV
+                        </button>
                     </div>
                 </div>
 
-                <!-- Right: Active Scale Metric & Clear Tool -->
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="cad-scale-display" style="color: #94a3b8; font-size: 0.72rem;" title="Escala de medida actual">
-                        Escala: <strong>1 px = 0.005 m</strong> (Calibrada)
-                    </span>
-                    <button type="button" onclick="deleteSelectedAnnotation()" class="btn-canvas-tool" style="color: #ef4444; border-color: #ef4444; padding: 2px 6px;" title="Eliminar objeto seleccionado (Supr)">
-                        🗑️ Eliminar
-                    </button>
-                </div>
             </div>
 
-            <!-- 3b. Dedicated 4-Point 3-Degree B-Spline Aerodynamics Toolbar (Spanish) -->
-            <div id="cad-stripe-bar" style="background: #0d1527; border-bottom: 1px solid #1e293b; padding: 0.3rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; z-index: 24; flex-wrap: wrap; gap: 8px;">
-                <!-- Left: Stripe Selector, Type & Color -->
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                        <span>⛵</span> <strong>Línea B-Spline 4-Pt:</strong>
-                    </span>
-
-                    <!-- Active Stripe Dropdown -->
-                    <select id="toolbar-stripe-select" onchange="selectStripeByIndex(parseInt(this.value))" style="background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; max-width: 220px;">
-                        <!-- Dynamically populated -->
-                    </select>
-
-                    <!-- Stripe Position / Type -->
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #94a3b8;">Tipo:</span>
-                        <select id="toolbar-stripe-type" onchange="changeActiveStripeType(this.value)" style="background: #0f172a; border: 1px solid #475569; color: white; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px;">
-                            <option value="foot">Pujamen / Base (25%)</option>
-                            <option value="lower_quarter">Cuarto Inferior (37.5%)</option>
-                            <option value="mid" selected>Sección Media (50%)</option>
-                            <option value="upper_quarter">Cuarto Superior (62.5%)</option>
-                            <option value="top">Baluma / Arriba (75%)</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                    </div>
-
-                    <!-- Stripe Color Picker -->
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #94a3b8;">Color:</span>
-                        <input type="color" id="toolbar-stripe-color" value="#38bdf8" onchange="changeActiveStripeColor(this.value)" style="width: 20px; height: 20px; padding: 0; border: 1px solid #475569; border-radius: 3px; cursor: pointer; background: transparent;">
-                    </div>
-                </div>
-
-                <!-- Center & Right: 4-Point 3-Deg B-Spline Aerodynamic Controls -->
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    
-                    <!-- Toggle 4-Pt Control Polygon -->
-                    <button type="button" class="btn-canvas-tool" id="btn-toggle-polygon" onclick="toggleControlPolygon()" title="Mostrar/Ocultar Polígono y Tangentes B-Spline de 4 Puntos" style="border-color: #38bdf8; color: #38bdf8;">
-                        <span>🔘</span> Brazos: <span id="lbl-polygon-status">ON</span>
-                    </button>
-
-                    <!-- Invert Direction P0 <-> P3 -->
-                    <button type="button" class="btn-canvas-tool" onclick="invertActiveStripeDirection()" title="Invertir Sentido Gratil (P0) y Baluma (P3)">
-                        <span>🔄</span> Invertir Gratil/Baluma
-                    </button>
-
-                    <!-- Camber Nudge -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <span style="font-size: 0.7rem; color: #94a3b8; padding-right: 4px;">Bolsa:</span>
-                        <button type="button" onclick="nudgeStripeCamber(-0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Reducir Profundidad de Bolsa en 0.5%">−</button>
-                        <span id="badge-stripe-camber" style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; min-width: 36px; text-align: center;">12.0%</span>
-                        <button type="button" onclick="nudgeStripeCamber(0.5)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Aumentar Profundidad de Bolsa en 0.5%">+</button>
-                    </div>
-
-                    <!-- Draft Position Nudge -->
-                    <div style="display: inline-flex; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 4px;">
-                        <span style="font-size: 0.7rem; color: #94a3b8; padding-right: 4px;">Pos Bolsa:</span>
-                        <button type="button" onclick="nudgeStripeDraft(-1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Desplazar Bolsa Hacia Delante 1%">◀</button>
-                        <span id="badge-stripe-draft" style="font-size: 0.72rem; color: #f59e0b; font-weight: 700; min-width: 34px; text-align: center;">45%</span>
-                        <button type="button" onclick="nudgeStripeDraft(1.0)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 1px 4px; font-weight: 700;" title="Desplazar Bolsa Hacia Atrás 1%">▶</button>
-                    </div>
-
-                    <!-- Duplicate & Delete -->
-                    <button type="button" class="btn-canvas-tool" onclick="duplicateActiveStripe()" title="Duplicar Línea Activa en Nueva Capa">
-                        <span>📑</span> Duplicar
-                    </button>
-                    <button type="button" class="btn-canvas-tool" onclick="openNewStripeModal()" style="border-color: #10b981; color: #10b981;" title="Añadir Nueva Línea B-Spline de 4 Puntos">
-                        <span>+</span> Nueva Línea
-                    </button>
-                </div>
-            </div>
-
-            <!-- 4. Studio Main Workspace (Left 2D Toolbar + Canvas Container + Right Layers Panel) -->
+            <!-- Área de Trabajo del Lienzo -->
             <div style="flex: 1; display: flex; position: relative; overflow: hidden; min-height: 0;">
                 
-                <!-- Left Vertical 2D CAD Toolbar (Floating / Docked) -->
-                <div id="cad-vertical-toolbar" style="width: 46px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border-right: 1px solid #1e293b; display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 5px; z-index: 20; box-shadow: 2px 0 10px rgba(0,0,0,0.5);">
-                    
-                    <!-- Selection & View Navigation -->
-                    <button type="button" class="cad-vtool-btn active" id="tool-select" onclick="setStudioTool('select')" title="Seleccionar y Mover (V)">
-                        <span>👆</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-pan" onclick="setStudioTool('pan')" title="Mano / Desplazar Vista (H o Espacio)">
-                        <span>🖐️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-zoom" onclick="setStudioTool('zoom')" title="Zoom por Caja (Z)">
-                        <span>🔍</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-crop" onclick="setStudioTool('crop')" title="Recortar Imagen (C)">
-                        <span>✂️</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- 2D Measurement CAD Tools -->
-                    <button type="button" class="cad-vtool-btn" id="tool-ruler" onclick="setStudioTool('ruler')" title="Regla de Medición Lineal (R)">
-                        <span>📏</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-angle" onclick="setStudioTool('angle')" title="Goniómetro / Ángulo (A)">
-                        <span>📐</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-caliper" onclick="setStudioTool('caliper')" title="Calibre de Camber y Calado (D)">
-                        <span>⛵</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- 2D Drawing & Shape Tools -->
-                    <button type="button" class="cad-vtool-btn" id="tool-spline" onclick="setStudioTool('spline')" title="Curva Spline / Bezier (S)">
-                        <span>〰️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-pen" onclick="setStudioTool('pen')" title="Pincel a Mano Alzada (P)">
-                        <span>✏️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-arrow" onclick="setStudioTool('arrow')" title="Flecha de Dimensión / Apunte (W)">
-                        <span>↗️</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-rect" onclick="setStudioTool('rect')" title="Rectángulo (B)">
-                        <span>⬜</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-ellipse" onclick="setStudioTool('ellipse')" title="Círculo / Elipse (O)">
-                        <span>⭕</span>
-                    </button>
-                    <button type="button" class="cad-vtool-btn" id="tool-text" onclick="setStudioTool('text')" title="Cuadro de Texto (T)">
-                        <span>🔤</span>
-                    </button>
-
-                    <div style="width: 30px; height: 1px; background: #334155; margin: 4px 0;"></div>
-
-                    <!-- Eyedropper & Utilities -->
-                    <button type="button" class="cad-vtool-btn" id="tool-eyedropper" onclick="setStudioTool('eyedropper')" title="Pipeta de Color">
-                        <span>🧪</span>
-                    </button>
-                </div>
-
-                <!-- Center Canvas Work Area -->
                 <div style="flex: 1; position: relative; background: #020617; overflow: hidden; display: flex; align-items: center; justify-content: center;" id="canvasWrapper">
                     
                     <canvas id="sailStudioCanvas" style="display: block; cursor: crosshair;"></canvas>
 
-                    <!-- Floating Crop Action Controls (Active only in Crop mode) -->
-                    <div id="crop-action-bar" style="display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 14px; z-index: 50; display: flex; gap: 10px; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+                    <!-- Barra de Recorte Flotante -->
+                    <div id="crop-action-bar" style="display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 14px; z-index: 50; gap: 10px; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
                         <span style="font-weight: 700; font-size: 0.8rem; color: #38bdf8;">✂️ Modo Recorte</span>
                         <select id="crop-aspect-preset" onchange="setCropAspect(this.value)" style="background: #020617; border: 1px solid #475569; color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;">
-                            <option value="free">Proporción Libre</option>
+                            <option value="free">Aspecto Libre</option>
                             <option value="1:1">Cuadrado 1:1</option>
                             <option value="4:3">Foto 4:3</option>
                             <option value="16:9">Panorámico 16:9</option>
-                            <option value="sail">Proporción Vela (HLU:HLP)</option>
+                            <option value="sail">Aspecto Vela (HLU:HLP)</option>
                         </select>
                         <button type="button" onclick="applyCrop()" style="background: #10b981; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-weight: 700; font-size: 0.78rem; cursor: pointer;">
                             ✅ Aplicar Recorte
@@ -982,69 +717,79 @@
                         </button>
                     </div>
 
-                    <!-- Floating Real-time HUD Telemetry -->
-                    <div id="cad-hud" style="position: absolute; bottom: 1.25rem; left: 1.25rem; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(12px); border: 1px solid #334155; border-radius: 8px; padding: 0.75rem 1.25rem; display: flex; gap: 1.5rem; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 10; pointer-events: auto;">
+                    <!-- HUD Flotante en Vivo -->
+                    <div id="cad-hud" style="position: absolute; bottom: 1.25rem; left: 1.25rem; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); border: 1px solid #334155; border-radius: 8px; padding: 0.65rem 1.1rem; display: flex; gap: 1.4rem; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 10; pointer-events: auto;">
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Max Camber</div>
-                            <div id="hud-camber" style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">-- %</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Max Camber</div>
+                            <div id="hud-camber" style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">-- %</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Posición Calado</div>
-                            <div id="hud-draft" style="font-size: 1.25rem; font-weight: 800; color: #f59e0b;">-- %</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Posición Calado</div>
+                            <div id="hud-draft" style="font-size: 1.15rem; font-weight: 800; color: #f59e0b;">-- %</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Ángulo Twist</div>
-                            <div id="hud-twist" style="font-size: 1.25rem; font-weight: 800; color: #10b981;">-- °</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Ángulo Torsión</div>
+                            <div id="hud-twist" style="font-size: 1.15rem; font-weight: 800; color: #10b981;">-- °</div>
                         </div>
                         <div>
-                            <div style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase;">Entrada / Salida</div>
-                            <div id="hud-entry-exit" style="font-size: 1rem; font-weight: 700; color: #f8fafc;">-- / --</div>
+                            <div style="font-size: 0.62rem; color: #94a3b8; text-transform: uppercase;">Entrada / Salida</div>
+                            <div id="hud-entry-exit" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc;">-- / --</div>
                         </div>
                     </div>
 
-                    <!-- Canvas Mode Hint Overlay Pill -->
-                    <div id="canvas-hint-pill" style="position: absolute; top: 1.25rem; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); border: 1px solid #38bdf8; border-radius: 20px; padding: 5px 16px; font-size: 0.75rem; color: #f8fafc; pointer-events: none; z-index: 10;">
-                        💡 <strong>Consejo:</strong> ¡Usa las herramientas CAD a la izquierda (Regla, Spline, Calibre, Flecha) para medir cualquier perfil!
-                    </div>
-
-                    <!-- Floating Picture-in-Picture Minimap Navigator -->
+                    <!-- Minimapa -->
                     <div id="cad-minimap-box" style="display: none; position: absolute; bottom: 1.25rem; right: 1.25rem; width: 160px; height: 120px; background: #0b0f17; border: 2px solid #38bdf8; border-radius: 6px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.8); z-index: 15; cursor: pointer;">
                         <canvas id="minimapCanvas" width="160" height="120" style="width: 100%; height: 100%; display: block;"></canvas>
                         <div id="minimap-viewport-box" style="position: absolute; border: 1.5px solid #ef4444; background: rgba(239, 68, 68, 0.2); pointer-events: none;"></div>
                     </div>
 
-                    <!-- Magnifying Scope / Loupe (Optical Inspection) -->
                     <div id="zoomLoupe" style="display: none; position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 2px solid #38bdf8; overflow: hidden; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.8); background: #000; z-index: 200;">
                         <canvas id="zoomCanvas" width="130" height="130"></canvas>
                     </div>
 
                 </div>
 
-                <!-- Right Collapsible Layers & Annotations Panel -->
+                <!-- Panel Derecho de Capas -->
                 <div id="cad-layers-panel" style="display: none; width: 260px; background: #0f172a; border-left: 1px solid #1e293b; flex-direction: column; z-index: 20; box-shadow: -2px 0 10px rgba(0,0,0,0.5);">
                     <div style="padding: 10px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">📑 Capas y Líneas B-Spline</span>
+                        <span style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">📑 Capas y Franjas</span>
                         <button type="button" onclick="toggleLayersPanel()" style="background: none; border: none; color: #94a3b8; cursor: pointer;">✕</button>
                     </div>
-
-                    <!-- Quick Add Stripe Header Button -->
                     <div style="padding: 8px 10px; background: #111827; border-bottom: 1px solid #1e293b; display: flex; gap: 6px;">
                         <button type="button" onclick="openNewStripeModal()" style="flex: 1; background: #0284c7; color: white; border: none; padding: 6px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <span>+</span> Nueva Línea B-Spline
+                            <span>+</span> Nueva Franja B-Spline
                         </button>
                     </div>
-                    
                     <div style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;" id="cad-layers-list">
-                        <!-- Populated dynamically with stripes and annotations -->
                     </div>
-
                     <div style="padding: 8px; border-top: 1px solid #1e293b; display: flex; gap: 6px;">
                         <button type="button" onclick="clearAllAnnotations()" style="flex: 1; background: #334155; color: #ef4444; border: 1px solid #ef4444; padding: 5px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">
-                            🗑️ Limpiar Todo CAD
+                            🗑️ Borrar Todo CAD
                         </button>
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Barra de Estado Inferior -->
+            <div id="studio-desktop-statusbar" class="desktop-statusbar">
+                <div class="statusbar-left">
+                    <span class="status-indicator">● LISTO</span>
+                    <span id="sb-cursor-pos">X: -- px | Y: -- px</span>
+                    <span id="sb-image-dims">Dims: --</span>
+                    <span id="sb-scale">Escala: 1 px = 0.005 m</span>
+                </div>
+                <div class="statusbar-center">
+                    <span id="sb-active-stripe" style="color: #38bdf8; font-weight: 700;">Activa: Franja 1 (Media)</span>
+                    <span id="sb-metrics-camber" style="color: #38bdf8;">Camber: --%</span>
+                    <span id="sb-metrics-draft" style="color: #f59e0b;">Calado: --%</span>
+                    <span id="sb-metrics-twist" style="color: #10b981;">Torsión: --°</span>
+                </div>
+                <div class="statusbar-right">
+                    <span id="sb-tack" class="status-badge-tack" onclick="toggleTackDirection()" style="cursor: pointer;" title="Click para alternar Amura">ESTR</span>
+                    <span id="sb-tool">Herramienta: Seleccionar (V)</span>
+                    <span id="sb-zoom" onclick="zoomToFit()" style="cursor: pointer;" title="Ajustar">100%</span>
+                </div>
             </div>
         </div>
 
@@ -1260,82 +1005,341 @@
             </div>
         </div>
 
-        <!-- PANEL 3: Camber & Aero Analytics Charts -->
-        <div id="panel-analytics" class="wizard-panel" style="padding: 2rem; max-width: 1050px; margin: 0 auto; width: 100%; overflow-y: auto;">
-            <h2 style="color: #f8fafc; font-size: 1.4rem; margin: 0 0 0.4rem 0;">Paso 3: Análisis de Distribución de Camber y Aerodinámica</h2>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1.5rem 0;">Curvas de perfil de sección, migración del calado, ángulos de entrada/salida y torsión aerodinámica.</p>
+        <!-- PANEL 3: Estudio Profesional de Distribución de Camber y Analítica Aero -->
+        <div id="panel-analytics" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; flex-direction: column; overflow: hidden;">
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                <!-- Camber Depth Section Curves -->
-                <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <h4 style="color: #38bdf8; margin: 0; font-size: 0.95rem;">Perfiles de Camber (% Profundidad vs % Cuerda)</h4>
-                        <span style="font-size: 0.7rem; color: #94a3b8;">Superposición de todas las secciones</span>
-                    </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="camberChartCanvas"></canvas>
-                    </div>
+            <!-- Barra Superior de Encabezado -->
+            <div style="background: #0f172a; border-bottom: 1px solid #1e293b; padding: 0.6rem 1.2rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 10px; flex-wrap: wrap;">
+                <div>
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                        <span>📊</span> Paso 3: Estudio de Camber y Analítica Aerodinámica
+                        <span style="font-size: 0.65rem; background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid #d97706; padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">4 Gráficos · Controles Excel</span>
+                    </h3>
+                    <p style="color: #64748b; font-size: 0.75rem; margin: 2px 0 0 0;">Perfiles de camber de sección · Migración del calado · Ángulos de entrada/salida · Dispersión shape index · Radar de torsión</p>
                 </div>
-
-                <!-- Twist & Draft Gradient Chart -->
-                <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <h4 style="color: #f59e0b; margin: 0; font-size: 0.95rem;">Gradiente de Torsión y Calado</h4>
-                        <span style="font-size: 0.7rem; color: #94a3b8;">De Pujamen a Cabeza</span>
-                    </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="twistChartCanvas"></canvas>
-                    </div>
+                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                    <button onclick="updateAnalyticsView()" style="background: #0284c7; color: white; border: none; padding: 6px 14px; border-radius: 5px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">🔄 Actualizar</button>
+                    <button onclick="exportAnalyticsCSV()" style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 5px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">📥 Exportar CSV</button>
                 </div>
             </div>
 
-            <!-- Geometric Parameters Table -->
-            <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
-                <h4 style="color: #f8fafc; margin: 0 0 1rem 0; font-size: 0.95rem;">Desglose Geométrico de Secciones</h4>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;" id="analyticsGeometryTable">
-                        <thead>
-                            <tr style="border-bottom: 1px solid #475569; text-align: left; color: #94a3b8;">
-                                <th style="padding: 8px;">Franja / Altura</th>
-                                <th style="padding: 8px;">Max Camber (%)</th>
-                                <th style="padding: 8px;">Posición Calado (%)</th>
-                                <th style="padding: 8px;">Ángulo Twist (°)</th>
-                                <th style="padding: 8px;">Ángulo Entrada (°)</th>
-                                <th style="padding: 8px;">Ángulo Salida (°)</th>
-                                <th style="padding: 8px;">Cuerda (px)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="analyticsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            <!-- Cuerpo Dividido -->
+            <div style="display: grid; grid-template-columns: 300px 1fr; flex: 1; min-height: 0; overflow: hidden;">
+
+                <!-- ===== BARRA LATERAL IZQUIERDA: Barra de Herramientas Analítica ===== -->
+                <div id="analytics-sidebar" style="background: #111827; border-right: 1px solid #1f2937; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+
+                    <!-- Sección 1: Opciones de Visualización de Gráficos -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">📈 Visualización Gráfica</h4>
+                        <div style="display: flex; flex-direction: column; gap: 7px; font-size: 0.78rem; color: #cbd5e1;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-fill" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #38bdf8; width: 14px; height: 14px;">
+                                Rellenar área bajo la curva
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-grid" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #38bdf8; width: 14px; height: 14px;">
+                                Mostrar líneas de cuadrícula
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-points" onchange="updateAnalyticsChartOptions()" style="accent-color: #38bdf8; width: 14px; height: 14px;">
+                                Mostrar puntos de datos
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-draftline" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #f59e0b; width: 14px; height: 14px;">
+                                <span style="color: #f59e0b;">Línea vertical de calado máximo</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-angles" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #10b981; width: 14px; height: 14px;">
+                                <span style="color: #10b981;">Marcadores ángulo entrada / salida</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="aopt-smooth" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #a78bfa; width: 14px; height: 14px;">
+                                <span style="color: #a78bfa;">Suavizado de curvas (Spline)</span>
+                            </label>
+                        </div>
+                        <div style="margin-top: 0.6rem;">
+                            <label style="font-size: 0.75rem; color: #94a3b8;">Tensión de Curva: <span id="lbl-tension">0.35</span></label>
+                            <input type="range" id="aopt-tension" min="0" max="1" step="0.05" value="0.35"
+                                oninput="document.getElementById('lbl-tension').innerText=this.value; updateAnalyticsChartOptions()"
+                                style="width: 100%; accent-color: #a78bfa; margin-top: 4px;">
+                        </div>
+                    </div>
+
+                    <!-- Sección 2: Control de Series de Franjas -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px;">🎨 Series de Franjas</h4>
+                        <div id="analytics-stripe-controls" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: #cbd5e1;">
+                            <div style="color: #64748b; font-size: 0.72rem; font-style: italic;">Cargue una foto y auto-detecte franjas primero</div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 3: Escala de Ejes -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px;">📏 Escala de Ejes</h4>
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
+                            <div>
+                                <div style="color: #94a3b8; margin-bottom: 4px; font-weight: 600;">Eje X — % Cuerda</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                    <div>
+                                        <label style="color: #64748b; font-size: 0.7rem;">Mín</label>
+                                        <input type="number" id="ax-xmin" value="0" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 5px; border-radius: 4px; color: #f8fafc; font-size: 0.78rem;">
+                                    </div>
+                                    <div>
+                                        <label style="color: #64748b; font-size: 0.7rem;">Máx</label>
+                                        <input type="number" id="ax-xmax" value="100" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 5px; border-radius: 4px; color: #f8fafc; font-size: 0.78rem;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="color: #94a3b8; margin-bottom: 4px; font-weight: 600;">Eje Y — % Camber</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                    <div>
+                                        <label style="color: #64748b; font-size: 0.7rem;">Mín</label>
+                                        <input type="number" id="ax-ymin" placeholder="auto" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 5px; border-radius: 4px; color: #f8fafc; font-size: 0.78rem;">
+                                    </div>
+                                    <div>
+                                        <label style="color: #64748b; font-size: 0.7rem;">Máx</label>
+                                        <input type="number" id="ax-ymax" placeholder="auto" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 5px; border-radius: 4px; color: #f8fafc; font-size: 0.78rem;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 2px;">
+                                <button onclick="resetAnalyticsAxes()" style="padding: 5px; background: #334155; color: #cbd5e1; border: 1px solid #475569; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">↺ Reset</button>
+                                <button onclick="zoomFitAnalyticsAxes()" style="padding: 5px; background: #0284c7; color: white; border: none; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">⛶ Ajustar</button>
+                            </div>
+                            <div style="font-size: 0.68rem; color: #64748b; background: #0f172a; padding: 5px 8px; border-radius: 4px; border: 1px solid #1e293b;">
+                                🖱️ Rueda para zoom · Clic+arrastrar para desplazar
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 4: Líneas de Referencia Objetivo -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #f59e0b; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Referencias Objetivo</h4>
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
+                            <div>
+                                <label style="color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                                    <input type="checkbox" id="ref-camber-en" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #f59e0b;">
+                                    Camber Objetivo (%)
+                                </label>
+                                <input type="number" id="ref-camber" value="12.5" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #d97706; padding: 5px; border-radius: 4px; color: #f59e0b; font-size: 0.8rem; font-weight: 700;">
+                            </div>
+                            <div>
+                                <label style="color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                                    <input type="checkbox" id="ref-draft-en" checked onchange="updateAnalyticsChartOptions()" style="accent-color: #a78bfa;">
+                                    Posición Calado Obj (%)
+                                </label>
+                                <input type="number" id="ref-draft" value="40" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #7c3aed; padding: 5px; border-radius: 4px; color: #a78bfa; font-size: 0.8rem; font-weight: 700;">
+                            </div>
+                            <div>
+                                <label style="color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                                    <input type="checkbox" id="ref-entry-en" onchange="updateAnalyticsChartOptions()" style="accent-color: #10b981;">
+                                    Ángulo Entrada Obj (°)
+                                </label>
+                                <input type="number" id="ref-entry" value="18" oninput="updateAnalyticsChartOptions()" style="width: 100%; background: #0f172a; border: 1px solid #334155; padding: 5px; border-radius: 4px; color: #10b981; font-size: 0.8rem;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 5: Parámetros Aero Calculados -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px;">⚡ Parámetros Aero</h4>
+                        <div id="analytics-aero-cards" style="display: flex; flex-direction: column; gap: 6px;">
+                            <div style="color: #64748b; font-size: 0.72rem; font-style: italic;">Ejecute el análisis para ver los parámetros calculados</div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 6: Visibilidad de Gráficos -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.85rem;">
+                        <h4 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0 0 0.65rem 0; text-transform: uppercase; letter-spacing: 0.5px;">🗂️ Gráficos Visibles</h4>
+                        <div style="display: flex; flex-direction: column; gap: 7px; font-size: 0.78rem; color: #cbd5e1;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="show-chart-camber" checked onchange="toggleAnalyticsChart('camber', this.checked)" style="accent-color: #38bdf8; width: 14px; height: 14px;">
+                                <span style="color: #38bdf8;">■</span> Curvas de Perfil Camber
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="show-chart-bar" checked onchange="toggleAnalyticsChart('bar', this.checked)" style="accent-color: #f59e0b; width: 14px; height: 14px;">
+                                <span style="color: #f59e0b;">■</span> Barras Camber + Calado
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="show-chart-radar" checked onchange="toggleAnalyticsChart('radar', this.checked)" style="accent-color: #a78bfa; width: 14px; height: 14px;">
+                                <span style="color: #a78bfa;">■</span> Radar Huella de Perfil
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="show-chart-scatter" checked onchange="toggleAnalyticsChart('scatter', this.checked)" style="accent-color: #10b981; width: 14px; height: 14px;">
+                                <span style="color: #10b981;">■</span> Dispersión Shape Index
+                            </label>
+                        </div>
+                    </div>
+
+                </div><!-- FIN BARRA LATERAL IZQUIERDA -->
+
+                <!-- ===== ÁREA DE TRABAJO DERECHA: Gráficos + Tabla de Datos ===== -->
+                <div id="analytics-workspace" style="overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1.25rem; background: #0b0f17;">
+
+                    <!-- Gráfico 1: Curvas de Perfil de Camber (PRIMARIO — ancho completo) -->
+                    <div id="chart-block-camber" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h4 style="color: #38bdf8; margin: 0; font-size: 0.95rem; font-weight: 700;">1. Curvas de Perfil de Camber</h4>
+                                <span style="font-size: 0.68rem; color: #64748b; background: #0f172a; padding: 2px 7px; border-radius: 10px;">% Cuerda vs % Profundidad Camber</span>
+                            </div>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <button onclick="if(camberChart){camberChart.resetZoom();}" style="background: #334155; color: #94a3b8; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">↺ Reset</button>
+                                <button onclick="if(camberChart){camberChart.zoom(1.3);}" style="background: #334155; color: #94a3b8; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">🔍+</button>
+                                <button onclick="if(camberChart){camberChart.zoom(0.77);}" style="background: #334155; color: #94a3b8; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">🔍−</button>
+                            </div>
+                        </div>
+                        <div style="position: relative; height: 300px; width: 100%;">
+                            <canvas id="camberChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos 2 + 3 en paralelo -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+
+                        <!-- Gráfico 2: Barras — Camber + Calado -->
+                        <div id="chart-block-bar" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h4 style="color: #f59e0b; margin: 0; font-size: 0.9rem; font-weight: 700;">2. Barras de Camber y Calado</h4>
+                                <span style="font-size: 0.68rem; color: #64748b;">Por Sección de Franja</span>
+                            </div>
+                            <div style="position: relative; height: 220px;">
+                                <canvas id="draftBarChartCanvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico 3: Radar — Huella de Forma -->
+                        <div id="chart-block-radar" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h4 style="color: #a78bfa; margin: 0; font-size: 0.9rem; font-weight: 700;">3. Radar Huella de Forma</h4>
+                                <span style="font-size: 0.68rem; color: #64748b;">Perfil de Araña Aerodinámico</span>
+                            </div>
+                            <div style="position: relative; height: 220px;">
+                                <canvas id="radarChartCanvas"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Gráfico 4: Dispersión Shape Index -->
+                    <div id="chart-block-scatter" style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="display: align-items: center; gap: 8px;">
+                                <h4 style="color: #10b981; margin: 0; font-size: 0.9rem; font-weight: 700;">4. Dispersión Shape Index</h4>
+                                <span style="font-size: 0.68rem; color: #64748b; background: #0f172a; padding: 2px 7px; border-radius: 10px;">Pos Calado % vs Max Camber %</span>
+                            </div>
+                            <span style="font-size: 0.68rem; color: #64748b;">⊕ = Retícula Objetivo</span>
+                        </div>
+                        <div style="position: relative; height: 220px;">
+                            <canvas id="shapeIndexChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Datos Completa -->
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h4 style="color: #f8fafc; margin: 0; font-size: 0.9rem; font-weight: 700;">📋 Tabla Completa de Métricas Aerodinámicas</h4>
+                            <button onclick="exportAnalyticsCSV()" style="background: #334155; color: #94a3b8; border: 1px solid #475569; padding: 4px 10px; border-radius: 4px; font-size: 0.72rem; cursor: pointer;">📥 CSV</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                                <thead>
+                                    <tr style="background: #0f172a; border-bottom: 2px solid #334155;">
+                                        <th style="padding: 8px 10px; text-align: left; color: #94a3b8; white-space: nowrap;">Franja</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #38bdf8; white-space: nowrap;">Max Camber</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #f59e0b; white-space: nowrap;">Pos Calado</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #10b981; white-space: nowrap;">Torsión</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #f8fafc; white-space: nowrap;">Entrada °</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #f8fafc; white-space: nowrap;">Salida °</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #a78bfa; white-space: nowrap;">Shape Index</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #64748b; white-space: nowrap;">Cuerda (px)</th>
+                                        <th style="padding: 8px 10px; text-align: left; color: #64748b; white-space: nowrap;">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analyticsTableBody">
+                                    <tr><td colspan="9" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.8rem;">Ejecute la auto-detección para calcular la analítica</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div><!-- FIN ÁREA DE TRABAJO DERECHA -->
+
+            </div><!-- FIN CUERPO DIVIDIDO -->
+
+        </div><!-- FIN PANEL 3 -->
 
         <!-- PANEL 4: Ghost & History Compare -->
-        <div id="panel-compare" class="wizard-panel" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%; overflow-y: auto;">
-            <h2 style="color: #f8fafc; font-size: 1.4rem; margin: 0 0 0.4rem 0;">Paso 4: Comparación Histórica y Superposición Fantasma</h2>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1.5rem 0;">Superpón escaneos previos o curvas objetivo de diseño para contrastar trimado.</p>
-
-            <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+        <div id="panel-compare" class="wizard-panel" style="flex: 1; width: 100%; height: 100%; min-height: 0; padding: 1.5rem; overflow-y: auto;">
+            <div style="max-width: 1200px; margin: 0 auto; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;">Seleccionar Análisis Guardado</label>
-                        <select id="compareAnalysisSelect" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 9px; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
-                            <option value="">-- Sin escaneos históricos seleccionados --</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 18px;">
-                        <button onclick="applyGhostOverlay()" style="background: #f59e0b; color: #0f172a; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
-                            👻 Superponer Fantasma
-                        </button>
-                        <button onclick="clearGhostOverlay()" style="background: #475569; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
-                            Limpiar Fantasma
-                        </button>
+                        <h2 style="color: #f8fafc; font-size: 1.45rem; margin: 0 0 0.35rem 0; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>👻</span> Paso 4: Comparación Histórica y Superposición Fantasma
+                        </h2>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Superpón escaneos previos de navegación, polares de trimado o curvas de diseño objetivo para contrastar variaciones aerodinámicas.</p>
                     </div>
                 </div>
 
-                <div style="position: relative; height: 300px; width: 100%;">
-                    <canvas id="compareChartCanvas"></canvas>
+                <!-- Tarjeta de Selección de Perfil Fantasma -->
+                <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.2rem; align-items: center;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600;">Seleccionar Perfil Objetivo de Comparación</label>
+                            <select id="compareAnalysisSelect" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 9px 12px; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                                <option value="target1">🎯 Polar de Diseño North Sails 3Di RAW (Medio: 13.5% @ 42%)</option>
+                                <option value="heavy">💨 Objetivo Viento Fuerte Plano Ceñida (Medio: 9.8% @ 46%)</option>
+                                <option value="light">🌊 Objetivo Viento Ligero Potencia Profundo (Medio: 14.8% @ 40%)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: flex-end; justify-content: flex-start;">
+                            <button type="button" onclick="applyGhostOverlay()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #0f172a; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                                <span>👻</span> Superponer Fantasma
+                            </button>
+                            <button type="button" onclick="clearGhostOverlay()" style="background: #334155; color: #cbd5e1; border: 1px solid #475569; padding: 9px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                                Limpiar Fantasma
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Comparación y Tabla Delta -->
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                    
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                            <h3 style="color: #38bdf8; font-size: 1rem; margin: 0; font-weight: 700;">📈 Comparación de Curvas de Camber y Calado</h3>
+                            <span style="font-size: 0.72rem; color: #94a3b8;">Línea continua: Escaneo Actual • Línea discontinua: Objetivo Fantasma</span>
+                        </div>
+                        <div style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="compareChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem;">
+                        <h3 style="color: #10b981; font-size: 1rem; margin: 0 0 0.8rem 0; font-weight: 700;">📋 Tabla Delta Aerodinámica (Actual vs. Fantasma)</h3>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                <thead>
+                                    <tr style="background: #0f172a; border-bottom: 2px solid #334155;">
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Franja</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #38bdf8;">Camber Actual</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Camber Objetivo</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #f59e0b;">Δ Camber</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #38bdf8;">Calado Actual</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #94a3b8;">Calado Objetivo</th>
+                                        <th style="padding: 8px 12px; text-align: left; color: #a78bfa;">Δ Calado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareDeltaTableBody">
+                                    <tr><td colspan="7" style="padding: 14px; text-align: center; color: #64748b;">Haga clic en "Superponer Fantasma" para ver las diferencias delta</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -1589,6 +1593,151 @@
 </div>
 
 <style>
+/* Desktop Horizontal Steps Bar */
+.desktop-steps-bar {
+    height: 40px;
+    min-height: 40px;
+    background: #0c1222;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.85rem;
+    user-select: none;
+    z-index: 101;
+    flex-shrink: 0;
+}
+.desktop-steps-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+}
+.desktop-steps-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 12px;
+    border-right: 1px solid #1e293b;
+}
+.desktop-steps-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+.step-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px 10px;
+    border-radius: 5px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+.step-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+}
+.step-tab-btn.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+.step-tab-btn .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1e293b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #94a3b8;
+}
+.step-tab-btn.active .step-num {
+    background: #38bdf8;
+    color: #0f172a;
+}
+.desktop-steps-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.steps-profile-pill {
+    padding: 3px 10px;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+.steps-tack-pill {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1.5px solid #10b981;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Unified CAD Studio Ribbon */
+.cad-studio-ribbon {
+    background: #0d1424;
+    border-bottom: 1px solid #1e293b;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 30;
+}
+.ribbon-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3px;
+}
+.ribbon-group-header {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.ribbon-group-items {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ribbon-divider {
+    width: 1px;
+    background: #1e293b;
+    margin: 2px 4px;
+}
+.ribbon-vdiv {
+    width: 1px;
+    height: 18px;
+    background: #334155;
+    margin: 0 2px;
+}
+.cad-ribbon-tool-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 0.9rem !important;
+}
+
 /* Desktop Menubar Styling */
 .desktop-menubar {
     height: 38px;
