@@ -124,9 +124,14 @@ function initStudio() {
         ctx = canvas.getContext('2d');
     }
     unlockAllTabs();
+    if (!scanData.imageDimensions || scanData.imageDimensions.width === 0) {
+        scanData.imageDimensions = { width: 1200, height: 750 };
+    }
     if (!scanData.stripes || scanData.stripes.length === 0) {
         initializeDefaultBenchmarkStripes();
     }
+    resizeCanvasToFit();
+    renderCanvas();
 }
 
 // Global curve point normalization helper (handles both [x, y] arrays and {x, y} objects)
@@ -257,6 +262,14 @@ window.switchScanTab = function(tabName) {
     if (tabName === 'canvas') {
         resizeCanvasToFit();
         renderCanvas();
+        requestAnimationFrame(() => {
+            resizeCanvasToFit();
+            renderCanvas();
+        });
+        setTimeout(() => {
+            resizeCanvasToFit();
+            renderCanvas();
+        }, 60);
     } else if (tabName === 'analytics') {
         updateAnalyticsView();
     } else if (tabName === 'compare') {
@@ -425,18 +438,24 @@ window.loadPresetSample = function(presetKey) {
     
     if (presetKey === 'white_blue') {
         selectScanType('foot');
-        document.getElementById('paramSailColor').value = 'white';
-        document.getElementById('paramStripeColor').value = 'blue';
+        if (document.getElementById('paramSailColor')) document.getElementById('paramSailColor').value = 'white';
+        if (document.getElementById('paramStripeColor')) document.getElementById('paramStripeColor').value = 'blue';
+        if (document.getElementById('inputSailName')) document.getElementById('inputSailName').value = 'White Sail (Blue Stripes)';
+        scanData.sailName = 'White Sail (Blue Stripes)';
         loadImageFromDataUrl('/static/images/sample-white-blue.jpg', 'White_Sail_Blue_Stripes.jpg');
     } else if (presetKey === 'white_boom') {
         selectScanType('foot');
-        document.getElementById('paramSailColor').value = 'white';
-        document.getElementById('paramStripeColor').value = 'black';
+        if (document.getElementById('paramSailColor')) document.getElementById('paramSailColor').value = 'white';
+        if (document.getElementById('paramStripeColor')) document.getElementById('paramStripeColor').value = 'black';
+        if (document.getElementById('inputSailName')) document.getElementById('inputSailName').value = 'Mainsail Foot (Boom Stripe)';
+        scanData.sailName = 'Mainsail Foot (Boom Stripe)';
         loadImageFromDataUrl('/static/images/sample-white-boom.jpg', 'White_Sail_Dark_Boom.jpg');
     } else if (presetKey === 'black_carbon') {
         selectScanType('foot');
-        document.getElementById('paramSailColor').value = 'black';
-        document.getElementById('paramStripeColor').value = 'red';
+        if (document.getElementById('paramSailColor')) document.getElementById('paramSailColor').value = 'black';
+        if (document.getElementById('paramStripeColor')) document.getElementById('paramStripeColor').value = 'red';
+        if (document.getElementById('inputSailName')) document.getElementById('inputSailName').value = 'Carbon 3Di Jib (Red Stripes)';
+        scanData.sailName = 'Carbon 3Di Jib (Red Stripes)';
         loadImageFromDataUrl('/static/images/sample-black-red.jpg', 'Black_Carbon_Red_Stripes.jpg');
     } else if (presetKey === 'jib_label') {
         unlockAllTabs();
@@ -1047,14 +1066,16 @@ function imageToScreen(imgX, imgY) {
 
 function resizeCanvasToFit() {
     const wrapper = document.getElementById('canvasWrapper');
-    if (!wrapper || !canvas || !scanData.imageObj) return;
+    if (!wrapper || !canvas) return;
     
-    const maxW = wrapper.clientWidth;
-    const maxH = wrapper.clientHeight;
+    const maxW = wrapper.clientWidth || 800;
+    const maxH = wrapper.clientHeight || 600;
     
-    const imgW = scanData.imageDimensions.width;
-    const imgH = scanData.imageDimensions.height;
+    const imgW = scanData.imageDimensions?.width || scanData.imageWidth || (scanData.imageObj ? scanData.imageObj.width : 1200);
+    const imgH = scanData.imageDimensions?.height || scanData.imageHeight || (scanData.imageObj ? scanData.imageObj.height : 750);
     
+    if (imgW <= 0 || imgH <= 0 || maxW <= 0 || maxH <= 0) return;
+
     const aspect = imgW / imgH;
     let targetW = maxW;
     let targetH = maxW / aspect;
@@ -1066,15 +1087,16 @@ function resizeCanvasToFit() {
     
     canvas.width = Math.floor(targetW);
     canvas.height = Math.floor(targetH);
-    canvas.style.width = `${targetW}px`;
-    canvas.style.height = `${targetH}px`;
+    canvas.style.width = `${Math.floor(targetW)}px`;
+    canvas.style.height = `${Math.floor(targetH)}px`;
 }
 
 function renderCanvas() {
-    if (!ctx || !canvas || !scanData.imageObj) return;
+    if (!ctx || !canvas) return;
     
     const cw = canvas.width;
     const ch = canvas.height;
+    if (cw <= 0 || ch <= 0) return;
     
     ctx.clearRect(0, 0, cw, ch);
     
@@ -1084,18 +1106,19 @@ function renderCanvas() {
     ctx.save();
     
     // 2. Apply Camera Transform (Center + Pan + Zoom)
-    const baseScale = Math.min(cw / scanData.imageDimensions.width, ch / scanData.imageDimensions.height);
+    const iw = scanData.imageDimensions?.width || scanData.imageWidth || (scanData.imageObj ? scanData.imageObj.width : 1200);
+    const ih = scanData.imageDimensions?.height || scanData.imageHeight || (scanData.imageObj ? scanData.imageObj.height : 750);
+    
+    const baseScale = Math.min(cw / iw, ch / ih);
     const effectiveScale = (baseScale * camera.zoom) || 1.0;
     camera.effectiveScale = effectiveScale;
     
     ctx.translate(cw / 2 + camera.panX, ch / 2 + camera.panY);
     ctx.scale(effectiveScale, effectiveScale);
-    ctx.translate(-scanData.imageDimensions.width / 2, -scanData.imageDimensions.height / 2);
+    ctx.translate(-iw / 2, -ih / 2);
     
     // 3. Apply Image Transformations (Rotate & Flip)
     ctx.save();
-    const iw = scanData.imageDimensions.width;
-    const ih = scanData.imageDimensions.height;
     
     ctx.translate(iw / 2, ih / 2);
     if (scanData.transform.rotate) {
@@ -1107,12 +1130,20 @@ function renderCanvas() {
     ctx.translate(-iw / 2, -ih / 2);
     
     // 4. Apply Image Filters (CSS Filter Matrix)
-    const f = scanData.transform.filters;
-    const totalBrightness = Math.max(0, f.brightness + f.exposure);
-    ctx.filter = `brightness(${totalBrightness}%) contrast(${f.contrast}%) ${f.invert ? 'invert(100%)' : ''}`;
-    
-    ctx.drawImage(scanData.imageObj, 0, 0, iw, ih);
-    ctx.filter = 'none';
+    if (scanData.imageObj) {
+        const f = scanData.transform.filters;
+        const totalBrightness = Math.max(0, f.brightness + f.exposure);
+        ctx.filter = `brightness(${totalBrightness}%) contrast(${f.contrast}%) ${f.invert ? 'invert(100%)' : ''}`;
+        ctx.drawImage(scanData.imageObj, 0, 0, iw, ih);
+        ctx.filter = 'none';
+    } else {
+        // Technical CAD sail background if photo not yet selected
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, iw, ih);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, iw, ih);
+    }
     ctx.restore();
     
     // 5. Draw Draft Stripes Overlay
@@ -3237,7 +3268,7 @@ window.exportAnalyticsCSV = function() {
 
 
 
-let ghostData = null;
+// ghostData is declared at top level
 
 function updateCompareView() {
     const canvasEl = document.getElementById('compareChartCanvas');
@@ -4998,6 +5029,7 @@ window.loadSampleSailBenchmark = async function(sampleName) {
                 scanData.imageObj = img;
                 scanData.imageWidth = img.naturalWidth || img.width;
                 scanData.imageHeight = img.naturalHeight || img.height;
+                scanData.imageDimensions = { width: scanData.imageWidth, height: scanData.imageHeight };
                 
                 const sbDims = document.getElementById('sb-image-dims');
                 if (sbDims) sbDims.innerText = `Dims: ${scanData.imageWidth} × ${scanData.imageHeight} px`;
@@ -5179,3 +5211,20 @@ window.setStripePalette = function(palette) {
     renderCanvas();
     buildReportPreview();
 };
+
+// Global Window Resize Listener ensuring CAD Canvas & Charts always fit to window size
+window.addEventListener('resize', () => {
+    if (document.getElementById('panel-canvas')?.classList.contains('active')) {
+        resizeCanvasToFit();
+        renderCanvas();
+    }
+    if (camberChart) {
+        try { camberChart.resize(); } catch (e) {}
+    }
+    if (twistChart) {
+        try { twistChart.resize(); } catch (e) {}
+    }
+    if (compareChart) {
+        try { compareChart.resize(); } catch (e) {}
+    }
+});

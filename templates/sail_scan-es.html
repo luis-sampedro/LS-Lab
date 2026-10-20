@@ -5,7 +5,7 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="sailscan-container" style="display: flex; flex-direction: column; height: calc(100vh - 70px); background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
+<div class="sailscan-container" style="display: flex; flex-direction: column; height: 100%; flex: 1; background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
     <!-- BARRA DE MENÚ SUPERIOR DE ESCRITORIO (ES) -->
     <!-- 1. BARRA HORIZONTAL SUPERIOR DE PASOS (~40px altura) -->
     <div class="desktop-steps-bar">
@@ -55,7 +55,7 @@
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
                 <span>Archivo</span>
                 <div class="desktop-dropdown" id="dropdown-file">
-                    <div class="desktop-dropdown-item" onclick="document.getElementById('sailPhotoInput').click()">
+                    <div class="desktop-dropdown-item" onclick="(document.getElementById('fileInput')||document.getElementById('sailPhotoInput')).click()">
                         <span>📂 Abrir Foto de Vela...</span>
                         <span class="shortcut">Ctrl+O</span>
                     </div>
@@ -1593,6 +1593,58 @@ Análisis de Camber, Calado y Torsión por Visión Artificial
 </div>
 
 <style>
+/* Desktop Window Fit & Anti-Scroll */
+html, body {
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+body {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #090e1a !important;
+}
+.topbar {
+    flex-shrink: 0 !important;
+    padding: 0.4rem 2vw !important;
+    min-height: 48px !important;
+    max-height: 52px !important;
+}
+main#top {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.sailscan-container {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    width: 100% !important;
+}
+.cad-studio-ribbon {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    min-height: 58px !important;
+    max-height: 64px !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+}
+.ribbon-group {
+    flex-shrink: 0 !important;
+}
+
 /* Desktop Horizontal Steps Bar */
 .desktop-steps-bar {
     height: 40px;
@@ -2158,3 +2210,4 @@ Análisis de Camber, Calado y Torsión por Visión Artificial
 <script type="module" src="{{ url_for('static', filename='js/firebase-init.js') }}"></script>
 <script src="/static/js/sailscan-studio.js"></script>
 {% endblock %}
+{% block footer %}{% endblock %}
