@@ -55,7 +55,7 @@
                     <div class="desktop-dropdown-item" onclick="switchTab('upload')">
                         <span>⚙️ Recalibrate Wind Direction...</span>
                     </div>
-                    <div class="desktop-dropdown-item" onclick="document.getElementById('enableNonSailingFilter').click()">
+                    <div class="desktop-dropdown-item" onclick="toggleLowSpeedFilter()">
                         <span>🧹 Toggle Low-Speed Filtering</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
@@ -239,35 +239,6 @@
                 <!-- Format Detected Badge -->
                 <div id="detected-format-badge" style="display: none; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; border-radius: 6px; padding: 0.75rem 1rem; margin-top: 1rem; color: #38bdf8; font-weight: 600; font-size: 0.9rem; align-items: center; gap: 8px;">
                     🔍 <span id="detected-format-text">Format Detected: Vakaros Binary (.vkx)</span>
-                </div>
-            </div>
-
-            <!-- Non-Sailing Speed Filter & Hidden Leg Settings Card -->
-            <div class="card" style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; width: 100%;">
-                <h4 style="color: #f8fafc; margin: 0 0 0.75rem 0; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                    ⚙️ Non-Sailing Speed Filtering & Hidden Legs Controls
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; color: #cbd5e1;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="enableNonSailingFilter" checked onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
-                        <span>Enable Low-Speed Filtering (Filter onshore, floating & capsize points)</span>
-                    </label>
-                    
-                    <div style="display: flex; align-items: center; gap: 12px; margin-left: 24px;">
-                        <span>Speed Threshold:</span>
-                        <select id="nonSailingSpeedThreshold" onchange="updateNonSailingFilter()" style="background: #0f172a; border: 1px solid #475569; padding: 4px 8px; border-radius: 4px; color: white;">
-                            <option value="0.5">0.5 knots</option>
-                            <option value="1.0" selected>1.0 knot (Default)</option>
-                            <option value="1.5">1.5 knots</option>
-                            <option value="2.0">2.0 knots</option>
-                            <option value="3.0">3.0 knots</option>
-                        </select>
-                    </div>
-
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-left: 24px;">
-                        <input type="checkbox" id="actAsHiddenLeg" checked onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
-                        <span>Render Excluded Low-Speed Points as <strong>Hidden Legs (🙈)</strong> on Timeline Ribbon</span>
-                    </label>
                 </div>
             </div>
 
@@ -578,6 +549,9 @@
                             <button onclick="goToSelectedLegEnd()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Go to End of Selected Leg">⏭️</button>
 
                             <div style="width: 1px; height: 20px; background: #334155; margin: 0 4px;"></div>
+                            <button type="button" id="btnToggleLowSpeedQuick" onclick="toggleLowSpeedFilter()" style="background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 0 10px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;" title="Toggle Low-Speed Filter (Tow / Onshore / Capsize)">
+                                <span>🐌</span> <span id="lblLowSpeedStatus">Low-Speed: OFF</span>
+                            </button>
                             <div style="position: relative; display: inline-block; z-index: 9999;">
                                 <div style="display: flex; align-items: center;">
                                     <button onclick="autoDetectLegsClips()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 0 8px; height: 32px; border-radius: 6px 0 0 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Auto-detect sublegs (Upwind, Downwind, Tacks, Gybes)">⚡ Auto-Detect</button>
@@ -714,7 +688,7 @@
                                 <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚙️ Data Filters</span>
                                 <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
                                     <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">
-                                        <input type="checkbox" id="enableNonSailingFilter" checked onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
+                                        <input type="checkbox" id="enableNonSailingFilter" onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
                                         <span>🐌 Low Speed Filter</span>
                                     </label>
                                     <div style="display: flex; align-items: center; gap: 6px; margin-left: 22px;">

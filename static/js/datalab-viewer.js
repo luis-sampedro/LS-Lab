@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupKeyboardShortcuts();
     setupPopoverDismiss();
     initExcelRowResizers();
+    if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
 });
 
 window.applyLayoutPreset = function(preset) {
@@ -158,12 +159,58 @@ window.initExcelRowResizers = function() {
 };
 
 function initMap() {
-    map = L.map('map').setView([42.2328, -8.7226], 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
-    }).addTo(map);
+    map = L.map('map', {
+        zoomControl: true,
+        preferCanvas: true
+    }).setView([42.2328, -8.7226], 13);
+
+    // 1. Sleek High-Contrast Dark Canvas (Fast, 100% Free, NO API KEY REQUIRED)
+    const darkLayer = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="https://www.esri.com">Esri</a> &copy; OpenStreetMap',
+        maxZoom: 19
+    });
+
+    // 2. OpenStreetMap Standard (Free, community-driven, no API key)
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    });
+
+    // 3. High-Resolution Coastal Satellite Imagery (No API key)
+    const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="https://www.esri.com">Esri</a> &copy; Maxar, Earthstar Geographics',
+        maxZoom: 19
+    });
+
+    // Default to the dark canvas layer: clean, no auth or API keys needed
+    darkLayer.addTo(map);
+
+    // Multi-basemap switch control
+    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+    const baseMaps = isEs ? {
+        "🌙 Modo Oscuro (Dark Canvas)": darkLayer,
+        "🗺️ Mapa Estándar (OSM)": osmLayer,
+        "🛰️ Satélite Costero": satLayer
+    } : {
+        "🌙 Dark Mode (Dark Canvas)": darkLayer,
+        "🗺️ Standard Map (OSM)": osmLayer,
+        "🛰️ Coastal Satellite": satLayer
+    };
+
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+    // Ensure map tiles and dimensions automatically adjust whenever container becomes visible
+    if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        });
+        const mapEl = document.getElementById('map');
+        if (mapEl) ro.observe(mapEl);
+        const mapSec = document.getElementById('mapSection');
+        if (mapSec) ro.observe(mapSec);
+    }
 
     map.on('click', function(e) {
         if (typeof isPickingMarkMode !== 'undefined' && isPickingMarkMode) {
@@ -444,6 +491,8 @@ window.switchTab = function(tabId) {
     if (visualizerTabs.includes(tabId)) {
         visualizer.style.display = 'flex';
         refreshVisualizer();
+        setTimeout(() => { if (map) map.invalidateSize(); }, 60);
+        setTimeout(() => { if (map) map.invalidateSize(); }, 250);
     } else {
         visualizer.style.display = 'none';
     }
@@ -459,21 +508,23 @@ window.switchTab = function(tabId) {
 };
 
 function refreshVisualizer() {
-    if (!sessionData || !sessionData.track) return;
-
     setTimeout(() => {
         if (map) {
             map.invalidateSize();
-            if (trackPolyline) {
-                map.fitBounds(trackPolyline.getBounds(), { padding: [30, 30] });
+            if (sessionData && sessionData.track && trackPolyline) {
+                try {
+                    map.fitBounds(trackPolyline.getBounds(), { padding: [30, 30] });
+                } catch(e) {}
             }
         }
         if (timeChart) {
             timeChart.resize();
             timeChart.update();
         }
-        updateFrame(playbackIndex);
-    }, 120);
+        if (sessionData && sessionData.track) {
+            updateFrame(playbackIndex);
+        }
+    }, 80);
 }
 
 function handleBoatSelectChange() {
@@ -2378,6 +2429,7 @@ window.clearSegments = function() {
 };
 
 window.applyDataFilters = function() {
+    if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
     if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog) return;
 
     const lowSpeedCheckbox = document.getElementById('enableNonSailingFilter');
@@ -2388,7 +2440,13 @@ window.applyDataFilters = function() {
     const foilingEnabled = foilingCheckbox ? foilingCheckbox.checked : false;
     const foilingThresh = parseFloat(document.getElementById('foilingSpeedThreshold')?.value || 8.0);
 
-    if (!lowSpeedEnabled && !foilingEnabled) return;
+    if (!lowSpeedEnabled && !foilingEnabled) {
+        const hasLowSpeed = activeSegments.some(s => s.label === 'Low Speed Leg' || s.label.includes('Low Speed'));
+        if (hasLowSpeed) {
+            resetToSingleSessionLeg();
+        }
+        return;
+    }
 
     let sogs = sessionData.metrics.sog;
     
@@ -2449,7 +2507,36 @@ window.applyDataFilters = function() {
     if (popover) popover.style.display = 'none';
 };
 
+window.toggleLowSpeedFilter = function() {
+    const cb = document.getElementById('enableNonSailingFilter');
+    if (!cb) return;
+    cb.checked = !cb.checked;
+    updateLowSpeedStatusUI();
+    updateNonSailingFilter();
+};
+
+window.updateLowSpeedStatusUI = function() {
+    const cb = document.getElementById('enableNonSailingFilter');
+    const lbl = document.getElementById('lblLowSpeedStatus');
+    const btn = document.getElementById('btnToggleLowSpeedQuick');
+    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+    if (cb && lbl && btn) {
+        if (cb.checked) {
+            lbl.textContent = isEs ? 'Filtro Vel: ON' : 'Low-Speed: ON';
+            btn.style.color = '#38bdf8';
+            btn.style.borderColor = '#38bdf8';
+            btn.style.background = 'rgba(56, 189, 248, 0.15)';
+        } else {
+            lbl.textContent = isEs ? 'Filtro Vel: OFF' : 'Low-Speed: OFF';
+            btn.style.color = '#94a3b8';
+            btn.style.borderColor = '#475569';
+            btn.style.background = '#1e293b';
+        }
+    }
+};
+
 window.updateNonSailingFilter = function() {
+    updateLowSpeedStatusUI();
     applyDataFilters();
 };
 
@@ -3055,7 +3142,7 @@ function calculateLegStats() {
 
     const thresholdInput = document.getElementById('nonSailingSpeedThreshold');
     const threshold = parseFloat(thresholdInput ? thresholdInput.value : 1.0) || 1.0;
-    const isFilterEnabled = document.getElementById('enableNonSailingFilter') ? document.getElementById('enableNonSailingFilter').checked : true;
+    const isFilterEnabled = document.getElementById('enableNonSailingFilter') ? document.getElementById('enableNonSailingFilter').checked : false;
 
     let upSogs = [], upHeels = [], upVmgs = [];
     let downSogs = [], downHeels = [], downVmgs = [];
@@ -3129,7 +3216,7 @@ function calculateFlightStats() {
     
     const thresholdInput = document.getElementById('nonSailingSpeedThreshold');
     const threshold = parseFloat(thresholdInput ? thresholdInput.value : 1.0) || 1.0;
-    const isFilterEnabled = document.getElementById('enableNonSailingFilter') ? document.getElementById('enableNonSailingFilter').checked : true;
+    const isFilterEnabled = document.getElementById('enableNonSailingFilter') ? document.getElementById('enableNonSailingFilter').checked : false;
 
     const sogs = sessionData.metrics.sog;
 
