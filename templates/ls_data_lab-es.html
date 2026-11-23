@@ -590,7 +590,7 @@
     </div>
 
     <!-- MAIN DESKTOP WORKSPACE -->
-    <div class="desktop-main-workspace" style="display: flex; flex: 1; height: calc(100% - 110px); min-height: 0; overflow: hidden; position: relative;">
+    <div class="desktop-main-workspace" style="display: flex; flex: 1 1 0; height: calc(100vh - 110px); height: calc(100dvh - 110px); min-height: 0; overflow: hidden; position: relative;">
         <!-- Main Content Panels Container -->
         <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         
@@ -2249,11 +2249,34 @@ main#top {
     border-radius: 1px;
 }
 
+.cad-right-container {
+    flex: 1 1 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 200px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+.cad-right-container .cad-viewport-window {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: calc(33.333% - 4px) !important;
+    overflow: hidden !important;
+}
+
+.cad-viewport-body {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
 /* Picture-in-Picture (PiP) / Modo Ventana Flotante (Grab & Move) */
 .cad-viewport-window.cad-pip-floating {
-    position: absolute !important;
-    z-index: 2500 !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 0 2px #0284c7 !important;
+    position: fixed !important;
+    z-index: 99999 !important;
+    box-shadow: 0 25px 65px rgba(0, 0, 0, 0.95), 0 0 0 2px #0284c7 !important;
     border-radius: 8px !important;
     resize: both !important;
     overflow: hidden !important;
@@ -2277,8 +2300,8 @@ main#top {
 
 /* Windows 11 Snap Layouts Flyout (Distribuciones Visuales Estilo Windows Snap) */
 .windows-snap-flyout {
-    position: absolute;
-    z-index: 4000;
+    position: fixed !important;
+    z-index: 100000 !important;
     background: #1e1f22;
     border: 1px solid #383a40;
     border-radius: 10px;

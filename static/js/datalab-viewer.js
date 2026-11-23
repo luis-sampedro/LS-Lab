@@ -393,6 +393,9 @@ window.toggleViewport = function(vpId, forceShow) {
     if (isVisible) {
         cadViewportState.visible[vpId] = true;
         cadViewportState.minimized[vpId] = false;
+        if (cadViewportState.maximized) {
+            cadViewportState.maximized = null;
+        }
         window.adjustDockedWindowsFill();
     } else {
         window.closeViewport(vpId);
@@ -557,53 +560,51 @@ window.initCadSplitters = function() {
 let snapFlyoutTimer = null;
 window.openSnapFlyout = function(targetVpId, event) {
     if (snapFlyoutTimer) clearTimeout(snapFlyoutTimer);
-    const flyout = document.getElementById('windowsSnapFlyout');
+    const flyout = document.getElementById("windowsSnapFlyout");
     if (!flyout) return;
     
     if (event) {
         event.stopPropagation();
         const btn = event.currentTarget || event.target;
         const rect = btn.getBoundingClientRect();
-        const cont = document.getElementById('shared-visualizer') || document.body;
-        const contRect = cont.getBoundingClientRect();
         
-        let top = rect.bottom - contRect.top + 6;
-        let left = rect.left - contRect.left - 180;
+        let top = rect.bottom + 6;
+        let left = rect.left - 180;
         if (left < 10) left = 10;
-        if (left + 310 > contRect.width) left = Math.max(10, contRect.width - 320);
-        if (top + 230 > contRect.height) top = Math.max(10, rect.top - contRect.top - 235);
+        if (left + 310 > window.innerWidth) left = Math.max(10, window.innerWidth - 320);
+        if (top + 230 > window.innerHeight) top = Math.max(10, rect.top - 235);
         
         flyout.style.top = `${top}px`;
         flyout.style.left = `${left}px`;
     }
-    flyout.classList.add('active');
+    flyout.classList.add("active");
 };
 
 window.closeSnapFlyoutDelay = function() {
     snapFlyoutTimer = setTimeout(() => {
-        const flyout = document.getElementById('windowsSnapFlyout');
-        if (flyout) flyout.classList.remove('active');
+        const flyout = document.getElementById("windowsSnapFlyout");
+        if (flyout) flyout.classList.remove("active");
     }, 280);
 };
 
 window.closeSnapFlyout = function() {
     if (snapFlyoutTimer) clearTimeout(snapFlyoutTimer);
-    const flyout = document.getElementById('windowsSnapFlyout');
-    if (flyout) flyout.classList.remove('active');
+    const flyout = document.getElementById("windowsSnapFlyout");
+    if (flyout) flyout.classList.remove("active");
 };
 
 window.applySnapLayout = function(layoutType) {
     window.closeSnapFlyout();
-    if (layoutType === 'pip-map') {
-        window.toggleFloatingViewport('map', true);
-    } else if (layoutType === 'pip-hud') {
-        window.toggleFloatingViewport('hud', true);
-    } else if (layoutType === 'pip-plot') {
-        window.toggleFloatingViewport('plot', true);
-    } else if (layoutType === 'pip-timeline') {
-        window.toggleFloatingViewport('timeline', true);
-    } else if (layoutType === 'dock-all') {
-        window.applyViewportPreset('default-cad');
+    if (layoutType === "pip-map") {
+        window.toggleFloatingViewport("map", true);
+    } else if (layoutType === "pip-hud") {
+        window.toggleFloatingViewport("hud", true);
+    } else if (layoutType === "pip-plot") {
+        window.toggleFloatingViewport("plot", true);
+    } else if (layoutType === "pip-timeline") {
+        window.toggleFloatingViewport("timeline", true);
+    } else if (layoutType === "dock-all") {
+        window.applyViewportPreset("default-cad");
     } else {
         window.applyViewportPreset(layoutType);
     }
@@ -611,24 +612,24 @@ window.applySnapLayout = function(layoutType) {
 
 window.resetHudToMapDefault = function() {
     if (cadViewportState.floating.hud) {
-        window.toggleFloatingViewport('hud', false);
+        window.toggleFloatingViewport("hud", false);
     }
 };
 
 window.adjustDockedWindowsFill = function() {
-    const vpMap = document.getElementById('vp-map-window');
-    const vpRight = document.getElementById('vp-right-container');
-    const vpHud = document.getElementById('vp-hud-window');
-    const vpPlot = document.getElementById('vp-plot-window');
-    const vpTimeline = document.getElementById('vp-timeline-window');
-    const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH1 = document.getElementById('splitter-cad-h1');
-    const splitH2 = document.getElementById('splitter-cad-h2');
+    const vpMap = document.getElementById("vp-map-window");
+    const vpRight = document.getElementById("vp-right-container");
+    const vpHud = document.getElementById("vp-hud-window");
+    const vpPlot = document.getElementById("vp-plot-window");
+    const vpTimeline = document.getElementById("vp-timeline-window");
+    const splitV = document.getElementById("splitter-cad-vertical");
+    const splitH1 = document.getElementById("splitter-cad-h1");
+    const splitH2 = document.getElementById("splitter-cad-h2");
 
-    const badgeMap = document.getElementById('badge-vp-map');
-    const badgeHud = document.getElementById('badge-vp-hud');
-    const badgePlot = document.getElementById('badge-vp-plot');
-    const badgeTimeline = document.getElementById('badge-vp-timeline');
+    const badgeMap = document.getElementById("badge-vp-map");
+    const badgeHud = document.getElementById("badge-vp-hud");
+    const badgePlot = document.getElementById("badge-vp-plot");
+    const badgeTimeline = document.getElementById("badge-vp-timeline");
 
     if (!vpMap || !vpRight || !vpHud || !vpPlot || !vpTimeline) return;
 
@@ -637,76 +638,76 @@ window.adjustDockedWindowsFill = function() {
     const fPlot = !!cadViewportState.floating.plot;
     const fTimeline = !!cadViewportState.floating.timeline;
 
-    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
-    const pipText = isEs ? 'PiP Flotante' : 'Floating PiP';
+    const isEs = document.documentElement.lang === "es" || window.location.href.includes("lang=es");
+    const pipText = isEs ? "PiP Flotante" : "Floating PiP";
 
     if (badgeMap) badgeMap.textContent = fMap ? pipText : `${cadViewportState.splitters.verticalPct}%`;
-    if (badgeHud) badgeHud.textContent = fHud ? pipText : '33%';
-    if (badgePlot) badgePlot.textContent = fPlot ? pipText : '33%';
-    if (badgeTimeline) badgeTimeline.textContent = fTimeline ? pipText : '33%';
-
-    // Allow floating children in vp-right-container to cross boundaries without clipping
-    if (fHud || fPlot || fTimeline) {
-        vpRight.style.overflow = 'visible';
-    } else {
-        vpRight.style.overflow = 'hidden';
-    }
+    if (badgeHud) badgeHud.textContent = fHud ? pipText : "33%";
+    if (badgePlot) badgePlot.textContent = fPlot ? pipText : "33%";
+    if (badgeTimeline) badgeTimeline.textContent = fTimeline ? pipText : "33%";
 
     const rightDocked = [];
-    if (!fHud && cadViewportState.visible.hud && !cadViewportState.minimized.hud) rightDocked.push('hud');
-    if (!fPlot && cadViewportState.visible.plot && !cadViewportState.minimized.plot) rightDocked.push('plot');
-    if (!fTimeline && cadViewportState.visible.timeline && !cadViewportState.minimized.timeline) rightDocked.push('timeline');
+    if (!fHud && cadViewportState.visible.hud && !cadViewportState.minimized.hud) rightDocked.push("hud");
+    if (!fPlot && cadViewportState.visible.plot && !cadViewportState.minimized.plot) rightDocked.push("plot");
+    if (!fTimeline && cadViewportState.visible.timeline && !cadViewportState.minimized.timeline) rightDocked.push("timeline");
 
     const totalRightVisible = (!fHud && cadViewportState.visible.hud ? 1 : 0) +
                               (!fPlot && cadViewportState.visible.plot ? 1 : 0) +
                               (!fTimeline && cadViewportState.visible.timeline ? 1 : 0);
 
+    // If Map was maximized but right windows are being restored/docked, clear maximized state
+    if (cadViewportState.maximized === "map" && totalRightVisible > 0) {
+        cadViewportState.maximized = null;
+    }
+
     if (fMap && totalRightVisible === 0) {
-        vpRight.style.display = 'none';
-        if (splitV) splitV.style.display = 'none';
-        if (splitH1) splitH1.style.display = 'none';
-        if (splitH2) splitH2.style.display = 'none';
+        vpRight.style.display = "none";
+        if (splitV) splitV.style.display = "none";
+        if (splitH1) splitH1.style.display = "none";
+        if (splitH2) splitH2.style.display = "none";
         return;
     }
 
     if (fMap) {
-        vpRight.style.display = 'flex';
-        vpRight.style.flex = '1';
-        vpRight.style.width = '100%';
-        if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = "flex";
+        vpRight.style.flex = "1";
+        vpRight.style.width = "100%";
+        if (splitV) splitV.style.display = "none";
     } else if (totalRightVisible === 0) {
-        vpMap.style.display = 'flex';
-        vpMap.style.flex = '1';
-        vpMap.style.width = '100%';
-        vpRight.style.display = 'none';
-        if (splitV) splitV.style.display = 'none';
-        if (badgeMap) badgeMap.textContent = '100%';
+        vpMap.style.display = "flex";
+        vpMap.style.flex = "1";
+        vpMap.style.width = "100%";
+        vpRight.style.display = "none";
+        if (splitV) splitV.style.display = "none";
+        if (badgeMap) badgeMap.textContent = "100%";
         return;
     } else {
-        vpMap.style.display = 'flex';
-        vpMap.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
-        vpMap.style.width = `${cadViewportState.splitters.verticalPct}%`;
-        vpRight.style.display = 'flex';
-        vpRight.style.flex = '1';
-        vpRight.style.width = `${100 - cadViewportState.splitters.verticalPct}%`;
-        if (splitV) splitV.style.display = 'flex';
+        const vPct = cadViewportState.splitters.verticalPct || 50;
+        vpMap.style.display = "flex";
+        vpMap.style.flex = `0 0 ${vPct}%`;
+        vpMap.style.width = `${vPct}%`;
+        vpRight.style.display = "flex";
+        vpRight.style.flex = `0 0 ${100 - vPct}%`;
+        vpRight.style.width = `${100 - vPct}%`;
+        if (splitV) splitV.style.display = "flex";
     }
 
     [
-        { id: 'hud', el: vpHud, badge: badgeHud },
-        { id: 'plot', el: vpPlot, badge: badgePlot },
-        { id: 'timeline', el: vpTimeline, badge: badgeTimeline }
+        { id: "hud", el: vpHud, badge: badgeHud },
+        { id: "plot", el: vpPlot, badge: badgePlot },
+        { id: "timeline", el: vpTimeline, badge: badgeTimeline }
     ].forEach(item => {
         const isFloating = cadViewportState.floating[item.id];
         const isVisible = cadViewportState.visible[item.id];
         if (!isFloating && isVisible) {
-            item.el.style.display = 'flex';
+            item.el.style.display = "flex";
             if (!cadViewportState.minimized[item.id]) {
-                item.el.style.flex = '1';
-                item.el.style.removeProperty('height');
-                item.el.style.removeProperty('min-height');
+                const heightPct = rightDocked.length > 0 ? (100 / rightDocked.length) : 33.33;
+                item.el.style.flex = "1 1 0";
+                item.el.style.minHeight = "0";
+                item.el.style.height = `calc(${heightPct}% - 4px)`;
                 if (item.badge) {
-                    item.badge.textContent = `${Math.round(100 / Math.max(1, rightDocked.length))}%`;
+                    item.badge.textContent = `${Math.round(heightPct)}%`;
                 }
             }
         }
@@ -717,61 +718,67 @@ window.adjustDockedWindowsFill = function() {
     const timelineDocked = !fTimeline && cadViewportState.visible.timeline;
 
     if (splitH1) {
-        splitH1.style.display = (hudDocked && (plotDocked || timelineDocked)) ? 'flex' : 'none';
+        splitH1.style.display = (hudDocked && (plotDocked || timelineDocked)) ? "flex" : "none";
     }
     if (splitH2) {
-        splitH2.style.display = (plotDocked && timelineDocked) ? 'flex' : 'none';
+        splitH2.style.display = (plotDocked && timelineDocked) ? "flex" : "none";
     }
 };
 
-let cadMaxZ = 2500;
+let cadMaxZ = 99999;
+
+window.bringCadWindowToFront = function(win) {
+    if (win && win.classList.contains("cad-pip-floating")) {
+        win.style.zIndex = (++cadMaxZ).toString();
+    }
+};
 
 window.toggleFloatingViewport = function(vpId, forceState) {
     const windowEl = document.getElementById(`vp-${vpId}-window`);
-    const container = document.getElementById('shared-visualizer');
     const pipBtn = document.getElementById(`btn-pip-${vpId}`);
-    if (!windowEl || !container) return;
+    if (!windowEl) return;
 
-    const isFloating = windowEl.classList.contains('cad-pip-floating');
-    const targetState = typeof forceState === 'boolean' ? forceState : !isFloating;
+    const isFloating = windowEl.classList.contains("cad-pip-floating");
+    const targetState = typeof forceState === "boolean" ? forceState : !isFloating;
 
     cadViewportState.floating[vpId] = targetState;
 
     if (targetState) {
-        windowEl.classList.add('cad-pip-floating');
+        windowEl.classList.add("cad-pip-floating");
         windowEl.style.zIndex = (++cadMaxZ).toString();
         if (pipBtn) {
-            pipBtn.classList.add('active');
-            pipBtn.innerHTML = '⚓';
-            pipBtn.title = 'Anclar a la cuadrícula (Dock to Grid)';
+            pipBtn.classList.add("active");
+            pipBtn.innerHTML = "⚓";
+            pipBtn.title = "Anclar a la cuadrícula (Dock to Grid)";
         }
 
-        const contRect = container.getBoundingClientRect();
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
         const defaultPositions = {
-            map: { left: 30, top: 30, width: Math.max(380, Math.min(560, contRect.width * 0.52)), height: Math.max(260, Math.min(420, contRect.height * 0.6)) },
-            hud: { left: Math.max(20, contRect.width - 540), top: 30, width: Math.max(400, Math.min(540, contRect.width * 0.52)), height: 280 },
-            plot: { left: Math.max(20, contRect.width - 520), top: 70, width: Math.max(380, Math.min(520, contRect.width * 0.5)), height: Math.max(220, Math.min(320, contRect.height * 0.45)) },
-            timeline: { left: Math.max(20, contRect.width - 550), top: Math.max(60, contRect.height - 300), width: Math.max(400, Math.min(540, contRect.width * 0.52)), height: 260 }
+            map: { left: 40, top: 120, width: Math.max(380, Math.min(600, winW * 0.48)), height: Math.max(260, Math.min(450, winH * 0.55)) },
+            hud: { left: Math.max(20, winW - 560), top: 120, width: Math.max(400, Math.min(540, winW * 0.45)), height: 290 },
+            plot: { left: Math.max(20, winW - 540), top: 180, width: Math.max(380, Math.min(520, winW * 0.45)), height: Math.max(220, Math.min(340, winH * 0.42)) },
+            timeline: { left: Math.max(20, winW - 560), top: Math.max(120, winH - 330), width: Math.max(400, Math.min(540, winW * 0.45)), height: 260 }
         };
-        const pos = cadViewportState.floatingPos[vpId] || defaultPositions[vpId] || { left: 40, top: 40, width: 480, height: 320 };
+        const pos = cadViewportState.floatingPos[vpId] || defaultPositions[vpId] || { left: 50, top: 130, width: 480, height: 320 };
 
-        windowEl.style.left = `${Math.max(10, Math.min(contRect.width - 240, pos.left))}px`;
-        windowEl.style.top = `${Math.max(10, Math.min(contRect.height - 140, pos.top))}px`;
+        windowEl.style.left = `${Math.max(10, Math.min(winW - 200, pos.left))}px`;
+        windowEl.style.top = `${Math.max(10, Math.min(winH - 120, pos.top))}px`;
         windowEl.style.width = `${pos.width || 480}px`;
         windowEl.style.height = `${pos.height || 320}px`;
-        windowEl.style.flex = 'none';
+        windowEl.style.flex = "none";
     } else {
-        windowEl.classList.remove('cad-pip-floating');
-        windowEl.style.removeProperty('left');
-        windowEl.style.removeProperty('top');
-        windowEl.style.removeProperty('width');
-        windowEl.style.removeProperty('height');
-        windowEl.style.removeProperty('flex');
-        windowEl.style.removeProperty('z-index');
+        windowEl.classList.remove("cad-pip-floating");
+        windowEl.style.removeProperty("left");
+        windowEl.style.removeProperty("top");
+        windowEl.style.removeProperty("width");
+        windowEl.style.removeProperty("height");
+        windowEl.style.removeProperty("flex");
+        windowEl.style.removeProperty("z-index");
         if (pipBtn) {
-            pipBtn.classList.remove('active');
-            pipBtn.innerHTML = '🗗';
-            pipBtn.title = 'Picture-in-Picture / Modo Ventana Flotante (Grab & Move)';
+            pipBtn.classList.remove("active");
+            pipBtn.innerHTML = "🗗";
+            pipBtn.title = "Picture-in-Picture / Modo Ventana Flotante (Grab & Move)";
         }
     }
 
@@ -780,58 +787,64 @@ window.toggleFloatingViewport = function(vpId, forceState) {
     setTimeout(() => {
         if (map) map.invalidateSize();
         if (timeChart) timeChart.resize();
-        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+        if (typeof renderSegmentRibbon === "function") renderSegmentRibbon();
     }, 60);
 };
 
 window.initCadFloatingDrag = function() {
-    const titlebars = document.querySelectorAll('.cad-viewport-titlebar');
-    const container = document.getElementById('shared-visualizer');
-    if (!container) return;
+    const titlebars = document.querySelectorAll(".cad-viewport-titlebar");
+
+    // Click handler to bring PiP window to top whenever clicked
+    document.querySelectorAll(".cad-viewport-window").forEach(win => {
+        win.addEventListener("mousedown", () => {
+            if (win.classList.contains("cad-pip-floating")) {
+                window.bringCadWindowToFront(win);
+            }
+        });
+    });
 
     titlebars.forEach(tb => {
-        tb.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button, select, input, .cad-size-badge, .cad-vars-pill, .cad-leg-badge')) return;
+        tb.addEventListener("mousedown", (e) => {
+            if (e.target.closest("button, select, input, .cad-size-badge, .cad-vars-pill, .cad-leg-badge")) return;
 
-            const win = tb.closest('.cad-viewport-window');
+            const win = tb.closest(".cad-viewport-window");
             if (!win) return;
-            const vpId = win.id.replace('vp-', '').replace('-window', '');
+            const vpId = win.id.replace("vp-", "").replace("-window", "");
 
-            win.style.zIndex = (++cadMaxZ).toString();
+            window.bringCadWindowToFront(win);
 
-            const isFloating = win.classList.contains('cad-pip-floating');
+            const isFloating = win.classList.contains("cad-pip-floating");
             const startMouseX = e.clientX;
             const startMouseY = e.clientY;
-            const contRect = container.getBoundingClientRect();
             const winRect = win.getBoundingClientRect();
 
-            let initialLeft = winRect.left - contRect.left;
-            let initialTop = winRect.top - contRect.top;
+            let initialLeft = winRect.left;
+            let initialTop = winRect.top;
             let hasPoppedOut = false;
 
             function onMouseMove(moveEv) {
                 const dx = moveEv.clientX - startMouseX;
                 const dy = moveEv.clientY - startMouseY;
 
-                if (!win.classList.contains('cad-pip-floating') && !hasPoppedOut) {
+                if (!win.classList.contains("cad-pip-floating") && !hasPoppedOut) {
                     if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                         hasPoppedOut = true;
                         window.toggleFloatingViewport(vpId, true);
                         const w = win.offsetWidth || 440;
                         const h = win.offsetHeight || 300;
-                        initialLeft = Math.max(10, Math.min(contRect.width - w - 10, moveEv.clientX - contRect.left - w / 2));
-                        initialTop = Math.max(10, Math.min(contRect.height - h - 10, moveEv.clientY - contRect.top - 14));
+                        initialLeft = Math.max(10, Math.min(window.innerWidth - w - 10, moveEv.clientX - w / 2));
+                        initialTop = Math.max(10, Math.min(window.innerHeight - h - 10, moveEv.clientY - 14));
                         win.style.left = `${initialLeft}px`;
                         win.style.top = `${initialTop}px`;
                     }
                     return;
                 }
 
-                document.body.style.cursor = 'grabbing';
+                document.body.style.cursor = "grabbing";
                 const w = win.offsetWidth;
                 const h = win.offsetHeight;
-                const maxL = contRect.width - w - 4;
-                const maxT = contRect.height - h - 4;
+                const maxL = window.innerWidth - w - 4;
+                const maxT = window.innerHeight - h - 4;
 
                 const curL = Math.max(4, Math.min(maxL, initialLeft + dx));
                 const curT = Math.max(4, Math.min(maxT, initialTop + dy));
@@ -848,17 +861,18 @@ window.initCadFloatingDrag = function() {
             }
 
             function onMouseUp() {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                document.body.style.cursor = '';
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+                document.body.style.cursor = "";
                 if (map) map.invalidateSize();
                 if (timeChart) timeChart.resize();
             }
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
         });
     });
+    
 
     if (window.ResizeObserver) {
         const ro = new ResizeObserver(() => {
