@@ -64,61 +64,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // CAD VIEWPORT STATE & MANAGEMENT (Rhino / Star-CCM+ Style & Windows 11 Snap)
 const cadViewportState = {
-    layout: 'cad', // 'cad' (50% Map / 25% Plot / 25% Timeline - Default), 'split-50', 'split-65', 'rows-3', 'map', 'plot', 'timeline', 'rows', 'cols'
-    maximized: null, // null | 'map' | 'plot' | 'timeline'
+    layout: 'cad', // 'cad' (50% Map / Right column: HUD, Plot, Timeline - Default), 'split-50', 'split-65', 'rows-3', 'map', 'hud', 'plot', 'timeline'
+    maximized: null, // null | 'map' | 'hud' | 'plot' | 'timeline'
     floating: {
         map: false,
+        hud: false,
         plot: false,
         timeline: false
     },
     floatingPos: {
-        map: { left: 30, top: 30, width: 480, height: 350 },
-        plot: { left: 60, top: 60, width: 500, height: 300 },
-        timeline: { left: 80, top: 100, width: 520, height: 260 }
+        map: { left: 30, top: 30, width: 520, height: 380 },
+        hud: { left: 50, top: 40, width: 480, height: 300 },
+        plot: { left: 70, top: 60, width: 500, height: 280 },
+        timeline: { left: 90, top: 100, width: 520, height: 240 }
     },
     visible: {
         map: true,
+        hud: true,
         plot: true,
         timeline: true
     },
     minimized: {
         map: false,
+        hud: false,
         plot: false,
         timeline: false
     },
     splitters: {
         verticalPct: 50,
-        horizontalPct: 50
+        rightH1Pct: 33.3,
+        rightH2Pct: 33.3
     }
 };
 
 window.applyViewportPreset = function(preset) {
     cadViewportState.layout = preset;
     cadViewportState.maximized = null;
-    
+
     const vpMap = document.getElementById('vp-map-window');
     const vpRight = document.getElementById('vp-right-container');
+    const vpHud = document.getElementById('vp-hud-window');
     const vpPlot = document.getElementById('vp-plot-window');
     const vpTimeline = document.getElementById('vp-timeline-window');
     const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH = document.getElementById('splitter-cad-horizontal');
+    const splitH1 = document.getElementById('splitter-cad-h1');
+    const splitH2 = document.getElementById('splitter-cad-h2');
     const vis = document.getElementById('shared-visualizer');
 
-    if (!vpMap || !vpRight || !vpPlot || !vpTimeline || !vis) return;
+    if (!vpMap || !vpRight || !vpHud || !vpPlot || !vpTimeline || !vis) return;
 
     // Reset minimized & floating
-    cadViewportState.minimized = { map: false, plot: false, timeline: false };
-    cadViewportState.floating = { map: false, plot: false, timeline: false };
-    
-    // Clear layout modifier classes and inline displays
+    cadViewportState.minimized = { map: false, hud: false, plot: false, timeline: false };
+    cadViewportState.floating = { map: false, hud: false, plot: false, timeline: false };
+
     vis.classList.remove('cad-layout-rows', 'cad-layout-cols');
-    [vpMap, vpPlot, vpTimeline].forEach(w => {
+    [vpMap, vpHud, vpPlot, vpTimeline].forEach(w => {
         w.classList.remove('cad-pip-floating');
         w.style.removeProperty('display');
         w.style.removeProperty('left');
         w.style.removeProperty('top');
         w.style.removeProperty('width');
         w.style.removeProperty('height');
+        w.style.removeProperty('flex');
     });
     document.querySelectorAll('.cad-btn-pip').forEach(b => {
         b.classList.remove('active');
@@ -128,92 +135,114 @@ window.applyViewportPreset = function(preset) {
 
     vpRight.style.removeProperty('display');
     if (splitV) splitV.style.removeProperty('display');
-    if (splitH) splitH.style.removeProperty('display');
+    if (splitH1) splitH1.style.removeProperty('display');
+    if (splitH2) splitH2.style.removeProperty('display');
 
     const badgeMap = document.getElementById('badge-vp-map');
+    const badgeHud = document.getElementById('badge-vp-hud');
+    const badgePlot = document.getElementById('badge-vp-plot');
+    const badgeTimeline = document.getElementById('badge-vp-timeline');
 
     if (preset === 'cad' || preset === 'default-cad') {
-        // Standard CAD Viewport (Default Bottom-Left Snap): 50% Left Map | 25% Right-Top Plot | 25% Right-Bottom Timeline
-        cadViewportState.visible = { map: true, plot: true, timeline: true };
+        // Standard CAD Viewport (Default): 50% Left Map | Right Column: 33% HUD / 33% Plot / 33% Timeline
+        cadViewportState.visible = { map: true, hud: true, plot: true, timeline: true };
         cadViewportState.splitters.verticalPct = 50;
-        cadViewportState.splitters.horizontalPct = 50;
         vpMap.style.flex = '0 0 50%';
         vpMap.style.width = '50%';
         vpRight.style.flex = '1';
         vpRight.style.width = '50%';
-        vpPlot.style.flex = '0 0 50%';
-        vpPlot.style.height = '50%';
+        vpHud.style.flex = '1';
+        vpPlot.style.flex = '1';
         vpTimeline.style.flex = '1';
         if (badgeMap) badgeMap.textContent = '50%';
-        const badgePlot = document.getElementById('badge-vp-plot');
-        const badgeTimeline = document.getElementById('badge-vp-timeline');
-        if (badgePlot) badgePlot.textContent = '25%';
-        if (badgeTimeline) badgeTimeline.textContent = '25%';
-        if (typeof window.resetHudToMapDefault === 'function') window.resetHudToMapDefault();
+        if (badgeHud) badgeHud.textContent = '33%';
+        if (badgePlot) badgePlot.textContent = '33%';
+        if (badgeTimeline) badgeTimeline.textContent = '33%';
     } else if (preset === 'split-50') {
-        // 50% Map | 50% Plot (Top-Left Snap)
-        cadViewportState.visible = { map: true, plot: true, timeline: false };
+        // 50% Map | 50% Plot
+        cadViewportState.visible = { map: true, hud: false, plot: true, timeline: false };
         vpMap.style.flex = '0 0 50%';
         vpMap.style.width = '50%';
         vpRight.style.flex = '1';
         vpRight.style.width = '50%';
+        vpHud.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
         vpPlot.style.flex = '1';
         vpPlot.style.height = '100%';
+        if (splitH2) splitH2.style.display = 'none';
         vpTimeline.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
         if (badgeMap) badgeMap.textContent = '50%';
+        if (badgePlot) badgePlot.textContent = '50%';
     } else if (preset === 'split-65') {
-        // 65% Map | 35% Right (Top-Right Snap)
-        cadViewportState.visible = { map: true, plot: true, timeline: true };
+        // 65% Map | 35% Right Column
+        cadViewportState.visible = { map: true, hud: true, plot: true, timeline: true };
         cadViewportState.splitters.verticalPct = 65;
         vpMap.style.flex = '0 0 65%';
         vpMap.style.width = '65%';
         vpRight.style.flex = '1';
         vpRight.style.width = '35%';
-        vpPlot.style.flex = '0 0 50%';
-        vpPlot.style.height = '50%';
+        vpHud.style.flex = '1';
+        vpPlot.style.flex = '1';
         vpTimeline.style.flex = '1';
         if (badgeMap) badgeMap.textContent = '65%';
+        if (badgeHud) badgeHud.textContent = '33%';
+        if (badgePlot) badgePlot.textContent = '33%';
+        if (badgeTimeline) badgeTimeline.textContent = '33%';
     } else if (preset === 'map') {
         // 100% Map
-        cadViewportState.visible = { map: true, plot: false, timeline: false };
+        cadViewportState.visible = { map: true, hud: false, plot: false, timeline: false };
         vpMap.style.flex = '1';
         vpMap.style.width = '100%';
         vpRight.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
         if (badgeMap) badgeMap.textContent = '100%';
+    } else if (preset === 'hud') {
+        // 100% HUD
+        cadViewportState.visible = { map: false, hud: true, plot: false, timeline: false };
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpHud.style.flex = '1';
+        vpHud.style.height = '100%';
+        if (splitH1) splitH1.style.display = 'none';
+        vpPlot.style.display = 'none';
+        if (splitH2) splitH2.style.display = 'none';
+        vpTimeline.style.display = 'none';
+        if (badgeHud) badgeHud.textContent = '100%';
     } else if (preset === 'plot') {
         // 100% Plot
-        cadViewportState.visible = { map: false, plot: true, timeline: false };
+        cadViewportState.visible = { map: false, hud: false, plot: true, timeline: false };
         vpMap.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = 'flex';
         vpRight.style.flex = '1';
         vpRight.style.width = '100%';
+        vpHud.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
         vpPlot.style.flex = '1';
         vpPlot.style.height = '100%';
+        if (splitH2) splitH2.style.display = 'none';
         vpTimeline.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
+        if (badgePlot) badgePlot.textContent = '100%';
     } else if (preset === 'timeline') {
-        // 100% Timeline Clipper
-        cadViewportState.visible = { map: false, plot: false, timeline: true };
+        // 100% Timeline
+        cadViewportState.visible = { map: false, hud: false, plot: false, timeline: true };
         vpMap.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
         vpRight.style.flex = '1';
         vpRight.style.width = '100%';
+        vpHud.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
         vpPlot.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
+        if (splitH2) splitH2.style.display = 'none';
         vpTimeline.style.flex = '1';
         vpTimeline.style.height = '100%';
+        if (badgeTimeline) badgeTimeline.textContent = '100%';
     } else if (preset === 'rows' || preset === 'rows-3') {
-        // 3 Horizontal Stacked Rows
         vis.classList.add('cad-layout-rows');
-        cadViewportState.visible = { map: true, plot: true, timeline: true };
-        if (badgeMap) badgeMap.textContent = 'Fila 1';
-    } else if (preset === 'cols') {
-        // 3 Vertical Columns
-        vis.classList.add('cad-layout-cols');
-        cadViewportState.visible = { map: true, plot: true, timeline: true };
-        if (badgeMap) badgeMap.textContent = 'Col 1';
+        cadViewportState.visible = { map: true, hud: true, plot: true, timeline: true };
     }
 
     updateCadWindowControlsUI();
@@ -227,26 +256,26 @@ window.applyViewportPreset = function(preset) {
     }, 60);
 };
 
-window.applyLayoutPreset = window.applyViewportPreset; // Backwards compatibility
+window.applyLayoutPreset = window.applyViewportPreset;
 
 window.toggleMaximizeViewport = function(vpId) {
     const vpMap = document.getElementById('vp-map-window');
     const vpRight = document.getElementById('vp-right-container');
+    const vpHud = document.getElementById('vp-hud-window');
     const vpPlot = document.getElementById('vp-plot-window');
     const vpTimeline = document.getElementById('vp-timeline-window');
     const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH = document.getElementById('splitter-cad-horizontal');
+    const splitH1 = document.getElementById('splitter-cad-h1');
+    const splitH2 = document.getElementById('splitter-cad-h2');
 
-    if (!vpMap || !vpRight || !vpPlot || !vpTimeline) return;
+    if (!vpMap || !vpRight || !vpHud || !vpPlot || !vpTimeline) return;
 
     if (cadViewportState.maximized === vpId) {
-        // Restore layout
         cadViewportState.maximized = null;
         window.applyViewportPreset(cadViewportState.layout || 'cad');
         return;
     }
 
-    // Maximize viewport
     cadViewportState.maximized = vpId;
     
     if (vpId === 'map') {
@@ -255,25 +284,42 @@ window.toggleMaximizeViewport = function(vpId) {
         vpMap.style.width = '100%';
         vpRight.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
+    } else if (vpId === 'hud') {
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpHud.style.display = 'flex';
+        vpHud.style.flex = '1';
+        vpHud.style.height = '100%';
+        if (splitH1) splitH1.style.display = 'none';
+        vpPlot.style.display = 'none';
+        if (splitH2) splitH2.style.display = 'none';
+        vpTimeline.style.display = 'none';
     } else if (vpId === 'plot') {
         vpMap.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
         vpRight.style.display = 'flex';
         vpRight.style.flex = '1';
         vpRight.style.width = '100%';
+        vpHud.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
         vpPlot.style.display = 'flex';
         vpPlot.style.flex = '1';
         vpPlot.style.height = '100%';
+        if (splitH2) splitH2.style.display = 'none';
         vpTimeline.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
     } else if (vpId === 'timeline') {
         vpMap.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
         vpRight.style.display = 'flex';
         vpRight.style.flex = '1';
         vpRight.style.width = '100%';
+        vpHud.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
         vpPlot.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
+        if (splitH2) splitH2.style.display = 'none';
         vpTimeline.style.display = 'flex';
         vpTimeline.style.flex = '1';
         vpTimeline.style.height = '100%';
@@ -306,19 +352,12 @@ window.minimizeViewport = function(vpId) {
             bodyEl.style.display = '';
             if (vpEl) {
                 vpEl.style.removeProperty('min-height');
-                if (vpId === 'map') {
-                    vpEl.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
-                    vpEl.style.width = `${cadViewportState.splitters.verticalPct}%`;
-                } else if (vpId === 'plot') {
-                    vpEl.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
-                    vpEl.style.height = `${cadViewportState.splitters.horizontalPct}%`;
-                } else if (vpId === 'timeline') {
-                    vpEl.style.flex = '1';
-                }
+                vpEl.style.flex = '1';
             }
         }
     }
 
+    window.adjustDockedWindowsFill();
     updateCadWindowControlsUI();
     updateCadDock();
 
@@ -335,47 +374,10 @@ window.closeViewport = function(vpId) {
         cadViewportState.maximized = null;
     }
     
-    const vpMap = document.getElementById('vp-map-window');
-    const vpRight = document.getElementById('vp-right-container');
-    const vpPlot = document.getElementById('vp-plot-window');
-    const vpTimeline = document.getElementById('vp-timeline-window');
-    const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH = document.getElementById('splitter-cad-horizontal');
+    const vpEl = document.getElementById(`vp-${vpId}-window`);
+    if (vpEl) vpEl.style.display = 'none';
 
-    if (vpId === 'map' && vpMap) {
-        vpMap.style.display = 'none';
-        if (splitV) splitV.style.display = 'none';
-        if (vpRight) {
-            vpRight.style.flex = '1';
-            vpRight.style.width = '100%';
-        }
-    } else if (vpId === 'plot' && vpPlot) {
-        vpPlot.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
-        if (vpTimeline) {
-            vpTimeline.style.flex = '1';
-            vpTimeline.style.height = '100%';
-        }
-    } else if (vpId === 'timeline' && vpTimeline) {
-        vpTimeline.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
-        if (vpPlot) {
-            vpPlot.style.flex = '1';
-            vpPlot.style.height = '100%';
-        }
-    }
-
-    // If both right windows are closed, give map 100%
-    if (!cadViewportState.visible.plot && !cadViewportState.visible.timeline) {
-        if (vpRight) vpRight.style.display = 'none';
-        if (splitV) splitV.style.display = 'none';
-        if (vpMap) {
-            vpMap.style.display = 'flex';
-            vpMap.style.flex = '1';
-            vpMap.style.width = '100%';
-        }
-    }
-
+    window.adjustDockedWindowsFill();
     updateCadWindowControlsUI();
     updateCadDock();
 
@@ -391,14 +393,16 @@ window.toggleViewport = function(vpId, forceShow) {
     if (isVisible) {
         cadViewportState.visible[vpId] = true;
         cadViewportState.minimized[vpId] = false;
-        window.applyViewportPreset(cadViewportState.layout || 'cad');
+        window.adjustDockedWindowsFill();
     } else {
         window.closeViewport(vpId);
     }
+    updateCadWindowControlsUI();
+    updateCadDock();
 };
 
 window.updateCadWindowControlsUI = function() {
-    ['map', 'plot', 'timeline'].forEach(vp => {
+    ['map', 'hud', 'plot', 'timeline'].forEach(vp => {
         const btnMax = document.getElementById(`btn-max-${vp}`);
         if (btnMax) {
             btnMax.textContent = (cadViewportState.maximized === vp) ? '❐' : '🗖';
@@ -416,7 +420,7 @@ window.updateCadDock = function() {
     if (!dock) return;
     
     const closedOrMin = [];
-    ['map', 'plot', 'timeline'].forEach(vp => {
+    ['map', 'hud', 'plot', 'timeline'].forEach(vp => {
         if (!cadViewportState.visible[vp] || cadViewportState.minimized[vp]) {
             closedOrMin.push(vp);
         }
@@ -432,6 +436,7 @@ window.updateCadDock = function() {
     dock.innerHTML = closedOrMin.map(vp => {
         const labels = {
             map: '🗺️ Mapa Tracker',
+            hud: '📊 Telemetría HUD',
             plot: '📈 Gráfica Telemetría',
             timeline: '🎬 Tramos Clipper'
         };
@@ -447,21 +452,22 @@ window.updateCadDock = function() {
 
 window.initCadSplitters = function() {
     const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH = document.getElementById('splitter-cad-horizontal');
+    const splitH1 = document.getElementById('splitter-cad-h1');
+    const splitH2 = document.getElementById('splitter-cad-h2');
     const vpMap = document.getElementById('vp-map-window');
     const vpRight = document.getElementById('vp-right-container');
+    const vpHud = document.getElementById('vp-hud-window');
     const vpPlot = document.getElementById('vp-plot-window');
     const vpTimeline = document.getElementById('vp-timeline-window');
     const container = document.getElementById('shared-visualizer');
 
-    if (!splitV || !splitH || !vpMap || !vpRight || !vpPlot || !vpTimeline || !container) return;
+    if (!splitV || !vpMap || !vpRight || !container) return;
 
     let isDraggingV = false;
-    let isDraggingH = false;
-    let startX = 0;
-    let startY = 0;
-    let startMapW = 0;
-    let startPlotH = 0;
+    let isDraggingH1 = false;
+    let isDraggingH2 = false;
+    let startX = 0, startY = 0;
+    let startMapW = 0, startHudH = 0, startPlotH = 0;
 
     splitV.addEventListener('mousedown', (e) => {
         isDraggingV = true;
@@ -472,14 +478,27 @@ window.initCadSplitters = function() {
         e.preventDefault();
     });
 
-    splitH.addEventListener('mousedown', (e) => {
-        isDraggingH = true;
-        startY = e.clientY;
-        startPlotH = vpPlot.offsetHeight;
-        document.body.style.cursor = 'row-resize';
-        splitH.classList.add('dragging');
-        e.preventDefault();
-    });
+    if (splitH1) {
+        splitH1.addEventListener('mousedown', (e) => {
+            isDraggingH1 = true;
+            startY = e.clientY;
+            startHudH = vpHud ? vpHud.offsetHeight : 150;
+            document.body.style.cursor = 'row-resize';
+            splitH1.classList.add('dragging');
+            e.preventDefault();
+        });
+    }
+
+    if (splitH2) {
+        splitH2.addEventListener('mousedown', (e) => {
+            isDraggingH2 = true;
+            startY = e.clientY;
+            startPlotH = vpPlot ? vpPlot.offsetHeight : 150;
+            document.body.style.cursor = 'row-resize';
+            splitH2.classList.add('dragging');
+            e.preventDefault();
+        });
+    }
 
     document.addEventListener('mousemove', (e) => {
         if (isDraggingV) {
@@ -490,31 +509,43 @@ window.initCadSplitters = function() {
             cadViewportState.splitters.verticalPct = pct;
             vpMap.style.flex = `0 0 ${pct}%`;
             vpMap.style.width = `${pct}%`;
-            const hud = document.getElementById('mapTelemetryOverlay');
-            if (hud && hud.style.left === 'auto') {
-                hud.style.right = `calc(${100 - pct}% + 14px)`;
-            }
+            vpRight.style.width = `${100 - pct}%`;
+            const badgeMap = document.getElementById('badge-vp-map');
+            if (badgeMap && !cadViewportState.floating.map) badgeMap.textContent = `${pct}%`;
             if (map) map.invalidateSize();
             if (timeChart) timeChart.resize();
-        } else if (isDraggingH) {
+        } else if (isDraggingH1 && vpHud && vpRight) {
             const dy = e.clientY - startY;
             const rightH = vpRight.offsetHeight;
-            const newPlotH = Math.max(80, Math.min(rightH - 80, startPlotH + dy));
+            const newHudH = Math.max(60, Math.min(rightH - 120, startHudH + dy));
+            const pct = Math.round((newHudH / rightH) * 100);
+            vpHud.style.flex = `0 0 ${pct}%`;
+            vpHud.style.height = `${pct}%`;
+            const badgeHud = document.getElementById('badge-vp-hud');
+            if (badgeHud && !cadViewportState.floating.hud) badgeHud.textContent = `${pct}%`;
+            if (timeChart) timeChart.resize();
+        } else if (isDraggingH2 && vpPlot && vpRight) {
+            const dy = e.clientY - startY;
+            const rightH = vpRight.offsetHeight;
+            const newPlotH = Math.max(60, Math.min(rightH - 120, startPlotH + dy));
             const pct = Math.round((newPlotH / rightH) * 100);
-            cadViewportState.splitters.horizontalPct = pct;
             vpPlot.style.flex = `0 0 ${pct}%`;
             vpPlot.style.height = `${pct}%`;
+            const badgePlot = document.getElementById('badge-vp-plot');
+            if (badgePlot && !cadViewportState.floating.plot) badgePlot.textContent = `${pct}%`;
             if (timeChart) timeChart.resize();
         }
     });
 
     document.addEventListener('mouseup', () => {
-        if (isDraggingV || isDraggingH) {
+        if (isDraggingV || isDraggingH1 || isDraggingH2) {
             isDraggingV = false;
-            isDraggingH = false;
+            isDraggingH1 = false;
+            isDraggingH2 = false;
             document.body.style.cursor = '';
-            splitV.classList.remove('dragging');
-            splitH.classList.remove('dragging');
+            if (splitV) splitV.classList.remove('dragging');
+            if (splitH1) splitH1.classList.remove('dragging');
+            if (splitH2) splitH2.classList.remove('dragging');
             if (map) map.invalidateSize();
             if (timeChart) timeChart.resize();
             if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
@@ -565,51 +596,44 @@ window.applySnapLayout = function(layoutType) {
     window.closeSnapFlyout();
     if (layoutType === 'pip-map') {
         window.toggleFloatingViewport('map', true);
+    } else if (layoutType === 'pip-hud') {
+        window.toggleFloatingViewport('hud', true);
     } else if (layoutType === 'pip-plot') {
         window.toggleFloatingViewport('plot', true);
     } else if (layoutType === 'pip-timeline') {
         window.toggleFloatingViewport('timeline', true);
     } else if (layoutType === 'dock-all') {
         window.applyViewportPreset('default-cad');
-        window.resetHudToMapDefault();
     } else {
         window.applyViewportPreset(layoutType);
     }
 };
 
 window.resetHudToMapDefault = function() {
-    const hud = document.getElementById('mapTelemetryOverlay');
-    const badge = document.getElementById('lblHudPipBadge');
-    if (!hud) return;
-
-    const vPct = (cadViewportState && cadViewportState.splitters && cadViewportState.splitters.verticalPct) ? cadViewportState.splitters.verticalPct : 50;
-    hud.style.position = 'absolute';
-    hud.style.top = '34px';
-    hud.style.right = `calc(${100 - vPct}% + 14px)`;
-    hud.style.left = 'auto';
-    hud.style.bottom = 'auto';
-    hud.style.zIndex = '2200';
-
-    if (badge) {
-        const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
-        badge.textContent = isEs ? 'En Mapa' : 'On Map';
+    if (cadViewportState.floating.hud) {
+        window.toggleFloatingViewport('hud', false);
     }
 };
 
 window.adjustDockedWindowsFill = function() {
     const vpMap = document.getElementById('vp-map-window');
     const vpRight = document.getElementById('vp-right-container');
+    const vpHud = document.getElementById('vp-hud-window');
     const vpPlot = document.getElementById('vp-plot-window');
     const vpTimeline = document.getElementById('vp-timeline-window');
     const splitV = document.getElementById('splitter-cad-vertical');
-    const splitH = document.getElementById('splitter-cad-horizontal');
+    const splitH1 = document.getElementById('splitter-cad-h1');
+    const splitH2 = document.getElementById('splitter-cad-h2');
+
     const badgeMap = document.getElementById('badge-vp-map');
+    const badgeHud = document.getElementById('badge-vp-hud');
     const badgePlot = document.getElementById('badge-vp-plot');
     const badgeTimeline = document.getElementById('badge-vp-timeline');
 
-    if (!vpMap || !vpRight || !vpPlot || !vpTimeline) return;
+    if (!vpMap || !vpRight || !vpHud || !vpPlot || !vpTimeline) return;
 
     const fMap = !!cadViewportState.floating.map;
+    const fHud = !!cadViewportState.floating.hud;
     const fPlot = !!cadViewportState.floating.plot;
     const fTimeline = !!cadViewportState.floating.timeline;
 
@@ -617,103 +641,86 @@ window.adjustDockedWindowsFill = function() {
     const pipText = isEs ? 'PiP Flotante' : 'Floating PiP';
 
     if (badgeMap) badgeMap.textContent = fMap ? pipText : `${cadViewportState.splitters.verticalPct}%`;
-    if (badgePlot) badgePlot.textContent = fPlot ? pipText : '25%';
-    if (badgeTimeline) badgeTimeline.textContent = fTimeline ? pipText : '25%';
+    if (badgeHud) badgeHud.textContent = fHud ? pipText : '33%';
+    if (badgePlot) badgePlot.textContent = fPlot ? pipText : '33%';
+    if (badgeTimeline) badgeTimeline.textContent = fTimeline ? pipText : '33%';
 
     // Allow floating children in vp-right-container to cross boundaries without clipping
-    if (fPlot || fTimeline) {
+    if (fHud || fPlot || fTimeline) {
         vpRight.style.overflow = 'visible';
     } else {
         vpRight.style.overflow = 'hidden';
     }
 
-    if (fMap && fPlot && fTimeline) {
-        // ALL 3 ARE FLOATING
+    const rightDocked = [];
+    if (!fHud && cadViewportState.visible.hud && !cadViewportState.minimized.hud) rightDocked.push('hud');
+    if (!fPlot && cadViewportState.visible.plot && !cadViewportState.minimized.plot) rightDocked.push('plot');
+    if (!fTimeline && cadViewportState.visible.timeline && !cadViewportState.minimized.timeline) rightDocked.push('timeline');
+
+    const totalRightVisible = (!fHud && cadViewportState.visible.hud ? 1 : 0) +
+                              (!fPlot && cadViewportState.visible.plot ? 1 : 0) +
+                              (!fTimeline && cadViewportState.visible.timeline ? 1 : 0);
+
+    if (fMap && totalRightVisible === 0) {
         vpRight.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
-        if (splitH) splitH.style.display = 'none';
+        if (splitH1) splitH1.style.display = 'none';
+        if (splitH2) splitH2.style.display = 'none';
         return;
     }
 
     if (fMap) {
-        // MAP IS FLOATING -> Right container expands to fill 100% width
         vpRight.style.display = 'flex';
         vpRight.style.flex = '1';
         vpRight.style.width = '100%';
         if (splitV) splitV.style.display = 'none';
-
-        if (fPlot && !fTimeline) {
-            // Plot is floating, timeline fills 100% height
-            vpTimeline.style.display = 'flex';
-            vpTimeline.style.flex = '1';
-            vpTimeline.style.height = '100%';
-            if (splitH) splitH.style.display = 'none';
-            if (badgeTimeline) badgeTimeline.textContent = '100%';
-        } else if (!fPlot && fTimeline) {
-            // Timeline is floating, plot fills 100% height
-            vpPlot.style.display = 'flex';
-            vpPlot.style.flex = '1';
-            vpPlot.style.height = '100%';
-            if (splitH) splitH.style.display = 'none';
-            if (badgePlot) badgePlot.textContent = '100%';
-        } else if (!fPlot && !fTimeline) {
-            // Both plot and timeline docked, 50% height each across 100% width
-            vpPlot.style.display = 'flex';
-            vpPlot.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
-            vpPlot.style.height = `${cadViewportState.splitters.horizontalPct}%`;
-            vpTimeline.style.display = 'flex';
-            vpTimeline.style.flex = '1';
-            vpTimeline.style.removeProperty('height');
-            if (splitH) splitH.style.display = 'flex';
-            if (badgePlot) badgePlot.textContent = '50%';
-            if (badgeTimeline) badgeTimeline.textContent = '50%';
-        }
-    } else {
-        // MAP IS DOCKED
+    } else if (totalRightVisible === 0) {
         vpMap.style.display = 'flex';
+        vpMap.style.flex = '1';
+        vpMap.style.width = '100%';
+        vpRight.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        if (badgeMap) badgeMap.textContent = '100%';
+        return;
+    } else {
+        vpMap.style.display = 'flex';
+        vpMap.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
+        vpMap.style.width = `${cadViewportState.splitters.verticalPct}%`;
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = `${100 - cadViewportState.splitters.verticalPct}%`;
+        if (splitV) splitV.style.display = 'flex';
+    }
 
-        if (fPlot && fTimeline) {
-            // Both right windows are floating -> Map fills 100% width and 100% height!
-            vpMap.style.flex = '1';
-            vpMap.style.width = '100%';
-            vpRight.style.display = 'none';
-            if (splitV) splitV.style.display = 'none';
-            if (splitH) splitH.style.display = 'none';
-            if (badgeMap) badgeMap.textContent = '100%';
-        } else {
-            // At least one of plot or timeline is docked
-            vpMap.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
-            vpMap.style.width = `${cadViewportState.splitters.verticalPct}%`;
-            vpRight.style.display = 'flex';
-            vpRight.style.flex = '1';
-            vpRight.style.width = `${100 - cadViewportState.splitters.verticalPct}%`;
-            if (splitV) splitV.style.display = 'flex';
-
-            if (fPlot && !fTimeline) {
-                // Plot is floating, timeline fills 100% of right column
-                vpTimeline.style.display = 'flex';
-                vpTimeline.style.flex = '1';
-                vpTimeline.style.height = '100%';
-                if (splitH) splitH.style.display = 'none';
-                if (badgeTimeline) badgeTimeline.textContent = '50%';
-            } else if (!fPlot && fTimeline) {
-                // Timeline is floating, plot fills 100% of right column
-                vpPlot.style.display = 'flex';
-                vpPlot.style.flex = '1';
-                vpPlot.style.height = '100%';
-                if (splitH) splitH.style.display = 'none';
-                if (badgePlot) badgePlot.textContent = '50%';
-            } else {
-                // Both docked: Standard 50% / 25% / 25% occupying 100% screen
-                vpPlot.style.display = 'flex';
-                vpPlot.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
-                vpPlot.style.height = `${cadViewportState.splitters.horizontalPct}%`;
-                vpTimeline.style.display = 'flex';
-                vpTimeline.style.flex = '1';
-                vpTimeline.style.removeProperty('height');
-                if (splitH) splitH.style.display = 'flex';
+    [
+        { id: 'hud', el: vpHud, badge: badgeHud },
+        { id: 'plot', el: vpPlot, badge: badgePlot },
+        { id: 'timeline', el: vpTimeline, badge: badgeTimeline }
+    ].forEach(item => {
+        const isFloating = cadViewportState.floating[item.id];
+        const isVisible = cadViewportState.visible[item.id];
+        if (!isFloating && isVisible) {
+            item.el.style.display = 'flex';
+            if (!cadViewportState.minimized[item.id]) {
+                item.el.style.flex = '1';
+                item.el.style.removeProperty('height');
+                item.el.style.removeProperty('min-height');
+                if (item.badge) {
+                    item.badge.textContent = `${Math.round(100 / Math.max(1, rightDocked.length))}%`;
+                }
             }
         }
+    });
+
+    const hudDocked = !fHud && cadViewportState.visible.hud;
+    const plotDocked = !fPlot && cadViewportState.visible.plot;
+    const timelineDocked = !fTimeline && cadViewportState.visible.timeline;
+
+    if (splitH1) {
+        splitH1.style.display = (hudDocked && (plotDocked || timelineDocked)) ? 'flex' : 'none';
+    }
+    if (splitH2) {
+        splitH2.style.display = (plotDocked && timelineDocked) ? 'flex' : 'none';
     }
 };
 
@@ -731,7 +738,6 @@ window.toggleFloatingViewport = function(vpId, forceState) {
     cadViewportState.floating[vpId] = targetState;
 
     if (targetState) {
-        // Pop out to Floating PiP Window
         windowEl.classList.add('cad-pip-floating');
         windowEl.style.zIndex = (++cadMaxZ).toString();
         if (pipBtn) {
@@ -743,7 +749,8 @@ window.toggleFloatingViewport = function(vpId, forceState) {
         const contRect = container.getBoundingClientRect();
         const defaultPositions = {
             map: { left: 30, top: 30, width: Math.max(380, Math.min(560, contRect.width * 0.52)), height: Math.max(260, Math.min(420, contRect.height * 0.6)) },
-            plot: { left: Math.max(20, contRect.width - 530), top: 40, width: Math.max(380, Math.min(520, contRect.width * 0.5)), height: Math.max(220, Math.min(320, contRect.height * 0.45)) },
+            hud: { left: Math.max(20, contRect.width - 540), top: 30, width: Math.max(400, Math.min(540, contRect.width * 0.52)), height: 280 },
+            plot: { left: Math.max(20, contRect.width - 520), top: 70, width: Math.max(380, Math.min(520, contRect.width * 0.5)), height: Math.max(220, Math.min(320, contRect.height * 0.45)) },
             timeline: { left: Math.max(20, contRect.width - 550), top: Math.max(60, contRect.height - 300), width: Math.max(400, Math.min(540, contRect.width * 0.52)), height: 260 }
         };
         const pos = cadViewportState.floatingPos[vpId] || defaultPositions[vpId] || { left: 40, top: 40, width: 480, height: 320 };
@@ -754,7 +761,6 @@ window.toggleFloatingViewport = function(vpId, forceState) {
         windowEl.style.height = `${pos.height || 320}px`;
         windowEl.style.flex = 'none';
     } else {
-        // Dock back to Grid
         windowEl.classList.remove('cad-pip-floating');
         windowEl.style.removeProperty('left');
         windowEl.style.removeProperty('top');
@@ -783,7 +789,6 @@ window.initCadFloatingDrag = function() {
     const container = document.getElementById('shared-visualizer');
     if (!container) return;
 
-    // Viewport Windows (Map, Plot, Timeline) Titlebars Grab & Move
     titlebars.forEach(tb => {
         tb.addEventListener('mousedown', (e) => {
             if (e.target.closest('button, select, input, .cad-size-badge, .cad-vars-pill, .cad-leg-badge')) return;
@@ -792,7 +797,6 @@ window.initCadFloatingDrag = function() {
             if (!win) return;
             const vpId = win.id.replace('vp-', '').replace('-window', '');
 
-            // Lift window on click
             win.style.zIndex = (++cadMaxZ).toString();
 
             const isFloating = win.classList.contains('cad-pip-floating');
@@ -801,7 +805,6 @@ window.initCadFloatingDrag = function() {
             const contRect = container.getBoundingClientRect();
             const winRect = win.getBoundingClientRect();
 
-            // Calculate precise position relative to container
             let initialLeft = winRect.left - contRect.left;
             let initialTop = winRect.top - contRect.top;
             let hasPoppedOut = false;
@@ -810,7 +813,6 @@ window.initCadFloatingDrag = function() {
                 const dx = moveEv.clientX - startMouseX;
                 const dy = moveEv.clientY - startMouseY;
 
-                // Pop out into PiP if dragged > 8px while docked
                 if (!win.classList.contains('cad-pip-floating') && !hasPoppedOut) {
                     if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                         hasPoppedOut = true;
@@ -857,66 +859,6 @@ window.initCadFloatingDrag = function() {
             document.addEventListener('mouseup', onMouseUp);
         });
     });
-
-    // Live HUD Telemetry Grab & Move
-    const hudTb = document.getElementById('hudTitlebar');
-    const hudOverlay = document.getElementById('mapTelemetryOverlay');
-    if (hudTb && hudOverlay) {
-        hudOverlay.addEventListener('mousedown', () => {
-            hudOverlay.style.zIndex = (++cadMaxZ).toString();
-        });
-
-        hudTb.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button, select, input')) return;
-            e.preventDefault();
-
-            hudOverlay.style.zIndex = (++cadMaxZ).toString();
-
-            const startMouseX = e.clientX;
-            const startMouseY = e.clientY;
-            const contRect = container.getBoundingClientRect();
-            const hudRect = hudOverlay.getBoundingClientRect();
-
-            const initialLeft = hudRect.left - contRect.left;
-            const initialTop = hudRect.top - contRect.top;
-
-            document.body.style.cursor = 'grabbing';
-            hudTb.style.cursor = 'grabbing';
-
-            function onHudMouseMove(moveEv) {
-                const dx = moveEv.clientX - startMouseX;
-                const dy = moveEv.clientY - startMouseY;
-
-                const w = hudOverlay.offsetWidth;
-                const h = hudOverlay.offsetHeight;
-                const maxL = contRect.width - w - 4;
-                const maxT = contRect.height - h - 4;
-
-                const curL = Math.max(4, Math.min(maxL, initialLeft + dx));
-                const curT = Math.max(4, Math.min(maxT, initialTop + dy));
-
-                hudOverlay.style.left = `${curL}px`;
-                hudOverlay.style.top = `${curT}px`;
-                hudOverlay.style.right = 'auto'; // detach from right lock
-
-                const badge = document.getElementById('lblHudPipBadge');
-                if (badge) {
-                    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
-                    badge.textContent = isEs ? 'PiP Flotante' : 'Floating PiP';
-                }
-            }
-
-            function onHudMouseUp() {
-                document.removeEventListener('mousemove', onHudMouseMove);
-                document.removeEventListener('mouseup', onHudMouseUp);
-                document.body.style.cursor = '';
-                if (hudTb) hudTb.style.cursor = 'grab';
-            }
-
-            document.addEventListener('mousemove', onHudMouseMove);
-            document.addEventListener('mouseup', onHudMouseUp);
-        });
-    }
 
     if (window.ResizeObserver) {
         const ro = new ResizeObserver(() => {

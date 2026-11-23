@@ -368,21 +368,25 @@
                         <div class="ribbon-menu-section-header">VENTANAS ACTIVAS</div>
                         <label class="ribbon-checkbox-item">
                             <input type="checkbox" id="chk-vp-map" checked onchange="toggleViewport('map', this.checked)">
-                            <span>🗺️ Mapa Tracker (Ventana Izquierda)</span>
+                            <span>🗺️ Mapa Tracker (Izquierda 50%)</span>
+                        </label>
+                        <label class="ribbon-checkbox-item">
+                            <input type="checkbox" id="chk-vp-hud" checked onchange="toggleViewport('hud', this.checked)">
+                            <span>📊 Telemetría en Vivo HUD (Derecha Superior)</span>
                         </label>
                         <label class="ribbon-checkbox-item">
                             <input type="checkbox" id="chk-vp-plot" checked onchange="toggleViewport('plot', this.checked)">
-                            <span>📈 Gráfica Telemetría (Derecha Superior)</span>
+                            <span>📈 Gráfica de Telemetría (Derecha Media)</span>
                         </label>
                         <label class="ribbon-checkbox-item">
                             <input type="checkbox" id="chk-vp-timeline" checked onchange="toggleViewport('timeline', this.checked)">
-                            <span>🎬 Tramos y Scrubber (Derecha Inferior)</span>
+                            <span>🎬 Tramos y Recortador Timeline (Derecha Inferior)</span>
                         </label>
 
                         <div class="ribbon-dropdown-divider"></div>
                         <div class="ribbon-menu-section-header">DISTRIBUCIÓN WINDOWS SNAP &amp; PIP</div>
                         <div class="ribbon-menu-item" onclick="applySnapLayout('default-cad')">
-                            <span>★ <strong>Predeterminada Snap</strong> (50% Mapa | 25% Plot | 25% Tramos)</span>
+                            <span>★ <strong>Predeterminada Snap</strong> (50% Mapa | 33% HUD / 33% Plot / 33% Tramos)</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="applySnapLayout('pip-map')">
                             <span>📌 <strong>Picture-in-Picture</strong> (Mapa Flotante - Grab &amp; Move)</span>
@@ -761,7 +765,167 @@
                 <div id="vp-right-container" class="cad-right-container" style="flex: 1; display: flex; flex-direction: column; min-width: 200px; height: 100%; min-height: 0; overflow: hidden;">
                     
                     <!-- VENTANA SUPERIOR DERECHA: Gráfica de Telemetría (50% de columna derecha = 25% total) -->
-                    <div id="vp-plot-window" class="cad-viewport-window" style="flex: 0 0 50%; height: 50%; min-height: 110px;">
+                                        <!-- RIGHT TOP VIEWPORT: Live Telemetry HUD (~33.3% default height) -->
+                    <div id="vp-hud-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
+                        <div class="cad-viewport-titlebar">
+                            <div class="cad-titlebar-left">
+                                <span>📊</span>
+                                <span class="cad-title-text">TELEMETRÍA EN VIVO HUD</span>
+                                <span class="cad-size-badge" id="badge-vp-hud">33%</span>
+                            </div>
+                            <div class="cad-titlebar-right">
+                                <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-hud" onclick="toggleFloatingViewport('hud')" title="Picture-in-Picture / Modo Ventana Flotante">🗗</button>
+                                <button type="button" class="cad-btn-win" onclick="minimizeViewport('hud')" title="Minimizar Ventana">_</button>
+                                <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-hud" onclick="openSnapFlyout('hud', event)" onmouseenter="openSnapFlyout('hud', event)" title="Windows Snap Layouts / Maximizar">🗖</button>
+                                <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('hud')" title="Cerrar Ventana">✕</button>
+                            </div>
+                        </div>
+
+                        <div id="hudSection" class="cad-viewport-body hud-window-body">
+                            <div id="mapTelemetryOverlay" style="display: flex; flex-direction: column; gap: 6px; width: 100%; height: 100%;">
+                                <!-- Group 1: Raw Telemetry -->
+                                <div>
+                                    <div class="hud-section-header" style="color: #38bdf8;">
+                                        <span>TELEMETRÍA DIRECTA (ARCHIVO)</span>
+                                        <span style="font-size: 0.6rem; color: #64748b; font-weight: 500;">6 VARIABLES</span>
+                                    </div>
+                                    <div class="hud-telemetry-grid">
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #38bdf8;">SOG</span>
+                                            <div class="hud-tile-val" style="color: #38bdf8;"><span id="val-sog">0.0</span><span class="hud-tile-unit">kn</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #f59e0b;">COG</span>
+                                            <div class="hud-tile-val" style="color: #f59e0b;"><span id="val-cog">0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #38bdf8;">MAG HDG</span>
+                                            <div class="hud-tile-val" style="color: #38bdf8;"><span id="val-hdg">0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #ef4444;">HEEL</span>
+                                            <div class="hud-tile-val" style="color: #ef4444;"><span id="val-heel">0.0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #ec4899;">PITCH</span>
+                                            <div class="hud-tile-val" style="color: #ec4899;"><span id="val-pitch">0.0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #a855f7;">ROT</span>
+                                            <div class="hud-tile-val" style="color: #a855f7;"><span id="val-rot">0.0</span><span class="hud-tile-unit">°/s</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Group 2: Derived Telemetry -->
+                                <div>
+                                    <div class="hud-section-header" style="color: #10b981;">
+                                        <span>TELEMETRÍA DERIVADA</span>
+                                        <span style="font-size: 0.6rem; color: #64748b; font-weight: 500;">6 VARIABLES</span>
+                                    </div>
+                                    <div class="hud-telemetry-grid">
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #10b981;">VMG</span>
+                                            <div class="hud-tile-val" style="color: #10b981;"><span id="val-vmg">0.0</span><span class="hud-tile-unit">kn</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #06b6d4;">VMC</span>
+                                            <div class="hud-tile-val" style="color: #06b6d4;"><span id="val-vmc">0.0</span><span class="hud-tile-unit">kn</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #8b5cf6;">TWA</span>
+                                            <div class="hud-tile-val" style="color: #8b5cf6;"><span id="val-twa">0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #f43f5e;">TWD</span>
+                                            <div class="hud-tile-val" style="color: #f43f5e;"><span id="val-twd">0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #eab308;">LEEWAY</span>
+                                            <div class="hud-tile-val" style="color: #eab308;"><span id="val-leeway">0.0°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #3b82f6;">CURRENT</span>
+                                            <div class="hud-tile-val" style="color: #3b82f6; font-size: clamp(0.65rem, 2cqw, 0.95rem);"><span id="val-current">0.0kn @ 0°</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Group 3: Racecourse Telemetry -->
+                                <div>
+                                    <div class="hud-section-header" style="color: #f59e0b;">
+                                        <span>TELEMETRÍA DE REGATA</span>
+                                        <span style="font-size: 0.6rem; color: #64748b; font-weight: 500;">BOYAS Y MÉTRICAS</span>
+                                    </div>
+                                    
+                                    <!-- Wind Selection & Auto-Detection -->
+                                    <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 4px; background: rgba(2, 6, 23, 0.5); padding: 3px 6px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap;">
+                                        <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold;">💨 VIENTO:</span>
+                                        <select id="telemetryWindSource" onchange="updateTelemetryWindCustomization()" style="flex: 1; min-width: 120px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px;">
+                                            <option value="calibrated">TWD Calibrado (<span id="sel-twd-val">215°</span>)</option>
+                                            <option value="custom">Ángulo Personalizado...</option>
+                                        </select>
+                                        <input type="number" id="telemetryCustomTwd" value="215" min="0" max="360" onchange="updateTelemetryWindCustomization()" style="display:none; width: 50px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                        <button onclick="autoDetectWindTwd()" title="Autodetectar TWD a partir de track GPS" style="background: #0284c7; color: white; border: none; font-size: 0.68rem; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 3px;">⚡ Detectar</button>
+                                    </div>
+
+                                    <!-- Controls for adding marks -->
+                                    <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap;">
+                                        <select id="raceMarkTypeSelect" style="flex: 1; min-width: 100px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px;">
+                                            <option value="windward">Windward (W)</option>
+                                            <option value="offset">Offset</option>
+                                            <option value="offset2">Offset 2</option>
+                                            <option value="leeward">Leeward (L)</option>
+                                            <option value="gate1">Gate 1</option>
+                                            <option value="gate2">Gate 2</option>
+                                            <option value="pin">Pin</option>
+                                            <option value="finish1">Finish 1</option>
+                                            <option value="finish2">Finish 2</option>
+                                            <option value="rc">Race Committee (RC)</option>
+                                        </select>
+                                        <button onclick="placeMarkAtBoat()" title="Colocar boya en posición actual del barco" style="background: #3b82f6; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 En Barco</button>
+                                        <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Clic en el mapa para colocar boya" style="background: #475569; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Mapa</button>
+                                        <button onclick="clearAllMarks()" title="Borrar todas las boyas" style="background: #dc2626; color: white; border: none; font-size: 0.68rem; padding: 2px 5px; border-radius: 4px; cursor: pointer;">🗑</button>
+                                    </div>
+
+                                    <div class="hud-telemetry-grid">
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #f59e0b;">TOP BRG</span>
+                                            <div class="hud-tile-val" style="color: #f59e0b;"><span id="val-top-brg">--°</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #10b981;">LINE BIAS</span>
+                                            <div class="hud-tile-val" style="color: #10b981;"><span id="val-line-bias">--</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #38bdf8;">LINE LEN</span>
+                                            <div class="hud-tile-val" style="color: #38bdf8;"><span id="val-line-len">--</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #a855f7;">LEG TYPE</span>
+                                            <div class="hud-tile-val" style="color: #a855f7;"><span id="val-leg-type">--</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #ec4899;">TARGET</span>
+                                            <div class="hud-tile-val" style="color: #ec4899;"><span id="val-target-mark">--</span></div>
+                                        </div>
+                                        <div class="hud-tile">
+                                            <span class="hud-tile-label" style="color: #eab308;">DIST BOYA</span>
+                                            <div class="hud-tile-val" style="color: #eab308;"><span id="val-dist-mark">--</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- HORIZONTAL SPLITTER RESIZER 1 (HUD vs Plot) -->
+                    <div id="splitter-cad-h1" class="cad-splitter cad-splitter-h" title="Drag up/down to resize HUD vs Plot height">
+                        <div class="cad-splitter-handle-h"></div>
+                    </div>
+
+                    <div id="vp-plot-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
                         <div class="cad-viewport-titlebar">
                             <div class="cad-titlebar-left">
                                 <span>📈</span>
@@ -783,12 +947,12 @@
                     </div>
 
                     <!-- RESIZABLE SPLITTER HORIZONTAL (Gráfica vs Tramos) -->
-                    <div id="splitter-cad-horizontal" class="cad-splitter cad-splitter-h" title="Arrastrar para ajustar altura de Gráfica vs Tramos">
+                    <div id="splitter-cad-h2" class="cad-splitter cad-splitter-h" title="Arrastrar para ajustar altura de Gráfica vs Tramos">
                         <div class="cad-splitter-handle-h"></div>
                     </div>
 
                     <!-- VENTANA INFERIOR DERECHA: Tramos y Timeline Clipper (50% de columna derecha = 25% total) -->
-                    <div id="vp-timeline-window" class="cad-viewport-window" style="flex: 1; min-height: 110px;">
+                    <div id="vp-timeline-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
                         <div class="cad-viewport-titlebar">
                             <div class="cad-titlebar-left">
                                 <span>🎬</span>
@@ -860,160 +1024,6 @@
                 <!-- Barra Dock Inferior para Ventanas Minimizadas / Cerradas -->
                 <div id="cad-dock-bar" style="display: none; position: absolute; bottom: 8px; left: 8px; z-index: 1000; gap: 6px;"></div>
 
-                <!-- LIVE TELEMETRY HUD OVERLAY (PiP Floating, Default On Top of Map) -->
-                <div id="mapTelemetryOverlay" class="cad-hud-pip" style="position: absolute; top: 34px; right: calc(50% + 14px); z-index: 2200; width: 380px; max-height: calc(100% - 46px); display: flex; flex-direction: column;">
-                        <!-- Telemetry Cards Container -->
-                        <div style="background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 0.6rem 0.75rem; box-shadow: 0 16px 40px rgba(0,0,0,0.85); color: #f8fafc; display: flex; flex-direction: column; max-height: 100%;">
-                            <!-- Header with Grab Bar, Reset to Map, and Minimize / Expand Toggle -->
-                            <div id="hudTitlebar" class="cad-hud-titlebar" style="cursor: grab; display: flex; align-items: center; justify-content: space-between; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px; user-select: none;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span style="font-size: 0.75rem; color: #64748b; cursor: grab;" title="Arrastrar y Mover HUD libremente">⠿</span>
-                                    <span style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
-                                        <span>📊</span> <span>TELEMETRÍA EN VIVO HUD</span>
-                                    </span>
-                                    <span id="lblHudPipBadge" style="font-size: 0.6rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 3px; padding: 1px 4px; font-weight: 700;">En Mapa</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <button type="button" onclick="resetHudToMapDefault()" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #475569; color: #38bdf8; border-radius: 4px; font-size: 0.65rem; padding: 2px 6px; cursor: pointer; font-weight: 600;" title="Reanclar encima del mapa">
-                                        ⚓ Reanclar
-                                    </button>
-                                    <button type="button" id="btnToggleTelemetryOverlay" onclick="toggleTelemetryOverlay()" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #475569; color: #cbd5e1; border-radius: 4px; font-size: 0.65rem; padding: 2px 7px; cursor: pointer; font-weight: 600;" title="Minimizar / Expandir panel de telemetría">
-                                        <span id="lblToggleTelemetryOverlay">− Minimizar</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="telemetryOverlayScrollContent" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1;">
-                            
-                            <!-- Group 1: Raw Telemetry (Read from file) -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>TELEMETRÍA DIRECTA (ARCHIVO)</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">SOG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-sog">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f59e0b;">COG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-cog">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">RUMBO MAG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-hdg">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ef4444;">ESCORA</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #ef4444;"><span id="val-heel">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ec4899;">PITCH</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #ec4899;"><span id="val-pitch">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #a855f7;">ROT</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #a855f7;"><span id="val-rot">0.0</span><span style="font-size:0.6rem;">°/s</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Group 2: Derived Telemetry -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>TELEMETRÍA DERIVADA</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #10b981;">VMG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #10b981;"><span id="val-vmg">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #06b6d4;">VMC</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #06b6d4;"><span id="val-vmc">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #8b5cf6;">TWA</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #8b5cf6;"><span id="val-twa">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f43f5e;">TWD</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f43f5e;"><span id="val-twd">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #eab308;">ABATIMIENTO</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #eab308;"><span id="val-leeway">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #3b82f6;">CORRIENTE</div>
-                                    <div style="font-size: 0.75rem; font-weight: 700; color: #3b82f6; margin-top:2px;"><span id="val-current">0.0kn @ 0°</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Group 3: Racecourse Marks & Live Race Metrics -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>CAMPO DE REGATA</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">BOYAS Y MÉTRICAS</span>
-                            </div>
-                            
-                            <!-- Selección y Autodetcción de Viento -->
-                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; background: rgba(2, 6, 23, 0.5); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-                                <span style="font-size: 0.7rem; color: #38bdf8; font-weight: bold;">💨 VIENTO:</span>
-                                <select id="telemetryWindSource" onchange="updateTelemetryWindCustomization()" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
-                                    <option value="calibrated">TWD Calibrado (<span id="sel-twd-val">215°</span>)</option>
-                                    <option value="custom">Ángulo Personalizado...</option>
-                                </select>
-                                <input type="number" id="telemetryCustomTwd" value="215" min="0" max="360" onchange="updateTelemetryWindCustomization()" style="display:none; width: 55px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
-                                <button onclick="autoDetectWindTwd()" title="Autodetectar TWD por Simetría GPS o Baliza" style="background: #0284c7; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 3px;">⚡ Detectar</button>
-                            </div>
-
-                            <!-- Controls for adding marks -->
-                            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
-                                <select id="raceMarkTypeSelect" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
-                                    <option value="windward">Barlovento (W)</option>
-                                    <option value="offset">Desmarque (Offset)</option>
-                                    <option value="offset2">Desmarque 2</option>
-                                    <option value="leeward">Sotavento (L)</option>
-                                    <option value="gate1">Puerta 1</option>
-                                    <option value="gate2">Puerta 2</option>
-                                    <option value="pin">Pin (Boya Salida)</option>
-                                    <option value="finish1">Llegada 1</option>
-                                    <option value="finish2">Llegada 2</option>
-                                    <option value="rc">Comité (RC)</option>
-                                </select>
-                                <button onclick="placeMarkAtBoat()" title="Colocar boya en posición del barco" style="background: #3b82f6; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 Barco</button>
-                                <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Hacer clic en el mapa" style="background: #475569; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Mapa</button>
-                                <button onclick="clearAllMarks()" title="Borrar boyas" style="background: #dc2626; color: white; border: none; font-size: 0.7rem; padding: 4px 6px; border-radius: 4px; cursor: pointer;">🗑</button>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f59e0b;">RUMBO W</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-top-brg">--°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #10b981;">VENTAJA SALIDA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #10b981; margin-top:2px;"><span id="val-line-bias">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">LONG SALIDA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-top:2px;"><span id="val-line-len">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #a855f7;">TRAMO</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #a855f7; margin-top:2px;"><span id="val-leg-type">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ec4899;">BOYA OBJETIVO</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #ec4899; margin-top:2px;"><span id="val-target-mark">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #eab308;">DIST BOYA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #eab308; margin-top:2px;"><span id="val-dist-mark">--</span></div>
-                                </div>
-                            </div>
-                            </div><!-- END telemetryOverlayScrollContent -->
-                        </div>
-                    </div>
-
                 <!-- Windows 11 Snap Layouts Flyout -->
                 <div id="windowsSnapFlyout" class="windows-snap-flyout" onmouseenter="clearTimeout(snapFlyoutTimer)" onmouseleave="closeSnapFlyoutDelay()">
                     <div class="snap-flyout-header">
@@ -1033,13 +1043,14 @@
                             <div class="snap-zone" style="flex: 1; height: 100%;">35%</div>
                         </div>
 
-                        <!-- 3. Bottom-Left: DEFAULT (50% Map | 25% Plot + 25% Legs) -->
-                        <div class="snap-card active-default" onclick="applySnapLayout('default-cad')" title="Configuración Predeterminada CAD (50% Mapa | 25% Gráfica / 25% Tramos)">
-                            <span class="snap-card-badge">★ Default</span>
+                        <!-- 3. Bottom-Left: DEFAULT (50% Mapa | 33% HUD + 33% Gráfica + 33% Tramos) -->
+                        <div class="snap-card active-default" onclick="applySnapLayout('default-cad')" title="Distribución CAD Predeterminada (50% Mapa | 33% HUD / 33% Gráfica / 33% Tramos)">
+                            <span class="snap-card-badge">★ Predet.</span>
                             <div class="snap-zone" style="flex: 1; height: 100%; font-size: 0.58rem; text-align: center;">Mapa<br>50%</div>
-                            <div style="flex: 1; height: 100%; display: flex; flex-direction: column; gap: 3px;">
-                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">Plot 25%</div>
-                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">Legs 25%</div>
+                            <div style="flex: 1; height: 100%; display: flex; flex-direction: column; gap: 2px;">
+                                <div class="snap-zone" style="flex: 1; font-size: 0.52rem;">HUD 33%</div>
+                                <div class="snap-zone" style="flex: 1; font-size: 0.52rem;">Gráfica 33%</div>
+                                <div class="snap-zone" style="flex: 1; font-size: 0.52rem;">Tramos 33%</div>
                             </div>
                         </div>
 
@@ -2445,6 +2456,101 @@ main#top {
         display: none !important;
     }
 }
+
+
+/* Fluid CAD HUD Telemetry & Adaptive Dimension Scaling */
+.hud-window-body {
+    container-type: inline-size;
+    container-name: hudcontainer;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 10px;
+    background: #0b1120;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.hud-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: clamp(0.56rem, 1.6cqw, 0.72rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.hud-telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    width: 100%;
+}
+
+@container (max-width: 580px) {
+    .hud-telemetry-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@container (max-width: 310px) {
+    .hud-telemetry-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.hud-tile {
+    background: rgba(2, 6, 23, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 5px;
+    padding: clamp(3px, 1cqw, 6px) clamp(4px, 1.2cqw, 8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-width: 0;
+    transition: background 0.15s, border-color 0.15s;
+}
+.hud-tile:hover {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.hud-tile-label {
+    font-size: clamp(0.52rem, 1.6cqw, 0.68rem);
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.hud-tile-val {
+    font-size: clamp(0.72rem, 2.6cqw, 1.2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 2px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.hud-tile-unit {
+    font-size: clamp(0.48rem, 1.4cqw, 0.62rem);
+    font-weight: 500;
+    opacity: 0.85;
+    margin-left: 2px;
+}
+
 </style>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
