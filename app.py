@@ -1170,28 +1170,33 @@ def ls_data_lab():
 
 
 
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'error': 'File is too large (maximum allowed size is 64 MB).'}), 413
+
 @app.route('/data-lab/upload', methods=['POST'])
 def data_lab_upload():
     try:
         if 'log_file' not in request.files:
-            return jsonify({'error': 'No file part'}), 400
+            return jsonify({'error': 'No file part in upload request'}), 400
             
         file = request.files['log_file']
-        if file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
+        if not file or file.filename == '':
+            return jsonify({'error': 'No file selected for upload'}), 400
 
-        from services.datalab_service import process_telemetry_file
-        # Process in memory for MVP
-        # In production, save to /tmp or cloud bucket first
+        from services.datalab_service import process_telemetry_file, sanitize_telemetry_result
         result = process_telemetry_file(file, file.filename)
         
         if 'error' in result:
              return jsonify(result), 400
              
-        return jsonify(result)
+        sanitized = sanitize_telemetry_result(result)
+        return jsonify(sanitized)
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Upload processing failed: {str(e)}'}), 500
 
 @app.route('/data-lab/save-project', methods=['POST'])
 def data_lab_save_project():
@@ -1206,6 +1211,40 @@ def data_lab_save_project():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/data-lab/load-sample/<sample_name>', methods=['GET'])
+def data_lab_load_sample(sample_name):
+    try:
+        import os
+        from services.datalab_service import process_telemetry_file, sanitize_telemetry_result
+        
+        sample_paths = {
+            'vakaros-abril': 'camber-images/SAILMON Data/vakaros/abril verde  21-11-2026.vkx',
+            'vakaros_moth': 'camber-images/SAILMON Data/vakaros/abril verde  21-11-2026.vkx',
+            'j80-abril': 'camber-images/SAILMON Data/2026-03-07-j80-abril.csv',
+            'j80_session': 'camber-images/SAILMON Data/2026-03-07-j80-abril.csv',
+            'sample-track': 'sample_track.csv',
+            'sample_track': 'sample_track.csv'
+        }
+        
+        if sample_name not in sample_paths:
+            return jsonify({'error': f'Sample identifier "{sample_name}" not found.'}), 404
+            
+        rel_path = sample_paths[sample_name]
+        abs_path = os.path.join(app.root_path, rel_path)
+        if not os.path.exists(abs_path):
+            return jsonify({'error': f'File {rel_path} not found on server'}), 404
+            
+        filename = os.path.basename(abs_path)
+        with open(abs_path, 'rb') as f:
+            res = process_telemetry_file(f, filename)
+            
+        if 'error' in res:
+            return jsonify(res), 400
+            
+        return jsonify(sanitize_telemetry_result(res))
+    except Exception as e:
+        return jsonify({'error': f'Failed to load sample: {str(e)}'}), 500
 
 
 @app.route('/design-tools')

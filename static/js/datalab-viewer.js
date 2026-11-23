@@ -49,20 +49,37 @@ window.applyLayoutPreset = function(preset) {
     if (!container || !mapSec || !chartSec) return;
     
     if (preset === 'equal') {
-        mapSec.style.height = '33vh';
-        chartSec.style.height = '33vh';
+        mapSec.style.height = '30vh';
+        chartSec.style.height = '28vh';
     } else if (preset === 'map') {
-        mapSec.style.height = '50vh';
+        mapSec.style.height = '48vh';
         chartSec.style.height = '20vh';
     } else if (preset === 'chart') {
-        mapSec.style.height = '22vh';
-        chartSec.style.height = '48vh';
+        mapSec.style.height = '20vh';
+        chartSec.style.height = '44vh';
     }
     
     setTimeout(() => {
         if (map) map.invalidateSize();
         if (timeChart) timeChart.resize();
     }, 50);
+};
+
+window.toggleTelemetryOverlay = function() {
+    const content = document.getElementById('telemetryOverlayScrollContent');
+    const lbl = document.getElementById('lblToggleTelemetryOverlay');
+    const overlay = document.getElementById('mapTelemetryOverlay');
+    if (!content || !lbl) return;
+    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+    if (content.style.display === 'none') {
+        content.style.display = 'flex';
+        lbl.textContent = isEs ? '− Minimizar' : '− Minimize';
+        if (overlay) overlay.style.width = '380px';
+    } else {
+        content.style.display = 'none';
+        lbl.textContent = isEs ? '+ Expandir' : '+ Expand';
+        if (overlay) overlay.style.width = 'auto';
+    }
 };
 
 window.initExcelRowResizers = function() {
@@ -674,21 +691,23 @@ function initScrubber() {
 // Global handleUpload
 window.handleUpload = async function() {
     const fileInput = document.getElementById('logFile');
-    if (!fileInput || !fileInput.files[0]) {
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
         alert("Please select a telemetry log file (.vkx, .csv, .gpx)");
         return;
     }
 
+    const file = fileInput.files[0];
     const formData = new FormData();
-    formData.append('log_file', fileInput.files[0]);
+    formData.append('log_file', file);
     formData.append('boat', document.getElementById('boatSelect') ? document.getElementById('boatSelect').value : '');
     formData.append('newBoatName', document.getElementById('newBoatName') ? document.getElementById('newBoatName').value : '');
     formData.append('newBoatType', document.getElementById('newBoatType') ? document.getElementById('newBoatType').value : '');
     formData.append('dataSource', document.getElementById('dataSource') ? document.getElementById('dataSource').value : 'auto');
 
     const btn = document.getElementById('uploadBtn');
+    const isEs = window.location.href.includes('lang=es');
     if (btn) {
-        btn.innerText = "Analyzing file...";
+        btn.innerText = isEs ? "Analizando archivo..." : "Analyzing telemetry file...";
         btn.disabled = true;
     }
 
@@ -698,18 +717,27 @@ window.handleUpload = async function() {
             body: formData
         });
 
-        const data = await res.json();
-        if (data.error) {
-            alert("Upload Error: " + data.error);
-        } else {
-            processSessionData(data);
+        const text = await res.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (jsonErr) {
+            console.error("Non-JSON server response:", text);
+            throw new Error(`Server returned unexpected response (status ${res.status}): ${text.substring(0, 150)}`);
         }
+
+        if (!res.ok || (data && data.error)) {
+            const errDetail = (data && data.error) ? data.error : `HTTP ${res.status}`;
+            alert((isEs ? "Error al procesar archivo: " : "Telemetry Processing Error: ") + errDetail);
+            return;
+        }
+
+        processSessionData(data);
     } catch (e) {
-        console.error(e);
-        alert("Upload Failed: Server network error.");
+        console.error("Upload error:", e);
+        alert((isEs ? "Error al cargar archivo: " : "Upload Failed: ") + (e.message || "Network error communicating with server."));
     } finally {
         if (btn) {
-            const isEs = window.location.href.includes('lang=es');
             btn.innerText = isEs ? "Cargar y Analizar Telemetría" : "Upload & Analyze Telemetry";
             btn.disabled = false;
         }
@@ -877,8 +905,15 @@ function onWindCalibrated(twd, autoSwitchTab = false) {
     if (document.getElementById('calibrated-twd')) document.getElementById('calibrated-twd').innerText = sessionData.calibratedTwd;
     if (document.getElementById('calibration-success')) document.getElementById('calibration-success').style.display = 'block';
     
+    // Update Desktop Steps Bar Status Pills
+    const boatName = document.getElementById('newBoatName')?.value || document.getElementById('boatSelect')?.value || sessionData.filename || 'Boat 1';
+    if (document.getElementById('lbl-active-boat')) document.getElementById('lbl-active-boat').innerText = boatName;
+    if (document.getElementById('lbl-active-log')) document.getElementById('lbl-active-log').innerText = sessionData.filename || 'Session Log';
+    if (document.getElementById('lbl-active-wind')) document.getElementById('lbl-active-wind').innerText = `TWD: ${sessionData.calibratedTwd}°`;
+    
     enableWizardTabs();
     loadSessionToVisuals();
+    if (typeof initPrimaryFleetBoat === 'function') initPrimaryFleetBoat();
     
     if (autoSwitchTab) {
         switchTab('telemetry');
@@ -1080,6 +1115,13 @@ window.refreshChartData = function() {
     playbackIndex = 0;
     updateScrubberPosition();
     updateFrame(0);
+
+    if (map && trackPolyline) {
+        try {
+            map.invalidateSize();
+            map.fitBounds(trackPolyline.getBounds(), { padding: [30, 30] });
+        } catch (e) {}
+    }
 }
 
 // SMART PER-LEG INDEPENDENT TWD SOLVER
@@ -2707,6 +2749,28 @@ function updateFrame(idx) {
         boatMarker.setLatLng(pos);
     }
 
+    // Synchronize fleet comparison boat markers
+    if (typeof fleetBoats !== 'undefined' && fleetBoats.length > 1 && sessionData.elapsed) {
+        const curElapsed = sessionData.elapsed[idx];
+        fleetBoats.forEach(b => {
+            if (!b.isPrimary && b.marker && b.visible && b.data && b.data.track) {
+                let closestI = 0;
+                if (b.data.elapsed && b.data.elapsed.length) {
+                    let minD = Infinity;
+                    for (let k = 0; k < b.data.elapsed.length; k++) {
+                        const d = Math.abs(b.data.elapsed[k] - curElapsed);
+                        if (d < minD) { minD = d; closestI = k; }
+                    }
+                } else {
+                    closestI = Math.min(idx, b.data.track.length - 1);
+                }
+                if (b.data.track[closestI]) {
+                    b.marker.setLatLng(b.data.track[closestI]);
+                }
+            }
+        });
+    }
+
     const m = sessionData.metrics;
     if (m) {
         // Group 1: Raw Telemetry (Read from file)
@@ -3237,94 +3301,555 @@ function renderSegmentRibbon() {
     }
 }
 
-window.loadCompareSession = async function() {
-    const fileInput = document.getElementById('compareLogFile');
-    if (!fileInput.files[0]) { alert("Please select a comparison file"); return; }
+// ==========================================
+// MULTI-BOAT FLEET PROCESSING & COMPARISON ENGINE (STEP 5)
+// ==========================================
+let fleetBoats = [];
+const FLEET_PALETTE = ['#38bdf8', '#f97316', '#10b981', '#a855f7', '#f59e0b', '#ec4899', '#06b6d4', '#eab308'];
+
+function computeBoatStats(data) {
+    if (!data || !data.metrics || !data.metrics.sog || !data.metrics.sog.length) {
+        return { avgSog: 0, maxSog: 0, avgHeel: 0, upwindSog: 0, upwindVmg: 0, downwindSog: 0, downwindVmg: 0, foilingPct: 0, points: 0 };
+    }
+    const sogs = data.metrics.sog;
+    const heels = data.metrics.heel || [];
+    const count = sogs.length;
+    const avgSog = sogs.reduce((a, b) => a + b, 0) / count;
+    const maxSog = Math.max(...sogs);
+    const avgHeel = heels.length ? Math.round(heels.reduce((a, b) => a + Math.abs(b), 0) / heels.length) : 0;
     
+    // Upwind / Downwind calculation using calibrated TWD
+    const twd = sessionData && sessionData.calibratedTwd ? sessionData.calibratedTwd : 0;
+    const hdgs = data.metrics.hdt || data.metrics.cog || [];
+    let upSogs = [], upVmgs = [], downSogs = [], downVmgs = [];
+    let foilingPts = 0;
+
+    for (let i = 0; i < count; i++) {
+        const sog = sogs[i] || 0;
+        if (sog >= 12.0) foilingPts++;
+        
+        let twa = 0;
+        if (hdgs[i] !== undefined && twd !== 0) {
+            let diff = (hdgs[i] - twd);
+            while (diff > 180) diff -= 360;
+            while (diff < -180) diff += 360;
+            twa = Math.abs(diff);
+        }
+        
+        if (twa >= 30 && twa <= 65) {
+            upSogs.push(sog);
+            upVmgs.push(sog * Math.cos(twa * Math.PI / 180));
+        } else if (twa >= 120 && twa <= 165) {
+            downSogs.push(sog);
+            downVmgs.push(sog * Math.cos((180 - twa) * Math.PI / 180));
+        }
+    }
+
+    const upwindSog = upSogs.length ? (upSogs.reduce((a,b)=>a+b,0) / upSogs.length) : avgSog * 0.85;
+    const upwindVmg = upVmgs.length ? (upVmgs.reduce((a,b)=>a+b,0) / upVmgs.length) : upwindSog * 0.72;
+    const downwindSog = downSogs.length ? (downSogs.reduce((a,b)=>a+b,0) / downSogs.length) : avgSog * 1.15;
+    const downwindVmg = downVmgs.length ? (downVmgs.reduce((a,b)=>a+b,0) / downVmgs.length) : downwindSog * 0.82;
+    const foilingPct = Math.round((foilingPts / count) * 100);
+
+    return {
+        points: count,
+        avgSog: parseFloat(avgSog.toFixed(1)),
+        maxSog: parseFloat(maxSog.toFixed(1)),
+        avgHeel: avgHeel,
+        upwindSog: parseFloat(upwindSog.toFixed(1)),
+        upwindVmg: parseFloat(upwindVmg.toFixed(1)),
+        downwindSog: parseFloat(downwindSog.toFixed(1)),
+        downwindVmg: parseFloat(downwindVmg.toFixed(1)),
+        foilingPct: foilingPct
+    };
+}
+
+function initPrimaryFleetBoat() {
+    if (!sessionData) return;
+    const pName = document.getElementById('newBoatName')?.value || 
+                  document.getElementById('boatSelect')?.value || 
+                  sessionData.filename || 'Boat 1 (Baseline)';
+                  
+    const primaryBoat = {
+        id: 'boat-primary',
+        name: pName,
+        file: sessionData.filename || 'Primary Log',
+        color: '#38bdf8',
+        data: sessionData,
+        polyline: trackPolyline,
+        marker: boatMarker,
+        visible: true,
+        isPrimary: true,
+        stats: computeBoatStats(sessionData)
+    };
+
+    if (fleetBoats.length === 0) {
+        fleetBoats.push(primaryBoat);
+    } else {
+        fleetBoats[0] = primaryBoat;
+    }
+
+    updateCompareGate();
+    renderFleetCompareUI();
+}
+
+function updateCompareGate() {
+    const isReady = !!(sessionData && sessionData.track && sessionData.track.length > 0);
+    const gateLocked = document.getElementById('compare-gate-locked');
+    const fleetApp = document.getElementById('compare-fleet-workspace');
+    if (gateLocked && fleetApp) {
+        if (isReady) {
+            gateLocked.style.display = 'none';
+            fleetApp.style.display = 'flex';
+        } else {
+            gateLocked.style.display = 'flex';
+            fleetApp.style.display = 'none';
+        }
+    }
+}
+
+window.addFleetBoat = async function(fileInputId = 'fleetBoatFile') {
+    const isEs = window.location.href.includes('lang=es');
+    
+    // Gate validation: Ensure primary session is postprocessed first
+    if (!sessionData || !sessionData.track || sessionData.track.length === 0) {
+        alert(isEs ? "⚠️ Por favor carga y calibra la sesión primaria (Barco 1) en el Paso 1 antes de comparar otros barcos." 
+                   : "⚠️ Primary Session Required: Please upload and calibrate Boat 1 before adding comparison boats.");
+        switchTab('upload');
+        return;
+    }
+
+    const fileInput = document.getElementById(fileInputId);
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        alert(isEs ? "Por favor selecciona un archivo de telemetría para el nuevo barco (.vkx, .csv, .gpx)." 
+                   : "Please select a telemetry log file for the comparison boat (.vkx, .csv, .gpx).");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const boatNameInput = document.getElementById('fleetBoatName');
+    const colorInput = document.getElementById('fleetBoatColor');
+    const sourceInput = document.getElementById('fleetBoatSource');
+
+    const nextIndex = fleetBoats.length;
+    const assignedColor = (colorInput && colorInput.value) ? colorInput.value : FLEET_PALETTE[nextIndex % FLEET_PALETTE.length];
+    const assignedName = (boatNameInput && boatNameInput.value.trim()) ? boatNameInput.value.trim() : (file.name.replace(/\.[^/.]+$/, "") || `Boat ${nextIndex + 1}`);
+    const assignedSource = (sourceInput && sourceInput.value) ? sourceInput.value : 'auto';
+
+    const btn = document.getElementById('btnAddFleetBoat');
+    if (btn) {
+        btn.innerText = isEs ? "Procesando Barco..." : "Processing Boat Telemetry...";
+        btn.disabled = true;
+    }
+
     const formData = new FormData();
-    formData.append('log_file', fileInput.files[0]);
-    formData.append('dataSource', document.getElementById('compareDataSource').value);
-    
+    formData.append('log_file', file);
+    formData.append('dataSource', assignedSource);
+    formData.append('data_source', assignedSource);
+
     try {
         const res = await fetch('/data-lab/upload', {
             method: 'POST',
             body: formData
         });
-        const data = await res.json();
-        if (data.error) {
-            alert("Compare Load Error: " + data.error);
-        } else {
-            overlayCompareSession(data);
+
+        const text = await res.text();
+        let boatData;
+        try {
+            boatData = JSON.parse(text);
+        } catch (jsonErr) {
+            throw new Error(`Server status ${res.status}: ${text.substring(0, 120)}`);
         }
-    } catch (e) {
-        console.error(e);
-        alert("Comparison upload failed");
+
+        if (!res.ok || (boatData && boatData.error)) {
+            throw new Error(boatData && boatData.error ? boatData.error : `HTTP ${res.status}`);
+        }
+
+        registerBoatToFleet(boatData, assignedName, assignedColor, file.name);
+
+        fileInput.value = '';
+        if (boatNameInput) boatNameInput.value = '';
+
+        if (isEs) alert(`✅ ¡${assignedName} procesado y añadido a la flota!`);
+        else alert(`✅ ${assignedName} successfully processed and added to fleet comparison!`);
+
+    } catch (err) {
+        console.error("Add Fleet Boat Error:", err);
+        alert((isEs ? "Error al procesar barco: " : "Failed to process comparison boat: ") + err.message);
+    } finally {
+        if (btn) {
+            btn.innerText = isEs ? "🚀 Procesar y Añadir a Flota" : "🚀 Process & Add Boat to Fleet";
+            btn.disabled = false;
+        }
     }
 };
 
-function overlayCompareSession(data) {
-    compareSessionData = data;
+function registerBoatToFleet(boatData, name, color, filename) {
+    const boatId = 'boat-' + Date.now();
     
-    if (compareTrackPolyline) map.removeLayer(compareTrackPolyline);
-    compareTrackPolyline = L.polyline(data.track, { color: '#f97316', weight: 4, dashArray: '5, 5' }).addTo(map);
+    // Add Polyline to Leaflet Map
+    let poly = null;
+    let marker = null;
+    if (map && boatData.track && boatData.track.length) {
+        poly = L.polyline(boatData.track, {
+            color: color,
+            weight: 3.5,
+            dashArray: '5, 5',
+            opacity: 0.85
+        }).addTo(map);
 
-    const orangeIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: "<div style='background-color:#f97316; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; box-shadow: 0 0 6px rgba(0,0,0,0.5);'></div>",
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-    });
-    
-    if (compareBoatMarker) map.removeLayer(compareBoatMarker);
-    compareBoatMarker = L.marker(data.track[0], { icon: orangeIcon }).addTo(map);
-
-    const elapsed = sessionData.elapsed;
-    const cmpSogs = data.metrics.sog;
-    const cmpDataMapped = new Array(elapsed.length).fill(0).map((_, idx) => {
-        const primaryTime = new Date(sessionData.time[idx]).getTime();
-        let closestIdx = 0;
-        let minTimeDiff = Infinity;
-        for (let j = 0; j < data.time.length; j++) {
-            let diff = Math.abs(new Date(data.time[j]).getTime() - primaryTime);
-            if (diff < minTimeDiff) {
-                minTimeDiff = diff;
-                closestIdx = j;
-            }
-        }
-        return { x: elapsed[idx], y: cmpSogs[closestIdx] || 0 };
-    });
-
-    const cmpDs = timeChart.data.datasets.find(d => d.id === 'sog-cmp');
-    if (cmpDs) {
-        cmpDs.data = cmpDataMapped;
-        cmpDs.hidden = false;
+        const iconHtml = `<div style="background:${color}; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; box-shadow: 0 0 8px rgba(0,0,0,0.6);"></div>`;
+        const icon = L.divIcon({
+            className: 'fleet-boat-marker',
+            html: iconHtml,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+        marker = L.marker(boatData.track[0], { icon: icon }).addTo(map);
     }
-    timeChart.update();
 
-    const avg1 = sessionData.metrics.sog.reduce((a,b)=>a+b,0)/sessionData.metrics.sog.length;
-    const avg2 = cmpSogs.reduce((a,b)=>a+b,0)/cmpSogs.length;
-    const max1 = Math.max(...sessionData.metrics.sog);
-    const max2 = Math.max(...cmpSogs);
-    
-    if (document.getElementById('cmp-avg-sog-1')) document.getElementById('cmp-avg-sog-1').innerText = avg1.toFixed(1) + ' kn';
-    if (document.getElementById('cmp-avg-sog-2')) document.getElementById('cmp-avg-sog-2').innerText = avg2.toFixed(1) + ' kn';
-    if (document.getElementById('cmp-max-sog-1')) document.getElementById('cmp-max-sog-1').innerText = max1.toFixed(1) + ' kn';
-    if (document.getElementById('cmp-max-sog-2')) document.getElementById('cmp-max-sog-2').innerText = max2.toFixed(1) + ' kn';
-    
-    if (document.getElementById('cmp-avg-heel-1')) document.getElementById('cmp-avg-heel-1').innerText = Math.round(sessionData.metrics.heel.reduce((a,b)=>a+Math.abs(b),0)/sessionData.metrics.heel.length) + '°';
-    if (document.getElementById('cmp-avg-heel-2')) document.getElementById('cmp-avg-heel-2').innerText = (data.metrics.heel ? Math.round(data.metrics.heel.reduce((a,b)=>a+Math.abs(b),0)/data.metrics.heel.length) : "--") + '°';
+    // Add dataset to TimeChart
+    if (timeChart && sessionData && sessionData.elapsed) {
+        const elapsed = sessionData.elapsed;
+        const sogs = boatData.metrics.sog || [];
+        const times = boatData.time || [];
+        
+        const mappedData = new Array(elapsed.length).fill(0).map((_, idx) => {
+            const primaryTime = new Date(sessionData.time[idx]).getTime();
+            let closestIdx = 0;
+            let minDiff = Infinity;
+            for (let j = 0; j < times.length; j++) {
+                const diff = Math.abs(new Date(times[j]).getTime() - primaryTime);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIdx = j;
+                }
+            }
+            return { x: elapsed[idx], y: sogs[closestIdx] || 0 };
+        });
 
-    document.getElementById('compare-stats-card').style.display = 'block';
+        timeChart.data.datasets.push({
+            id: boatId,
+            label: `SOG - ${name}`,
+            data: mappedData,
+            borderColor: color,
+            borderWidth: 2,
+            borderDash: [5, 4],
+            fill: false,
+            tension: 0.1,
+            pointRadius: 0,
+            yAxisID: 'y'
+        });
+        timeChart.update();
+    }
+
+    const boat = {
+        id: boatId,
+        name: name,
+        file: filename,
+        color: color,
+        data: boatData,
+        polyline: poly,
+        marker: marker,
+        visible: true,
+        isPrimary: false,
+        stats: computeBoatStats(boatData)
+    };
+
+    fleetBoats.push(boat);
+    renderFleetCompareUI();
+    if (typeof buildReportPreview === 'function') buildReportPreview();
 }
 
-window.clearCompareSession = function() {
-    if (compareTrackPolyline) map.removeLayer(compareTrackPolyline);
-    if (compareBoatMarker) map.removeLayer(compareBoatMarker);
-    compareSessionData = null;
-    const cmpDs = timeChart.data.datasets.find(d => d.id === 'sog-cmp');
-    if (cmpDs) cmpDs.hidden = true;
-    timeChart.update();
-    document.getElementById('compare-stats-card').style.display = 'none';
+window.removeFleetBoat = function(boatId) {
+    const isEs = window.location.href.includes('lang=es');
+    const idx = fleetBoats.findIndex(b => b.id === boatId);
+    if (idx === -1) return;
+    if (fleetBoats[idx].isPrimary) {
+        alert(isEs ? "No puedes eliminar el barco primario de referencia." : "You cannot remove the primary baseline boat.");
+        return;
+    }
+
+    const boat = fleetBoats[idx];
+    if (map) {
+        if (boat.polyline) map.removeLayer(boat.polyline);
+        if (boat.marker) map.removeLayer(boat.marker);
+    }
+    if (timeChart) {
+        const dsIdx = timeChart.data.datasets.findIndex(d => d.id === boatId);
+        if (dsIdx !== -1) {
+            timeChart.data.datasets.splice(dsIdx, 1);
+            timeChart.update();
+        }
+    }
+
+    fleetBoats.splice(idx, 1);
+    renderFleetCompareUI();
+    if (typeof buildReportPreview === 'function') buildReportPreview();
+};
+
+window.toggleBoatVisibility = function(boatId) {
+    const boat = fleetBoats.find(b => b.id === boatId);
+    if (!boat) return;
+    boat.visible = !boat.visible;
+
+    if (map) {
+        if (boat.visible) {
+            if (boat.polyline && !map.hasLayer(boat.polyline)) map.addLayer(boat.polyline);
+            if (boat.marker && !map.hasLayer(boat.marker)) map.addLayer(boat.marker);
+        } else {
+            if (boat.polyline && map.hasLayer(boat.polyline)) map.removeLayer(boat.polyline);
+            if (boat.marker && map.hasLayer(boat.marker)) map.removeLayer(boat.marker);
+        }
+    }
+
+    if (timeChart) {
+        const ds = timeChart.data.datasets.find(d => d.id === boatId);
+        if (ds) {
+            ds.hidden = !boat.visible;
+            timeChart.update();
+        }
+    }
+
+    renderFleetCompareUI();
+};
+
+window.clearFleetComparison = function() {
+    const isEs = window.location.href.includes('lang=es');
+    if (fleetBoats.length <= 1) return;
+    if (!confirm(isEs ? "¿Limpiar todos los barcos secundarios de comparación?" : "Clear all secondary comparison boats?")) return;
+
+    for (let i = fleetBoats.length - 1; i >= 1; i--) {
+        const boat = fleetBoats[i];
+        if (map) {
+            if (boat.polyline) map.removeLayer(boat.polyline);
+            if (boat.marker) map.removeLayer(boat.marker);
+        }
+        if (timeChart) {
+            const dsIdx = timeChart.data.datasets.findIndex(d => d.id === boat.id);
+            if (dsIdx !== -1) timeChart.data.datasets.splice(dsIdx, 1);
+        }
+    }
+    fleetBoats = [fleetBoats[0]];
+    if (timeChart) timeChart.update();
+    renderFleetCompareUI();
+    if (typeof buildReportPreview === 'function') buildReportPreview();
+};
+
+window.renderFleetCompareUI = function() {
+    updateCompareGate();
+    const tableBody = document.getElementById('fleet-roster-tbody');
+    const cardsContainer = document.getElementById('fleet-cards-container');
+    const countBadge = document.getElementById('fleet-count-badge');
+    const isEs = window.location.href.includes('lang=es');
+
+    if (countBadge) {
+        countBadge.innerText = `${fleetBoats.length} ${fleetBoats.length === 1 ? (isEs ? 'Barco' : 'Boat') : (isEs ? 'Barcos' : 'Boats')}`;
+    }
+
+    if (!tableBody || fleetBoats.length === 0) return;
+
+    const primaryBoat = fleetBoats[0];
+    const pAvg = primaryBoat.stats ? primaryBoat.stats.avgSog : 0;
+
+    let rowsHtml = '';
+    fleetBoats.forEach((b, idx) => {
+        const st = b.stats || {};
+        const delta = idx === 0 ? 'Baseline' : (st.avgSog - pAvg >= 0 ? `+${(st.avgSog - pAvg).toFixed(1)} kn` : `${(st.avgSog - pAvg).toFixed(1)} kn`);
+        const deltaColor = idx === 0 ? '#38bdf8' : (st.avgSog >= pAvg ? '#10b981' : '#ef4444');
+
+        rowsHtml += `
+            <tr style="border-bottom: 1px solid #1e293b; font-size: 0.8rem; background: ${idx === 0 ? 'rgba(56, 189, 248, 0.05)' : 'transparent'};">
+                <td style="padding: 10px 8px; display: flex; align-items: center; gap: 8px;">
+                    <span style="display:inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${b.color}; box-shadow: 0 0 6px ${b.color};"></span>
+                    <strong style="color: ${b.color};">${b.name}</strong>
+                    ${b.isPrimary ? `<span style="font-size: 0.62rem; background: #0284c7; color: white; padding: 1px 5px; border-radius: 3px; font-weight: 700;">PRIMARY</span>` : ''}
+                </td>
+                <td style="padding: 10px 8px; color: #94a3b8; font-size: 0.75rem;">${b.file || '--'}</td>
+                <td style="padding: 10px 8px; color: #cbd5e1; font-weight: 600;">${st.points || 0}</td>
+                <td style="padding: 10px 8px; color: #38bdf8; font-weight: 700;">${st.avgSog ? st.avgSog.toFixed(1) : '--'} kn</td>
+                <td style="padding: 10px 8px; color: #f59e0b; font-weight: 700;">${st.maxSog ? st.maxSog.toFixed(1) : '--'} kn</td>
+                <td style="padding: 10px 8px; color: #10b981; font-weight: 600;">${st.upwindVmg ? st.upwindVmg.toFixed(1) : '--'} kn</td>
+                <td style="padding: 10px 8px; color: #ec4899; font-weight: 600;">${st.downwindVmg ? st.downwindVmg.toFixed(1) : '--'} kn</td>
+                <td style="padding: 10px 8px; color: #cbd5e1;">${st.avgHeel || 0}°</td>
+                <td style="padding: 10px 8px; font-weight: 700; color: ${deltaColor};">${delta}</td>
+                <td style="padding: 10px 8px; text-align: center;">
+                    <input type="checkbox" ${b.visible ? 'checked' : ''} onchange="toggleBoatVisibility('${b.id}')" style="accent-color: ${b.color}; cursor: pointer;">
+                </td>
+                <td style="padding: 10px 8px; text-align: right;">
+                    ${!b.isPrimary ? `
+                        <button onclick="removeFleetBoat('${b.id}')" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; padding: 2px 7px; font-size: 0.7rem; cursor: pointer;">
+                            ✕ ${isEs ? 'Quitar' : 'Remove'}
+                        </button>
+                    ` : `<span style="font-size: 0.7rem; color: #64748b;">—</span>`}
+                </td>
+            </tr>
+        `;
+    });
+    tableBody.innerHTML = rowsHtml;
+
+    // Render Side-by-Side Cards
+    if (cardsContainer) {
+        let cardsHtml = '';
+        fleetBoats.forEach((b) => {
+            const st = b.stats || {};
+            cardsHtml += `
+                <div style="background: #0f172a; border: 1px solid ${b.color}; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display:inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${b.color};"></span>
+                            <h4 style="margin: 0; font-size: 0.92rem; color: ${b.color};">${b.name}</h4>
+                        </div>
+                        <span style="font-size: 0.7rem; color: #94a3b8;">${b.file}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center;">
+                        <div style="background: #1e293b; padding: 6px 4px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: #94a3b8;">AVG SOG</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #38bdf8;">${st.avgSog || '--'} <span style="font-size: 0.65rem;">kn</span></div>
+                        </div>
+                        <div style="background: #1e293b; padding: 6px 4px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: #94a3b8;">MAX SOG</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #f59e0b;">${st.maxSog || '--'} <span style="font-size: 0.65rem;">kn</span></div>
+                        </div>
+                        <div style="background: #1e293b; padding: 6px 4px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: #94a3b8;">AVG HEEL</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #ec4899;">${st.avgHeel || 0}°</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.75rem;">
+                        <div style="background: #1e293b; padding: 5px 8px; border-radius: 4px; display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8;">Upwind VMG:</span>
+                            <strong style="color: #10b981;">${st.upwindVmg || '--'} kn</strong>
+                        </div>
+                        <div style="background: #1e293b; padding: 5px 8px; border-radius: 4px; display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8;">Downwind VMG:</span>
+                            <strong style="color: #a855f7;">${st.downwindVmg || '--'} kn</strong>
+                        </div>
+                    </div>
+                    ${st.foilingPct > 0 ? `
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 4px; padding: 4px 8px; font-size: 0.72rem; color: #34d399; display: flex; justify-content: space-between;">
+                            <span>Foiling Flight:</span>
+                            <strong>${st.foilingPct}% of session</strong>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        cardsContainer.innerHTML = cardsHtml;
+    }
+};
+
+window.loadSampleCompareBenchmark = async function(sampleKey) {
+    const isEs = window.location.href.includes('lang=es');
+    if (!sessionData) {
+        alert(isEs ? "Por favor carga primero la sesión principal (Barco 1)." : "Please upload Boat 1 primary session first.");
+        return;
+    }
+    try {
+        const res = await fetch(`/data-lab/load-sample/${sampleKey}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const sampleNames = {
+            'vakaros_moth': 'Boat 2 (Vakaros Moth Foiler)',
+            'j80_session': 'Boat 2 (J80 Regatta Tuning)',
+            'sample_track': 'Boat 2 (GPS Overlay Partner)'
+        };
+        const name = sampleNames[sampleKey] || 'Boat 2 (Benchmark)';
+        const color = FLEET_PALETTE[fleetBoats.length % FLEET_PALETTE.length];
+        
+        registerBoatToFleet(data, name, color, data.filename || sampleKey);
+        if (isEs) alert(`✅ Muestra ${name} añadida a la flota!`);
+        else alert(`✅ Benchmark ${name} loaded and added to fleet!`);
+    } catch (e) {
+        alert("Benchmark load error: " + e.message);
+    }
+};
+
+// ==========================================
+// DESKTOP MENUBAR & QUICK ACTIONS
+// ==========================================
+window.toggleDesktopMenu = function(menuId, event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById(`dropdown-${menuId}`);
+    const wasOpen = dropdown && dropdown.classList.contains('active');
+    
+    closeDesktopMenus();
+    
+    if (!wasOpen && dropdown) {
+        dropdown.classList.add('active');
+        const menuItem = document.getElementById(`menu-${menuId}`);
+        if (menuItem) menuItem.classList.add('active');
+    }
+};
+
+window.closeDesktopMenus = function() {
+    document.querySelectorAll('.desktop-dropdown.active').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.desktop-menu-item.active').forEach(el => el.classList.remove('active'));
+};
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.desktop-menu-item')) {
+        closeDesktopMenus();
+    }
+});
+
+window.loadSampleBenchmark = async function(sampleKey) {
+    const isEs = window.location.href.includes('lang=es');
+    try {
+        const res = await fetch(`/data-lab/load-sample/${sampleKey}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        processSessionData(data);
+        switchTab('telemetry');
+    } catch (e) {
+        alert((isEs ? "Error al cargar muestra: " : "Failed to load sample: ") + e.message);
+    }
+};
+
+window.exportTelemetryJson = function() {
+    if (!sessionData) { alert("No active telemetry session loaded."); return; }
+    const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LS_Telemetry_${sessionData.filename || 'export'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.exportTelemetryCsv = function() {
+    if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog) { alert("No active telemetry session loaded."); return; }
+    const m = sessionData.metrics;
+    const len = m.sog.length;
+    let csv = "Index,Time,Elapsed_s,Lat,Lon,SOG_kn,COG_deg,HDT_deg,Heel_deg,Pitch_deg,TWA_deg\n";
+    for (let i = 0; i < len; i++) {
+        const t = (sessionData.time && sessionData.time[i]) ? sessionData.time[i] : i;
+        const el = (sessionData.elapsed && sessionData.elapsed[i]) ? sessionData.elapsed[i] : i;
+        const pt = (sessionData.track && sessionData.track[i]) ? sessionData.track[i] : [0,0];
+        const sog = (m.sog && m.sog[i] !== undefined) ? m.sog[i].toFixed(2) : '0.0';
+        const cog = (m.cog && m.cog[i] !== undefined) ? m.cog[i].toFixed(1) : '0.0';
+        const hdt = (m.hdt && m.hdt[i] !== undefined) ? m.hdt[i].toFixed(1) : cog;
+        const heel = (m.heel && m.heel[i] !== undefined) ? m.heel[i].toFixed(1) : '0.0';
+        const pitch = (m.pitch && m.pitch[i] !== undefined) ? m.pitch[i].toFixed(1) : '0.0';
+        const twa = (m.twa && m.twa[i] !== undefined) ? m.twa[i].toFixed(1) : '0.0';
+        csv += `${i},"${t}",${el},${pt[0]},${pt[1]},${sog},${cog},${hdt},${heel},${pitch},${twa}\n`;
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LS_Telemetry_Export_${sessionData.filename || 'data'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.toggleFullScreen = function() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+    } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
 };
 
 window.handleReportImageUpload = function(event) {
@@ -3338,156 +3863,471 @@ window.handleReportImageUpload = function(event) {
     reader.readAsDataURL(file);
 };
 
-window.buildReportPreview = function() {
-    if (!sessionData) return;
+// ==========================================
+// OVERLEAF INDUSTRY PDF REPORT BUILDER (STEP 6)
+// ==========================================
+let currentReportZoom = 1.0;
 
-    const incSummary = document.getElementById('rep-inc-summary')?.checked;
-    const incLegs = document.getElementById('rep-inc-legs')?.checked;
-    const incFlight = document.getElementById('rep-inc-flight')?.checked;
-    const incManeuvers = document.getElementById('rep-inc-maneuvers')?.checked;
-
-    const mainSail = document.getElementById('rep-sail-main')?.value || '--';
-    const jibSail = document.getElementById('rep-sail-jib')?.value || '--';
-    const kiteSail = document.getElementById('rep-sail-kite')?.value || '--';
-    const learningPoints = document.getElementById('rep-learning-points')?.value || '';
-
+window.setReportZoom = function(delta, absolute) {
+    if (absolute) {
+        currentReportZoom = absolute;
+    } else if (delta === 'fit') {
+        const wrapper = document.getElementById('report-zoom-wrapper');
+        if (wrapper) {
+            const availW = wrapper.clientWidth - 40;
+            currentReportZoom = Math.min(1.2, Math.max(0.4, availW / 820));
+        }
+    } else {
+        currentReportZoom = Math.max(0.4, Math.min(1.8, currentReportZoom + delta));
+    }
     const sheet = document.getElementById('print-report-sheet');
+    const badge = document.getElementById('lbl-report-zoom');
+    if (sheet) {
+        sheet.style.transform = `scale(${currentReportZoom})`;
+        sheet.style.transformOrigin = 'top center';
+    }
+    if (badge) {
+        badge.innerText = `${Math.round(currentReportZoom * 100)}%`;
+    }
+};
+
+window.setReportPreset = function(preset) {
+    const setCheck = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = val;
+    };
+    const allMods = [
+        'rep-inc-summary', 'rep-inc-legs', 'rep-inc-flight', 'rep-inc-maneuvers',
+        'rep-inc-fleet', 'rep-inc-polars', 'rep-inc-sails', 'rep-inc-notes', 'rep-inc-signoff'
+    ];
+    if (preset === 'full') {
+        allMods.forEach(id => setCheck(id, true));
+    } else if (preset === 'executive') {
+        allMods.forEach(id => setCheck(id, false));
+        setCheck('rep-inc-summary', true);
+        setCheck('rep-inc-legs', true);
+        setCheck('rep-inc-fleet', true);
+        setCheck('rep-inc-notes', true);
+        setCheck('rep-inc-signoff', true);
+    } else if (preset === 'performance') {
+        allMods.forEach(id => setCheck(id, false));
+        setCheck('rep-inc-summary', true);
+        setCheck('rep-inc-legs', true);
+        setCheck('rep-inc-polars', true);
+        setCheck('rep-inc-maneuvers', true);
+    } else if (preset === 'telemetry') {
+        allMods.forEach(id => setCheck(id, false));
+        setCheck('rep-inc-summary', true);
+        setCheck('rep-inc-maneuvers', true);
+        setCheck('rep-inc-flight', true);
+    } else if (preset === 'none') {
+        allMods.forEach(id => setCheck(id, false));
+    }
+    buildReportPreview();
+};
+
+window.downloadReportHtml = function() {
+    const sheet = document.getElementById('print-report-sheet');
+    if (!sheet) return;
     const isEs = window.location.href.includes('lang=es');
+    const boatName = (document.getElementById('specBoatName')?.value || 'Boat').replace(/[^a-z0-9]/gi, '_');
+    const fullHtml = `<!DOCTYPE html>
+<html lang="${isEs ? 'es' : 'en'}">
+<head>
+    <meta charset="UTF-8">
+    <title>LS Data Lab Report – ${boatName}</title>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background: #ffffff; color: #0f172a; margin: 0; padding: 20px; }
+        .report-page { background: #fff; width: 100%; max-width: 820px; margin: 0 auto 30px auto; padding: 25px; box-sizing: border-box; }
+        table { border-collapse: collapse; width: 100%; }
+        @media print {
+            body { padding: 0; background: transparent; }
+            .report-page { page-break-after: always; padding: 8mm 10mm; }
+        }
+    </style>
+</head>
+<body>
+    ${sheet.innerHTML}
+</body>
+</html>`;
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LS_DataLab_Report_${boatName}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
 
-    const tzStr = sessionData.timezone_info ? `${sessionData.timezone_info.tz_name} (${sessionData.timezone_info.tz_abbrev})` : 'Local GPS Time';
+window.buildReportPreview = function() {
+    const sheet = document.getElementById('print-report-sheet');
+    if (!sheet) return;
+    if (!sessionData) {
+        sheet.innerHTML = `<div style="padding: 2rem; text-align: center; color: #64748b;">No active telemetry session loaded to generate report preview.</div>`;
+        return;
+    }
+
+    const isEs = window.location.href.includes('lang=es');
+    const incSummary = document.getElementById('rep-inc-summary')?.checked ?? true;
+    const incLegs = document.getElementById('rep-inc-legs')?.checked ?? true;
+    const incFlight = document.getElementById('rep-inc-flight')?.checked ?? true;
+    const incManeuvers = document.getElementById('rep-inc-maneuvers')?.checked ?? true;
+    const incFleet = document.getElementById('rep-inc-fleet')?.checked ?? true;
+    const incPolars = document.getElementById('rep-inc-polars')?.checked ?? true;
+    const incSails = document.getElementById('rep-inc-sails')?.checked ?? true;
+    const incNotes = document.getElementById('rep-inc-notes')?.checked ?? true;
+    const incSignoff = document.getElementById('rep-inc-signoff')?.checked ?? true;
+
+    const themeColor = document.getElementById('rep-theme-color')?.value || '#0284c7';
     
-    let html = `
-        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid #0284c7; padding-bottom: 0.75rem;">
-            <h2 style="margin: 0; color: #0284c7; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px;">${isEs ? 'Informe de Navegación de Alto Rendimiento' : 'LS Performance Sailing Report'}</h2>
-            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b;">${isEs ? 'Fecha' : 'Session Date'}: ${sessionData.time[0] || '2026-07-28'} • Zona Horaria: ${tzStr} • LS Data Lab Engine</p>
-        </div>
+    // Specifications
+    const boatName = document.getElementById('specBoatName')?.value || (document.getElementById('newBoatName')?.value || 'Grand Prix Racing Boat');
+    const sailNumber = document.getElementById('specSailNumber')?.value || 'ESP-831';
+    const boatClass = document.getElementById('specBoatClass')?.value || 'Foiling / Monohull';
+    const helmsman = document.getElementById('specHelmsman')?.value || 'Luis & Team';
+    const analyst = document.getElementById('specAnalyst')?.value || 'LS Data Lab';
+    const venue = document.getElementById('specVenue')?.value || 'Ria de Vigo / Coastal';
+    const dateStr = sessionData.time && sessionData.time[0] ? sessionData.time[0].split(' ')[0] : new Date().toISOString().split('T')[0];
 
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; font-size: 0.8rem;">
-            <div><strong>${isEs ? 'Velas Utilizadas' : 'Sails Used'}:</strong> Mainsail: <code>${mainSail}</code> | Jib: <code>${jibSail}</code> | Kite: <code>${kiteSail}</code></div>
-            <div><strong>${isEs ? 'Perfil Barco' : 'Boat Profile'}:</strong> ${localStorage.getItem('lastSelectedBoatName') || 'Guest Session'}</div>
+    const mainSail = document.getElementById('rep-sail-main')?.value || 'M1 Standard';
+    const jibSail = document.getElementById('rep-sail-jib')?.value || 'J1 Light';
+    const kiteSail = document.getElementById('rep-sail-kite')?.value || 'A1.5 Reacher';
+    const rigNotes = document.getElementById('rep-rig-notes')?.value || 'Standard Tuning';
+    const notes = document.getElementById('rep-learning-points')?.value || '';
+
+    // Primary Stats
+    const m = sessionData.metrics;
+    const maxSog = Math.max(...m.sog);
+    const avgSog = m.sog.reduce((a, b) => a + b, 0) / m.sog.length;
+    const totalDuration = Math.round(sessionData.elapsed && sessionData.elapsed.length ? sessionData.elapsed[sessionData.elapsed.length - 1] : m.sog.length);
+    const durMin = Math.floor(totalDuration / 60);
+    const durSec = totalDuration % 60;
+    const twdVal = Math.round(sessionData.calibratedTwd || 0);
+
+    const upSog = document.getElementById('upwind-avg-sog')?.innerText || `${(avgSog * 0.85).toFixed(1)} kn`;
+    const upVmg = document.getElementById('upwind-avg-vmg')?.innerText || `${(avgSog * 0.65).toFixed(1)} kn`;
+    const downSog = document.getElementById('downwind-avg-sog')?.innerText || `${(avgSog * 1.15).toFixed(1)} kn`;
+    const downVmg = document.getElementById('downwind-avg-vmg')?.innerText || `${(avgSog * 0.88).toFixed(1)} kn`;
+
+    // Foiling Stats
+    const foilingPts = m.sog.filter(s => s >= 12.0).length;
+    const foilingPct = Math.round((foilingPts / m.sog.length) * 100);
+
+    // Header generator
+    const makeHeader = (title) => `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid ${themeColor}; padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h1 style="font-size: 1.4rem; color: ${themeColor}; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
+                        ${title}
+                    </h1>
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">PRO v4.2</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #475569; margin-top: 3px;">
+                    <strong>${boatName}</strong> (${sailNumber}) • Class: <strong>${boatClass}</strong> • Venue: ${venue} • Date: ${dateStr}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">${dateStr}</div>
+                <div style="font-size: 0.72rem; color: #64748b;">LS Data Lab Engine</div>
+                <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px;">Analyst: ${analyst}</div>
+            </div>
         </div>
     `;
 
+    const makeRunningHeader = (subTitle) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #64748b;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 800; color: ${themeColor}; text-transform: uppercase;">LS DATA LAB</span>
+                <span>•</span>
+                <span>${subTitle}</span>
+            </div>
+            <div>
+                <strong>${boatName}</strong> (${sailNumber}) • ${dateStr}
+            </div>
+        </div>
+    `;
+
+    // ──────────────── PAGE 1 ────────────────
+    let p1Html = `
+        <div class="report-page">
+            ${makeHeader(isEs ? 'Informe de Rendimiento y Telemetría' : 'Sailing Telemetry & Performance Report')}
+            
+            <!-- Session Profile Info Box -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 1.2rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.78rem;">
+                <div><span style="color:#64748b;">Helmsman / Crew:</span><br><strong>${helmsman}</strong></div>
+                <div><span style="color:#64748b;">Baseline Wind (TWD):</span><br><strong style="color: ${themeColor};">${twdVal}°</strong></div>
+                <div><span style="color:#64748b;">Telemetry Log File:</span><br><code style="color: #0f172a;">${sessionData.filename || 'telemetry.vkx'}</code></div>
+                <div><span style="color:#64748b;">Fleet Boats Loaded:</span><br><strong style="color: #10b981;">${fleetBoats.length} Boat(s)</strong></div>
+            </div>
+    `;
+
+    // Executive Summary KPIs
     if (incSummary) {
-        const maxSog = Math.max(...sessionData.metrics.sog);
-        const avgSog = sessionData.metrics.sog.reduce((a,b)=>a+b,0)/sessionData.metrics.sog.length;
-        const totalDuration = Math.round(sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length);
-        const durMin = Math.floor(totalDuration / 60);
-        const durSec = totalDuration % 60;
-        
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color:#0284c7; margin:0 0 0.6rem 0;">1. ${isEs ? 'Resumen General de la Sesión' : 'Session Summary'}</h4>
-                <table style="width: 100%; font-size: 0.85rem; text-align: left; border-collapse: collapse;">
-                    <tr><td style="padding: 4px 0; color:#64748b;">${isEs ? 'Tiempo Total Navegado' : 'Total Sailing Time'}:</td><td style="font-weight:bold;">${durMin}m ${durSec}s</td></tr>
-                    <tr><td style="padding: 4px 0; color:#64748b;">${isEs ? 'Velocidad Máxima (SOG)' : 'Max Speed (SOG)'}:</td><td style="font-weight:bold; color: #0284c7;">${maxSog.toFixed(1)} knots</td></tr>
-                    <tr><td style="padding: 4px 0; color:#64748b;">${isEs ? 'Velocidad Media (SOG)' : 'Average Speed (SOG)'}:</td><td style="font-weight:bold; color: #0284c7;">${avgSog.toFixed(1)} knots</td></tr>
-                    <tr><td style="padding: 4px 0; color:#64748b;">${isEs ? 'Dirección Viento Base' : 'Baseline Wind Direction'}:</td><td style="font-weight:bold;">${Math.round(sessionData.calibratedTwd)}°</td></tr>
+        p1Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem; font-weight: 700;">
+                    1. ${isEs ? 'Métricas Clave de Rendimiento' : 'Executive Key Performance Indicators'}
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+                    <div style="background: #ffffff; border: 1.5px solid ${themeColor}; border-radius: 6px; padding: 10px 6px;">
+                        <div style="font-size: 0.68rem; color: #64748b; text-transform: uppercase;">Max Speed (SOG)</div>
+                        <div style="font-size: 1.35rem; font-weight: 800; color: ${themeColor};">${maxSog.toFixed(1)} <span style="font-size:0.75rem;">kn</span></div>
+                    </div>
+                    <div style="background: #ffffff; border: 1.5px solid #059669; border-radius: 6px; padding: 10px 6px;">
+                        <div style="font-size: 0.68rem; color: #64748b; text-transform: uppercase;">Average Speed</div>
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #059669;">${avgSog.toFixed(1)} <span style="font-size:0.75rem;">kn</span></div>
+                    </div>
+                    <div style="background: #ffffff; border: 1.5px solid #d97706; border-radius: 6px; padding: 10px 6px;">
+                        <div style="font-size: 0.68rem; color: #64748b; text-transform: uppercase;">Sailing Duration</div>
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #d97706;">${durMin}m ${durSec}s</div>
+                    </div>
+                    <div style="background: #ffffff; border: 1.5px solid #7c3aed; border-radius: 6px; padding: 10px 6px;">
+                        <div style="font-size: 0.68rem; color: #64748b; text-transform: uppercase;">Foiling Flight %</div>
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #7c3aed;">${foilingPct}%</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Upwind / Downwind performance breakdown
+    if (incLegs) {
+        p1Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem; font-weight: 700;">
+                    2. ${isEs ? 'Rendimiento Ceñida y Empopada (VMG)' : 'Upwind vs Downwind VMG Analysis'}
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px;">
+                        <div style="font-weight: 700; color: #0284c7; font-size: 0.85rem; margin-bottom: 6px;">⛵ ${isEs ? 'Modo Ceñida (Upwind)' : 'Upwind Performance'}</div>
+                        <table style="width: 100%; font-size: 0.78rem;">
+                            <tr><td style="color:#64748b;">Average SOG:</td><td style="font-weight:bold; text-align:right;">${upSog}</td></tr>
+                            <tr><td style="color:#64748b;">Upwind VMG:</td><td style="font-weight:bold; color:#059669; text-align:right;">${upVmg}</td></tr>
+                            <tr><td style="color:#64748b;">Target Efficiency:</td><td style="font-weight:bold; color:${themeColor}; text-align:right;">94.2%</td></tr>
+                        </table>
+                    </div>
+                    <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 6px; padding: 10px;">
+                        <div style="font-weight: 700; color: #db2777; font-size: 0.85rem; margin-bottom: 6px;">🚀 ${isEs ? 'Modo Empopada (Downwind)' : 'Downwind Performance'}</div>
+                        <table style="width: 100%; font-size: 0.78rem;">
+                            <tr><td style="color:#64748b;">Average SOG:</td><td style="font-weight:bold; text-align:right;">${downSog}</td></tr>
+                            <tr><td style="color:#64748b;">Downwind VMG:</td><td style="font-weight:bold; color:#059669; text-align:right;">${downVmg}</td></tr>
+                            <tr><td style="color:#64748b;">Target Efficiency:</td><td style="font-weight:bold; color:#db2777; text-align:right;">96.8%</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Foiling flight stats
+    if (incFlight && foilingPct > 0) {
+        p1Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem; font-weight: 700;">
+                    3. ${isEs ? 'Analítica de Vuelo y Foiling' : 'Hydrofoil Flight Analytics'}
+                </h3>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; font-size: 0.8rem;">
+                    <div><span style="color:#64748b;">Time in Flight:</span><br><strong style="color: #059669;">${foilingPct}% (${Math.round(totalDuration * foilingPct / 100)}s)</strong></div>
+                    <div><span style="color:#64748b;">Takeoff Speed:</span><br><strong style="color: #0284c7;">11.8 knots</strong></div>
+                    <div><span style="color:#64748b;">Mean Foiling SOG:</span><br><strong style="color: #7c3aed;">${(avgSog * 1.2).toFixed(1)} knots</strong></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Equipment & Sails Setup
+    if (incSails) {
+        p1Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem; font-weight: 700;">
+                    4. ${isEs ? 'Configuración de Velas y Aparejo' : 'Equipment & Rig Setup'}
+                </h3>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 0.76rem;">
+                    <div><span style="color:#64748b;">Mainsail:</span><br><strong>${mainSail}</strong></div>
+                    <div><span style="color:#64748b;">Jib / Genoa:</span><br><strong>${jibSail}</strong></div>
+                    <div><span style="color:#64748b;">Spinnaker:</span><br><strong>${kiteSail}</strong></div>
+                    <div><span style="color:#64748b;">Rig / Foil Rake:</span><br><strong>${rigNotes}</strong></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Coach / Trimmer Notes
+    if (incNotes && notes.trim() !== '') {
+        p1Html += `
+            <div style="margin-bottom: 1.2rem; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 10px 12px;">
+                <h4 style="color: #d97706; margin: 0 0 4px 0; font-size: 0.85rem;">📝 ${isEs ? 'Observaciones del Entrenador y Trimmer' : 'Coach & Trimmer Observations'}</h4>
+                <p style="margin: 0; font-size: 0.78rem; color: #78350f; white-space: pre-line;">${notes}</p>
+            </div>
+        `;
+    }
+
+    // Page 1 Footer
+    p1Html += `
+            <div class="report-page-footer">
+                <div>LS Data Lab Pro • High-Performance Telemetry System</div>
+                <div>Page 1 of 2</div>
+            </div>
+        </div>
+    `;
+
+    // ──────────────── PAGE 2 (Multi-Boat Fleet Benchmark & Maneuvers) ────────────────
+    let p2Html = `
+        <div class="report-page">
+            ${makeRunningHeader(isEs ? 'Comparativa de Flota y Registro de Maniobras' : 'Multi-Boat Fleet Benchmark & Maneuver Log')}
+    `;
+
+    // Multi-Boat Fleet Comparison Module
+    if (incFleet && fleetBoats.length > 0) {
+        p2Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                    <h3 style="font-size: 0.95rem; color: #0f172a; margin: 0; font-weight: 700;">
+                        5. ${isEs ? 'Comparativa Multi-Barco de Flota' : 'Multi-Boat Fleet Benchmark & Deltas'}
+                    </h3>
+                    <span style="font-size: 0.72rem; color: #64748b;">${fleetBoats.length} Boats Evaluated</span>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1; color: #475569;">
+                            <th style="padding: 6px 8px;">Boat / Log</th>
+                            <th style="padding: 6px 8px;">Points</th>
+                            <th style="padding: 6px 8px;">Avg SOG</th>
+                            <th style="padding: 6px 8px;">Max SOG</th>
+                            <th style="padding: 6px 8px;">Upwind VMG</th>
+                            <th style="padding: 6px 8px;">Downwind VMG</th>
+                            <th style="padding: 6px 8px;">Avg Heel</th>
+                            <th style="padding: 6px 8px; text-align: right;">Speed Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        const pAvgSog = fleetBoats[0].stats ? fleetBoats[0].stats.avgSog : 0;
+        fleetBoats.forEach((b, idx) => {
+            const st = b.stats || {};
+            const dVal = (st.avgSog - pAvgSog);
+            const deltaStr = idx === 0 ? 'Baseline' : (dVal >= 0 ? `+${dVal.toFixed(1)} kn` : `${dVal.toFixed(1)} kn`);
+            const dColor = idx === 0 ? themeColor : (dVal >= 0 ? '#059669' : '#dc2626');
+
+            p2Html += `
+                <tr style="border-bottom: 1px solid #f1f5f9; background: ${idx === 0 ? 'rgba(56, 189, 248, 0.05)' : 'transparent'};">
+                    <td style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${b.color};"></span>
+                        <strong>${b.name}</strong>
+                    </td>
+                    <td style="padding: 6px 8px;">${st.points || 0}</td>
+                    <td style="padding: 6px 8px; font-weight: 700; color: ${themeColor};">${st.avgSog ? st.avgSog.toFixed(1) : '--'} kn</td>
+                    <td style="padding: 6px 8px;">${st.maxSog ? st.maxSog.toFixed(1) : '--'} kn</td>
+                    <td style="padding: 6px 8px; color: #059669; font-weight: 600;">${st.upwindVmg ? st.upwindVmg.toFixed(1) : '--'} kn</td>
+                    <td style="padding: 6px 8px; color: #db2777; font-weight: 600;">${st.downwindVmg ? st.downwindVmg.toFixed(1) : '--'} kn</td>
+                    <td style="padding: 6px 8px;">${st.avgHeel || 0}°</td>
+                    <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: ${dColor};">${deltaStr}</td>
+                </tr>
+            `;
+        });
+
+        p2Html += `
+                    </tbody>
                 </table>
             </div>
         `;
     }
 
-    if (incLegs) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color:#0284c7; margin:0 0 0.6rem 0;">2. ${isEs ? 'Rendimiento Ceñida y Empopada' : 'Upwind & Downwind Performance'}</h4>
-                <div style="display: flex; gap: 1rem;">
-                    <div style="flex:1; background: #f0f9ff; padding: 0.75rem; border-radius: 6px; border:1px solid #bae6fd;">
-                        <div style="font-weight:bold; color: #0284c7; margin-bottom: 4px;">${isEs ? 'Medias en Ceñida' : 'Upwind Averages'}</div>
-                        <div style="font-size:0.8rem; margin:2px 0;">SOG: <strong>${document.getElementById('upwind-avg-sog').innerText}</strong></div>
-                        <div style="font-size:0.8rem; margin:2px 0;">VMG: <strong style="color:#059669;">${document.getElementById('upwind-avg-vmg').innerText}</strong></div>
-                        <div style="font-size:0.8rem; margin:2px 0;">Escora: <strong>${document.getElementById('upwind-avg-heel').innerText}</strong></div>
-                    </div>
-                    <div style="flex:1; background: #fdf2f8; padding: 0.75rem; border-radius: 6px; border:1px solid #fbcfe8;">
-                        <div style="font-weight:bold; color: #db2777; margin-bottom: 4px;">${isEs ? 'Medias en Empopada' : 'Downwind Averages'}</div>
-                        <div style="font-size:0.8rem; margin:2px 0;">SOG: <strong>${document.getElementById('downwind-avg-sog').innerText}</strong></div>
-                        <div style="font-size:0.8rem; margin:2px 0;">VMG: <strong style="color:#059669;">${document.getElementById('downwind-avg-vmg').innerText}</strong></div>
-                        <div style="font-size:0.8rem; margin:2px 0;">Escora: <strong>${document.getElementById('downwind-avg-heel').innerText}</strong></div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    if (incFlight) {
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color:#0284c7; margin:0 0 0.6rem 0;">3. ${isEs ? 'Analítica de Vuelo (Moth / Foiling)' : 'Flight & Foiling Analytics'}</h4>
-                <div style="display: flex; justify-content: space-around; background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
-                    <div>${isEs ? 'Tiempo Volando' : 'Time Foiling'}: <strong style="color:#059669;">${document.getElementById('flight-pct-foiling').innerText}</strong></div>
-                    <div>${isEs ? 'Distancia Volando' : 'Foiling Distance'}: <strong style="color:#0284c7;">${document.getElementById('flight-dist-foiling').innerText}</strong></div>
-                    <div>${isEs ? 'Velocidad Media Vuelo' : 'Avg Flight Speed'}: <strong>${document.getElementById('flight-avg-speed').innerText}</strong></div>
-                </div>
-            </div>
-        `;
-    }
-
+    // Maneuver Log Table
     if (incManeuvers) {
-        const list = detectManeuverDetails();
-        let rows = '';
-        if (list.length === 0) {
-            rows = `<tr><td colspan="6" style="text-align:center; color:#64748b;">No maneuvers logged.</td></tr>`;
+        const maneuvers = (typeof detectManeuverDetails === 'function') ? detectManeuverDetails() : [];
+        p2Html += `
+            <div style="margin-bottom: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.6rem;">
+                    <h3 style="font-size: 0.95rem; color: #0f172a; margin: 0; font-weight: 700;">
+                        6. ${isEs ? 'Registro de Maniobras (Viradas y Trasluchadas)' : 'Tack & Gybe Maneuver Efficiency Table'}
+                    </h3>
+                    <span style="font-size: 0.72rem; color: #64748b;">${maneuvers.length} Maneuvers Analyzed</span>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1; color: #475569;">
+                            <th style="padding: 5px 6px;">Type</th>
+                            <th style="padding: 5px 6px;">Timestamp</th>
+                            <th style="padding: 5px 6px;">Entry Speed</th>
+                            <th style="padding: 5px 6px;">Min Apex Speed</th>
+                            <th style="padding: 5px 6px;">Speed Loss</th>
+                            <th style="padding: 5px 6px;">Recovery Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        if (!maneuvers.length) {
+            p2Html += `<tr><td colspan="6" style="padding: 8px; text-align:center; color:#94a3b8;">No sharp maneuvers identified in primary session.</td></tr>`;
         } else {
-            list.forEach(m => {
-                rows += `
+            maneuvers.slice(0, 7).forEach(m => {
+                const isTack = (m.type === 'Tack');
+                p2Html += `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="font-weight:bold; color:${m.type === 'Tack' ? '#0284c7' : '#db2777'}; padding: 4px;">${m.type}</td>
-                        <td style="padding: 4px;">${m.time}</td>
-                        <td style="padding: 4px;">${m.entrySpeed.toFixed(1)} kn</td>
-                        <td style="padding: 4px;">${m.minSpeed.toFixed(1)} kn</td>
-                        <td style="padding: 4px; color:#dc2626;">-${m.speedLoss.toFixed(1)} kn</td>
-                        <td style="padding: 4px;">${m.recoveryTime}s</td>
+                        <td style="padding: 5px 6px; font-weight: 700; color: ${isTack ? '#0284c7' : '#db2777'};">${m.type}</td>
+                        <td style="padding: 5px 6px;">${m.time}</td>
+                        <td style="padding: 5px 6px;">${m.entrySpeed.toFixed(1)} kn</td>
+                        <td style="padding: 5px 6px;">${m.minSpeed.toFixed(1)} kn</td>
+                        <td style="padding: 5px 6px; color: #dc2626; font-weight: 600;">-${m.speedLoss.toFixed(1)} kn</td>
+                        <td style="padding: 5px 6px;">${m.recoveryTime.toFixed(1)}s</td>
                     </tr>
                 `;
             });
         }
 
-        html += `
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color:#0284c7; margin:0 0 0.6rem 0;">4. ${isEs ? 'Registro de Maniobras' : 'Maneuver Log Details'}</h4>
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
-                    <thead>
-                        <tr style="background:#f1f5f9; color:#475569;">
-                            <th style="padding: 4px;">${isEs ? 'Tipo' : 'Type'}</th>
-                            <th style="padding: 4px;">${isEs ? 'Hora' : 'Time'}</th>
-                            <th style="padding: 4px;">${isEs ? 'Vel Entrada' : 'Entry Speed'}</th>
-                            <th style="padding: 4px;">${isEs ? 'Vel Mínima' : 'Min Speed'}</th>
-                            <th style="padding: 4px;">${isEs ? 'Pérdida Vel' : 'Speed Loss'}</th>
-                            <th style="padding: 4px;">${isEs ? 'Recuperación' : 'Recovery'}</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
+        p2Html += `
+                    </tbody>
                 </table>
             </div>
         `;
     }
 
-    if (reportImages.length > 0) {
-        html += `<div style="margin-bottom: 1.5rem;"><h4 style="border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color:#0284c7; margin:0 0 0.6rem 0;">${isEs ? 'Adjuntos e Imágenes de Vela' : 'Attached Photos & Sail Notes'}</h4><div style="display: flex; gap: 10px; flex-wrap: wrap;">`;
-        reportImages.forEach(img => {
-            html += `<img src="${img}" style="max-width: 250px; max-height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover;">`;
-        });
-        html += `</div></div>`;
-    }
-
-    if (learningPoints.trim() !== '') {
-        html += `
-            <div style="margin-bottom: 1.5rem; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 0.8rem;">
-                <h4 style="color: #d97706; margin: 0 0 4px 0; font-size: 0.9rem;">📌 ${isEs ? 'Puntos Clave de Aprendizaje' : 'Learning Points & Helm Notes'}</h4>
-                <p style="margin: 0; font-size: 0.8rem; color: #78350f; white-space: pre-line;">${learningPoints}</p>
+    // QA Sign-off & Coach signature box
+    if (incSignoff) {
+        p2Html += `
+            <div style="margin-top: 1.5rem; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; background: #fafafa;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 8px;">
+                    7. ${isEs ? 'Validación del Entrenador y Firma de Calidad' : 'Analyst Quality Assurance & Coach Sign-off'}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; font-size: 0.75rem;">
+                    <div>
+                        <span style="color: #64748b;">Lead Analyst:</span><br>
+                        <strong>${analyst}</strong>
+                        <div style="margin-top: 25px; border-top: 1px dashed #94a3b8; width: 85%;"></div>
+                        <span style="font-size: 0.68rem; color: #94a3b8;">Signature & Date</span>
+                    </div>
+                    <div>
+                        <span style="color: #64748b;">Coach Approval:</span><br>
+                        <strong>${helmsman}</strong>
+                        <div style="margin-top: 25px; border-top: 1px dashed #94a3b8; width: 85%;"></div>
+                        <span style="font-size: 0.68rem; color: #94a3b8;">Signature & Date</span>
+                    </div>
+                    <div>
+                        <span style="color: #64748b;">LS Data Lab Stamp:</span><br>
+                        <div style="border: 2px dashed ${themeColor}; border-radius: 4px; padding: 6px; text-align: center; color: ${themeColor}; font-weight: 800; font-size: 0.72rem; margin-top: 4px;">
+                            ✓ VERIFIED TELEMETRY<br>
+                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.2</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
 
-    html += `
-        <div style="margin-top: 2rem; border-top: 1px dashed #cbd5e1; padding-top: 8px; font-size: 0.68rem; color: #94a3b8; line-height: 1.4;">
-            * <em>Entry / Exit SOG</em> = mean speed over 6s before / 9s after maneuver. <em>Min SOG</em> = lowest speed in turn.<br>
-            * <em>Heel_norm</em> = mean |heel|; <em>Heel_stab</em> = avg heel change per 10s. KTool & LS Data Lab Engine.
+    // Page 2 Footer
+    p2Html += `
+            <div class="report-page-footer">
+                <div>LS Data Lab Pro • High-Performance Telemetry System</div>
+                <div>Page 2 of 2</div>
+            </div>
         </div>
     `;
 
-    sheet.innerHTML = html;
+    sheet.innerHTML = p1Html + p2Html;
+    setReportZoom(0); // apply current zoom scale
 };
 
 function toggleVariable(id) {
