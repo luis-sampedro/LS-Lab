@@ -184,8 +184,400 @@
         </div>
     </div>
 
+    <!-- 3. BARRA DE OPCIONES DINÁMICA CONTEXTUAL (Cambia según el paso/menú activo) -->
+    <div id="contextualRibbon" class="desktop-ribbon-bar">
+        <!-- Ribbon para Paso 1: Ingesta y Calibración -->
+        <div class="ribbon-tab-content active" id="ribbon-tab-upload">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #64748b; font-size: 0.72rem; font-weight: 700;">PASO 1:</span>
+                <button type="button" onclick="document.getElementById('logFile').click()" class="ribbon-action-btn">
+                    <span>📂</span> Abrir Archivo (.vkx, .csv, .gpx)
+                </button>
+                <button type="button" onclick="loadSampleBenchmark('vakaros-abril')" class="ribbon-action-btn">
+                    <span>🧪</span> Demo Abril Verde (.vkx)
+                </button>
+                <button type="button" onclick="loadSampleBenchmark('j80-abril')" class="ribbon-action-btn">
+                    <span>⛵</span> Demo J/80 (Sailmon CSV)
+                </button>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 0.7rem; color: #64748b;">Carga un log de sesión y calibra la dirección del viento para iniciar el análisis.</span>
+        </div>
+
+        <!-- Ribbon para Paso 2: Telemetría y Vistas CAD -->
+        <div class="ribbon-tab-content" id="ribbon-tab-telemetry" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
+                <!-- Desplegable 1: Tramos y Subtramos -->
+                <div class="ribbon-dropdown-wrapper">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('legs', event)">
+                        <span>🎬</span> <strong id="lblRibbonLegsTitle">Tramos y Subtramos</strong> <span>▾</span>
+                    </button>
+                    <div class="ribbon-dropdown-menu" id="dropdown-ribbon-legs" style="min-width: 330px;">
+                        <div class="ribbon-menu-section-header">⛵ TRAMOS PRINCIPALES (LEGS)</div>
+                        <div class="ribbon-menu-item" onclick="splitSegmentAtPlayhead()">
+                            <span>🏁 Marcar Salida / Dividir Tramo</span>
+                            <span class="ribbon-shortcut">Click</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="splitClipAtScrubber()">
+                            <span>✂️ Cortar Tramo en Posición del Cursor</span>
+                            <span class="ribbon-shortcut">✂</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptRenameClip()">
+                            <span>✏️ Renombrar Tramo Seleccionado</span>
+                            <span class="ribbon-shortcut">✏</span>
+                        </div>
+                        <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Tipo de Tramo:</span>
+                            <select id="clipTypeSelector" onchange="changeSelectedClipType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
+                                <option value="upwind">⛵ Ceñida (Upwind)</option>
+                                <option value="downwind">🚀 Popa (Downwind)</option>
+                                <option value="reach">💨 Través (Reach)</option>
+                                <option value="hidden">🙈 Oculto (Hidden)</option>
+                            </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="deleteSelectedClip()">
+                            <span style="color: #fca5a5;">🗑️ Eliminar Etiqueta Tramo (Mantiene Datos)</span>
+                            <span class="ribbon-shortcut">Supr</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="eraseSelectedLegData()">
+                            <span style="color: #ef4444; font-weight: bold;">💥 Borrar Datos de Tramo (Limpiar GPS)</span>
+                            <span class="ribbon-shortcut">2 pasos</span>
+                        </div>
+                        <div style="display: flex; gap: 4px; padding: 4px 12px;">
+                            <button type="button" onclick="goToSelectedLegStart()" class="ribbon-mini-btn" style="flex: 1;">⏮️ Ir al Inicio</button>
+                            <button type="button" onclick="goToSelectedLegEnd()" class="ribbon-mini-btn" style="flex: 1;">⏭️ Ir al Final</button>
+                        </div>
+
+                        <div class="ribbon-dropdown-divider"></div>
+
+                        <div class="ribbon-menu-section-header">➕ SUBTRAMOS Y MANIOBRAS (SUBLEGS)</div>
+                        <div class="ribbon-menu-item" onclick="createSublegAtPlayhead()">
+                            <span style="color: #10b981;">➕ Añadir Subtramo en Cursor</span>
+                            <span class="ribbon-shortcut">+</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="splitSublegAtScrubber()">
+                            <span>✂️ Cortar Subtramo</span>
+                            <span class="ribbon-shortcut">✂</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptRenameSubleg()">
+                            <span>✏️ Renombrar Subtramo</span>
+                            <span class="ribbon-shortcut">✏</span>
+                        </div>
+                        <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Tipo Subtramo:</span>
+                            <select id="sublegTypeSelector" onchange="changeSelectedSublegType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
+                                <option value="upwind">⛵ Ceñida (Upwind)</option>
+                                <option value="downwind">🚀 Popa (Downwind)</option>
+                                <option value="reach">💨 Través (Reach)</option>
+                            </select>
+                        </div>
+                        <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.74rem; color: #38bdf8;">Filtrar / Multi-Select:</span>
+                            <select id="sublegMultiSelector" onchange="selectSublegsByName(this.value)" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold;">
+                                <option value="">🔍 Seleccionar Subtramos...</option>
+                                <option value="all">Todos los Subtramos</option>
+                                <option value="ashore">🏠 En Tierra (Ashore)</option>
+                                <option value="capsize">🏊 Vuelcos (Capsize)</option>
+                                <option value="upwind">⛵ Todas las Ceñidas</option>
+                                <option value="downwind">🚀 Todas las Popas</option>
+                                <option value="reach">💨 Todos los Traveses</option>
+                                <option value="fly">🛩️ En Vuelo (Foiling)</option>
+                                <option value="low">🌊 Desplazamiento (Low-Ride)</option>
+                                <option value="tack">🔄 Viradas (Tacks)</option>
+                                <option value="gybe">🌪️ Trasluchadas (Gybes)</option>
+                                <option value="deselect">❌ Deseleccionar</option>
+                            </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="deleteSelectedSubleg()">
+                            <span style="color: #fca5a5;">🗑️ Eliminar Etiqueta Subtramo</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="eraseSelectedSublegData()">
+                            <span style="color: #ef4444; font-weight: bold;">💥 Borrar Datos de Subtramo</span>
+                        </div>
+                        <div style="display: flex; gap: 4px; padding: 4px 12px;">
+                            <button type="button" onclick="goToSelectedSublegStart()" class="ribbon-mini-btn" style="flex: 1;">⏮️ Inicio Subtramo</button>
+                            <button type="button" onclick="goToSelectedSublegEnd()" class="ribbon-mini-btn" style="flex: 1;">⏭️ Fin Subtramo</button>
+                        </div>
+
+                        <div class="ribbon-dropdown-divider"></div>
+                        <div class="ribbon-menu-item" onclick="resetToSingleSessionLeg()">
+                            <span>🔄 Restablecer a 1 Solo Tramo Completo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desplegable 2: Gráfica y Variables -->
+                <div class="ribbon-dropdown-wrapper">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('plots', event)">
+                        <span>📈</span> <strong id="lblRibbonPlotsTitle">Gráfica y Variables</strong> <span>▾</span>
+                    </button>
+                    <div class="ribbon-dropdown-menu" id="dropdown-ribbon-plots" style="min-width: 340px;">
+                        <div class="ribbon-menu-section-header">VARIABLES DE TELEMETRÍA (14 DATASETS)</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 6px 12px;">
+                            <button class="btn-chart" id="btn-chart-sog" onclick="toggleVariable('sog')">SOG</button>
+                            <button class="btn-chart inactive" id="btn-chart-cog" onclick="toggleVariable('cog')">COG</button>
+                            <button class="btn-chart" id="btn-chart-hdg" onclick="toggleVariable('hdg')">HDG</button>
+                            <button class="btn-chart inactive" id="btn-chart-heel" onclick="toggleVariable('heel')">HEEL</button>
+                            <button class="btn-chart inactive" id="btn-chart-pitch" onclick="toggleVariable('pitch')">PITCH</button>
+                            <button class="btn-chart inactive" id="btn-chart-rot" onclick="toggleVariable('rot')">ROT</button>
+                            <button class="btn-chart inactive" id="btn-chart-tws" onclick="toggleVariable('tws')">TWS</button>
+                            <button class="btn-chart inactive" id="btn-chart-twd" onclick="toggleVariable('twd')">TWD</button>
+                            <button class="btn-chart inactive" id="btn-chart-twa" onclick="toggleVariable('twa')">TWA</button>
+                            <button class="btn-chart inactive" id="btn-chart-vmg" onclick="toggleVariable('vmg')">VMG</button>
+                            <button class="btn-chart inactive" id="btn-chart-vmc" onclick="toggleVariable('vmc')">VMC</button>
+                            <button class="btn-chart inactive" id="btn-chart-leeway" onclick="toggleVariable('leeway')">LEEWAY</button>
+                            <button class="btn-chart inactive" id="btn-chart-cspd" onclick="toggleVariable('cspd')">CSPD</button>
+                            <button class="btn-chart inactive" id="btn-chart-cdir" onclick="toggleVariable('cdir')">CDIR</button>
+                        </div>
+
+                        <div class="ribbon-dropdown-divider"></div>
+                        <div class="ribbon-menu-section-header">PRESETS DE VISUALIZACIÓN</div>
+                        <div class="ribbon-menu-item" onclick="applyChartPreset('basic')">
+                            <span>⛵ Básico Navegación (SOG + HDG)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyChartPreset('wind')">
+                            <span>💨 Rendimiento Viento (TWS + TWD + TWA + VMG)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyChartPreset('dynamics')">
+                            <span>📐 Dinámica Casco (Heel + Pitch + ROT)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyChartPreset('current')">
+                            <span>🌊 Deriva y Corriente (Leeway + CSPD + CDIR)</span>
+                        </div>
+                        <div style="display: flex; gap: 4px; padding: 4px 12px;">
+                            <button type="button" onclick="applyChartPreset('all')" class="ribbon-mini-btn" style="flex: 1;">👁️ Mostrar Todos</button>
+                            <button type="button" onclick="applyChartPreset('none')" class="ribbon-mini-btn" style="flex: 1;">🙈 Ocultar Todos</button>
+                        </div>
+
+                        <div class="ribbon-dropdown-divider"></div>
+                        <div class="ribbon-menu-section-header">ZOOM DE LÍNEA TEMPORAL</div>
+                        <div style="display: flex; gap: 4px; padding: 4px 12px 8px;">
+                            <button type="button" onclick="chartZoom(1)" class="ribbon-mini-btn" style="flex: 1;" title="Acercar zoom">➕ Zoom In</button>
+                            <button type="button" onclick="chartZoom(-1)" class="ribbon-mini-btn" style="flex: 1;" title="Alejar zoom">➖ Zoom Out</button>
+                            <button type="button" onclick="resetChartZoom()" class="ribbon-mini-btn" style="flex: 1;" title="Ajustar escala completa">↔ Ajustar (Fit)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desplegable 3: Vistas CAD (Estilo Rhino / Star-CCM+) -->
+                <div class="ribbon-dropdown-wrapper">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('viewports', event)">
+                        <span>🪟</span> <strong id="lblRibbonVpTitle">Vistas CAD</strong> <span>▾</span>
+                    </button>
+                    <div class="ribbon-dropdown-menu" id="dropdown-ribbon-viewports" style="min-width: 310px;">
+                        <div class="ribbon-menu-section-header">VENTANAS ACTIVAS</div>
+                        <label class="ribbon-checkbox-item">
+                            <input type="checkbox" id="chk-vp-map" checked onchange="toggleViewport('map', this.checked)">
+                            <span>🗺️ Mapa Tracker (Ventana Izquierda)</span>
+                        </label>
+                        <label class="ribbon-checkbox-item">
+                            <input type="checkbox" id="chk-vp-plot" checked onchange="toggleViewport('plot', this.checked)">
+                            <span>📈 Gráfica Telemetría (Derecha Superior)</span>
+                        </label>
+                        <label class="ribbon-checkbox-item">
+                            <input type="checkbox" id="chk-vp-timeline" checked onchange="toggleViewport('timeline', this.checked)">
+                            <span>🎬 Tramos y Scrubber (Derecha Inferior)</span>
+                        </label>
+
+                        <div class="ribbon-dropdown-divider"></div>
+                        <div class="ribbon-menu-section-header">DISPOSICIÓN DE VISTAS (PRESETS CAD)</div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cad')">
+                            <span>📐 <strong>CAD Estándar</strong> (50% Mapa | 25% Plot | 25% Tramos)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('map')">
+                            <span>🗺️ <strong>Solo Mapa</strong> (100% Pantalla Completa)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('plot')">
+                            <span>📈 <strong>Solo Gráfica</strong> (100% Pantalla Completa)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('timeline')">
+                            <span>🎬 <strong>Solo Tramos &amp; Scrubber</strong> (100% Completa)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('rows')">
+                            <span>☰ <strong>3 Filas Horizontales</strong> (Mapa / Plot / Tramos)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cols')">
+                            <span>◫ <strong>3 Columnas Verticales</strong></span>
+                        </div>
+
+                        <div class="ribbon-dropdown-divider"></div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cad')">
+                            <span>🔄 Restaurar Todas las Ventanas y Separadores</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="width: 1px; height: 18px; background: #334155; margin: 0 4px;"></div>
+
+                <!-- Botones directos rápidos de la cinta -->
+                <button type="button" id="btnToggleLowSpeedQuick" onclick="toggleLowSpeedFilter()" class="ribbon-action-btn" title="Filtro de bajas velocidades (Remolque / En tierra / Vuelco)">
+                    <span>🐌</span> <span id="lblLowSpeedStatus">Filtro Vel: OFF</span>
+                </button>
+
+                <div style="position: relative; display: inline-block; z-index: 9999;">
+                    <div style="display: flex; align-items: center;">
+                        <button type="button" onclick="autoDetectLegsClips()" class="ribbon-action-btn" style="border-radius: 4px 0 0 4px; border-right: none;" title="Autodetectar subtramos (Ceñida, Popa, Viradas, Trasluchadas)">
+                            <span>⚡</span> <span>Autodetectar</span>
+                        </button>
+                        <button type="button" onclick="toggleAutoDetectPopover()" class="ribbon-action-btn" style="border-radius: 0 4px 4px 0; padding: 4px 7px;" title="Configurar umbrales de detección">
+                            ⚙️
+                        </button>
+                    </div>
+                    <!-- Auto-detect popover -->
+                    <div id="autoDetectPopover" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 9999; flex-direction: column; gap: 10px; min-width: 300px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+                        <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚡ Umbrales de Autodetección</span>
+
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección en Tierra</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🏠 Velocidad Máx (tierra):</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoAshoreSpeed" value="1.5" min="0" max="5" step="0.1" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">kn</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>⚓ Radio del Muelle:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoDockRadius" value="300" min="50" max="1000" step="50" style="width: 55px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección de Tramos</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>⏱️ Duración Mínima Tramo:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoMinLegMin" value="5" min="1" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🔄 Ángulo Mín Virada / Trasluchada:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoTackMinAngle" value="70" min="30" max="150" step="5" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">°</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Vuelcos y Vuelo (Foiler)</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🏊 Rango Velocidad Vuelco:</span>
+                                <div style="display: flex; align-items: center; gap: 2px;">
+                                    <input type="number" id="autoCapsizeMinSpeed" value="0.3" min="0" max="2" step="0.1" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
+                                    <span>–</span>
+                                    <input type="number" id="autoCapsizeMaxSpeed" value="3.0" min="1" max="5" step="0.5" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">kn</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🏊 Escora Mínima Vuelco:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoCapsizeMinHeel" value="45" min="20" max="90" step="5" style="width: 50px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">°</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🛩️ Velocidad Despegue (Vuelo):</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoFlightSpeed" value="10.0" min="4" max="25" step="0.5" style="width: 50px; background: #020617; color: #a855f7; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">kn</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" onclick="autoDetectLegs(false); toggleAutoDetectPopover();" style="width: 100%; background: #0284c7; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">
+                            Aplicar y Redetectar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="flex: 1;"></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.68rem; color: #64748b; font-family: monospace;">Vistas CAD: 50% Mapa | 25% Gráfica | 25% Tramos</span>
+            </div>
+        </div>
+
+        <!-- Ribbon para Paso 3: Tramos y Polares -->
+        <div class="ribbon-tab-content" id="ribbon-tab-performance" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #64748b; font-size: 0.72rem; font-weight: 700;">PASO 3:</span>
+                <button type="button" onclick="openPolarOption('upload')" class="ribbon-action-btn">
+                    <span>📂</span> Cargar Archivo .pol
+                </button>
+                <button type="button" onclick="openPolarOption('search')" class="ribbon-action-btn">
+                    <span>🌐</span> Buscar Polar Online...
+                </button>
+                <button type="button" onclick="openPolarOption('generate')" class="ribbon-action-btn">
+                    <span>⚡</span> Generar Polar de Sesión
+                </button>
+                <button type="button" onclick="exportTelemetryCsv()" class="ribbon-action-btn">
+                    <span>📥</span> Exportar CSV Limpio
+                </button>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 0.7rem; color: #64748b;">Compara curvas polares teóricas con la telemetría real navegada.</span>
+        </div>
+
+        <!-- Ribbon para Paso 4: Registro de Maniobras -->
+        <div class="ribbon-tab-content" id="ribbon-tab-maneuvers" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #64748b; font-size: 0.72rem; font-weight: 700;">PASO 4:</span>
+                <button type="button" onclick="renderManeuversTable()" class="ribbon-action-btn">
+                    <span>🔄</span> Recalcular Eficiencia de Maniobras
+                </button>
+                <button type="button" onclick="exportManeuversCsv()" class="ribbon-action-btn">
+                    <span>📊</span> Exportar Maniobras CSV
+                </button>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 0.7rem; color: #64748b;">Analiza velocidades de entrada/salida, pérdida de distancia y tiempos de ejecución.</span>
+        </div>
+
+        <!-- Ribbon para Paso 5: Comparativa de Sesiones -->
+        <div class="ribbon-tab-content" id="ribbon-tab-compare" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #64748b; font-size: 0.72rem; font-weight: 700;">PASO 5:</span>
+                <button type="button" onclick="document.getElementById('fleetBoatFile')?.click()" class="ribbon-action-btn">
+                    <span>➕</span> Añadir Barco Secundario...
+                </button>
+                <button type="button" onclick="loadSampleBenchmark('j80-abril')" class="ribbon-action-btn">
+                    <span>⛵</span> Barco Benchmark J/80
+                </button>
+                <button type="button" onclick="clearFleetComparison()" class="ribbon-action-btn" style="color: #fca5a5;">
+                    <span>🗑️</span> Limpiar Flota Comparativa
+                </button>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 0.7rem; color: #64748b;">Superpón múltiples sesiones o polares de referencia sobre la sesión activa.</span>
+        </div>
+
+        <!-- Ribbon para Paso 6: Informe Técnico PDF -->
+        <div class="ribbon-tab-content" id="ribbon-tab-report" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #64748b; font-size: 0.72rem; font-weight: 700;">PASO 6:</span>
+                <button type="button" onclick="window.print()" class="ribbon-action-btn" style="background: #0284c7; color: white; border-color: #38bdf8;">
+                    <span>🖨️</span> Imprimir / Guardar Informe PDF
+                </button>
+                <button type="button" onclick="exportOverleafLatex()" class="ribbon-action-btn">
+                    <span>📑</span> Abrir en Overleaf LaTeX
+                </button>
+                <button type="button" onclick="exportTelemetryJson()" class="ribbon-action-btn">
+                    <span>📤</span> Exportar Informe Completo (JSON)
+                </button>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 0.7rem; color: #64748b;">Genera un debriefing de ingeniería naval de 2 páginas listo para publicación.</span>
+        </div>
+    </div>
+
     <!-- MAIN DESKTOP WORKSPACE -->
-    <div class="desktop-main-workspace" style="display: flex; flex: 1; height: calc(100% - 78px); min-height: 0; overflow: hidden; position: relative;">
+    <div class="desktop-main-workspace" style="display: flex; flex: 1; height: calc(100% - 110px); min-height: 0; overflow: hidden; position: relative;">
         <!-- Main Content Panels Container -->
         <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         
@@ -291,12 +683,26 @@
             </div>
         </div>
 
-        <!-- PANEL 2: TELEMETRY SCRUBBER & MAP VISUALIZER -->
-        <div id="panel-telemetry" class="wizard-panel" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow-y: auto;">
-            <div id="shared-visualizer" style="display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%;">
+        <!-- PANEL 2: VISOR DE TELEMETRÍA Y SISTEMA MULTI-VENTANA CAD -->
+        <div id="panel-telemetry" class="wizard-panel" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow: hidden; position: relative;">
+            <div id="shared-visualizer" class="cad-viewport-container">
                 
-                <!-- Section 1: Map (Default ~30vh height) -->
-                <div id="mapSection" style="height: 30vh; min-height: 140px; position: relative; overflow: hidden;">
+                <!-- VENTANA IZQUIERDA: Tracker de Mapa (50% ancho por defecto) -->
+                <div id="vp-map-window" class="cad-viewport-window" style="flex: 0 0 50%; width: 50%; min-width: 180px;">
+                    <div class="cad-viewport-titlebar">
+                        <div class="cad-titlebar-left">
+                            <span>🗺️</span>
+                            <span class="cad-title-text">TRACKER DE MAPA</span>
+                            <span class="cad-size-badge">50%</span>
+                        </div>
+                        <div class="cad-titlebar-right">
+                            <button type="button" class="cad-btn-win" onclick="minimizeViewport('map')" title="Minimizar Ventana">_</button>
+                            <button type="button" class="cad-btn-win" id="btn-max-map" onclick="toggleMaximizeViewport('map')" title="Maximizar / Restaurar">🗖</button>
+                            <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('map')" title="Cerrar Ventana">✕</button>
+                        </div>
+                    </div>
+
+                    <div id="mapSection" class="cad-viewport-body" style="flex: 1; position: relative; min-height: 0; width: 100%; height: 100%; overflow: hidden;">
                     <div id="map" style="width: 100%; height: 100%; background: #020617;"></div>
                     
                     <div id="mapTelemetryOverlay" style="position: absolute; top: 10px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; width: 380px; max-height: calc(100% - 20px);">
@@ -478,246 +884,113 @@
                         </div>
                     </div>
                 </div>
+                </div><!-- END vp-map-window -->
 
-                <!-- Excel-like Row Resizer 1 (Map / Plot) -->
-                <div id="resizerMapChart" style="height: 12px; background: #0f172a; border-top: 1px solid #334155; border-bottom: 1px solid #334155; cursor: row-resize; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; z-index: 1010; user-select: none;" title="Arrastrar para ajustar altura de Mapa y Gráfico">
-                    <span style="font-size: 0.65rem; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">↕ AJUSTAR ALTURA MAPA / GRÁFICO</span>
-                    <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
-                        <div style="width: 30px; height: 2px; background: #475569; border-radius: 1px;"></div>
-                        <div style="width: 30px; height: 2px; background: #475569; border-radius: 1px;"></div>
-                    </div>
-                    <div style="display: flex; gap: 4px;">
-                        <button onclick="applyLayoutPreset('equal')" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; cursor: pointer;">1/3 Igual</button>
-                        <button onclick="applyLayoutPreset('map')" style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; cursor: pointer;">🗺️ Máx Mapa</button>
-                        <button onclick="applyLayoutPreset('chart')" style="background: #1e293b; color: #10b981; border: 1px solid #334155; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; cursor: pointer;">📈 Máx Gráfico</button>
-                    </div>
+                <!-- RESIZABLE SPLITTER VERTICAL (Izquierda vs Derecha) -->
+                <div id="splitter-cad-vertical" class="cad-splitter cad-splitter-v" title="Arrastrar para ajustar ancho de Mapa vs Gráfica/Tramos">
+                    <div class="cad-splitter-handle-v"></div>
                 </div>
 
-                <!-- Section 2: Chart / Plot (Default ~33% height) -->
-                <div id="chartSection" style="height: 33vh; min-height: 100px; position: relative; background: #0f172a; display: flex; flex-direction: column; padding: 4px 1.25rem;">
-                    <div style="flex: 1; position: relative; width: 100%; height: 100%;">
-                        <canvas id="timelineChart"></canvas>
-                    </div>
-                    <div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.7rem; color: #94a3b8; gap: 4px; padding-top: 2px; flex-wrap: wrap;">
-                        <span style="font-weight: bold; margin-right: 2px;">Mostrar Datos:</span> 
-                        <button class="btn-chart" id="btn-chart-sog" onclick="toggleVariable('sog')">SOG</button>
-                        <button class="btn-chart inactive" id="btn-chart-cog" onclick="toggleVariable('cog')">COG</button>
-                        <button class="btn-chart" id="btn-chart-hdg" onclick="toggleVariable('hdg')">HDG</button>
-                        <button class="btn-chart inactive" id="btn-chart-heel" onclick="toggleVariable('heel')">ESCORA</button>
-                        <button class="btn-chart inactive" id="btn-chart-pitch" onclick="toggleVariable('pitch')">PITCH</button>
-                        <button class="btn-chart inactive" id="btn-chart-rot" onclick="toggleVariable('rot')">ROT</button>
-                        <button class="btn-chart inactive" id="btn-chart-tws" onclick="toggleVariable('tws')">TWS</button>
-                        <button class="btn-chart inactive" id="btn-chart-twd" onclick="toggleVariable('twd')">TWD</button>
-                        <button class="btn-chart inactive" id="btn-chart-twa" onclick="toggleVariable('twa')">TWA</button>
-                        <button class="btn-chart inactive" id="btn-chart-vmg" onclick="toggleVariable('vmg')">VMG</button>
-                        <button class="btn-chart inactive" id="btn-chart-vmc" onclick="toggleVariable('vmc')">VMC</button>
-                        <button class="btn-chart inactive" id="btn-chart-leeway" onclick="toggleVariable('leeway')">LEEWAY</button>
-                        <button class="btn-chart inactive" id="btn-chart-cspd" onclick="toggleVariable('cspd')">CSPD</button>
-                        <button class="btn-chart inactive" id="btn-chart-cdir" onclick="toggleVariable('cdir')">CDIR</button>
-                    </div>
-                </div>
-
-                <!-- Excel-like Row Resizer 2 (Plot / Timeline) -->
-                <div id="resizerChartTimeline" style="height: 12px; background: #0f172a; border-top: 1px solid #334155; border-bottom: 1px solid #334155; cursor: row-resize; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; z-index: 1010; user-select: none;" title="Arrastrar para ajustar altura de Gráfico y Tramos">
-                    <span style="font-size: 0.65rem; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">↕ AJUSTAR ALTURA GRÁFICO / TRAMOS</span>
-                    <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
-                        <div style="width: 30px; height: 2px; background: #475569; border-radius: 1px;"></div>
-                        <div style="width: 30px; height: 2px; background: #475569; border-radius: 1px;"></div>
-                    </div>
-                    <div style="display: flex; gap: 4px;">
-                        <button onclick="applyLayoutPreset('equal')" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; cursor: pointer;">1/3 Igual</button>
-                    </div>
-                </div>
-
-                <!-- Section 3: Timeline & Controls (Flex 1) -->
-                <div id="timelineSection" style="flex: 1; min-height: 120px; background: #0f172a; border-top: 1px solid #1e293b; padding: 0.75rem 1.25rem; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;">
-                    <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; width: 100%;">
-                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: bold; margin-right: 4px;">TRAMOS:</span>
-                        <button onclick="splitSegmentAtPlayhead()" style="background: #1e293b; color: #f59e0b; border: 1px solid #f59e0b; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Cortar Tramo en Posición (Nueva Salida)">🏁</button>
-                        <button onclick="splitClipAtScrubber()" style="background: #0284c7; color: white; border: 1px solid #38bdf8; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Cortar tramo en la posición del cabezal (✂️ Cortar)">✂️</button>
-                        <button onclick="promptRenameClip()" style="background: #334155; color: #f8fafc; border: 1px solid #475569; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Renombrar tramo seleccionado">✏️</button>
-                        <select id="clipTypeSelector" onchange="changeSelectedClipType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 5px 6px; border-radius: 6px; font-size: 0.7rem;" title="Cambiar tipo de tramo">
-                            <option value="upwind">⛵ Ceñida</option>
-                            <option value="downwind">🚀 Empopada</option>
-                            <option value="reach">💨 Travesía</option>
-                            <option value="hidden">🙈 Oculto</option>
-                        </select>
-                        <button onclick="deleteSelectedClip()" style="background: #334155; color: #fca5a5; border: 1px solid #64748b; padding: 0 6px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Eliminar Etiqueta de Tramo (Mantiene los datos)">🗑️ Etiqueta</button>
-                        <button onclick="eraseSelectedLegData()" style="background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; padding: 0 6px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Borrar Datos de Telemetría (Elimina puntos con confirmación)">💥 Borrar Datos</button>
-                        <button onclick="goToSelectedLegStart()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ir al Inicio del Tramo">⏮️</button>
-                        <button onclick="goToSelectedLegEnd()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ir al Final del Tramo">⏭️</button>
-
-                        <div style="width: 1px; height: 20px; background: #334155; margin: 0 4px;"></div>
-                        <button type="button" id="btnToggleLowSpeedQuick" onclick="toggleLowSpeedFilter()" style="background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 0 10px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;" title="Alternar Filtro de Baja Velocidad (Fondeos / Remolque)">
-                            <span>🐌</span> <span id="lblLowSpeedStatus">Filtro Vel: OFF</span>
-                        </button>
-                        <div style="position: relative; display: inline-block; z-index: 9999;">
-                            <div style="display: flex; align-items: center;">
-                                <button onclick="autoDetectLegsClips()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 0 8px; height: 32px; border-radius: 6px 0 0 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Autodetectar subtramos (Ceñida, Empopada, Viradas, Trasluchadas)">⚡ Autodetectar</button>
-                                <button onclick="toggleAutoDetectPopover()" style="background: #1e293b; color: #94a3b8; border: 1px solid #0284c7; border-left: none; width: 24px; height: 32px; border-radius: 0 6px 6px 0; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Configurar umbrales de autodetección">⚙️</button>
+                <!-- CONTENEDOR DERECHO (Columna con Gráfica arriba y Tramos abajo) -->
+                <div id="vp-right-container" class="cad-right-container" style="flex: 1; display: flex; flex-direction: column; min-width: 200px; height: 100%; min-height: 0; overflow: hidden;">
+                    
+                    <!-- VENTANA SUPERIOR DERECHA: Gráfica de Telemetría (50% de columna derecha = 25% total) -->
+                    <div id="vp-plot-window" class="cad-viewport-window" style="flex: 0 0 50%; height: 50%; min-height: 110px;">
+                        <div class="cad-viewport-titlebar">
+                            <div class="cad-titlebar-left">
+                                <span>📈</span>
+                                <span class="cad-title-text">GRÁFICA DE TELEMETRÍA</span>
+                                <span id="activeVarsPill" class="cad-vars-pill">SOG, HDG</span>
                             </div>
-                            <div id="autoDetectPopover" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 9999; flex-direction: column; gap: 10px; min-width: 300px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
-                                <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚡ Umbrales de Autodetección</span>
+                            <div class="cad-titlebar-right">
+                                <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('plots', event)" title="Seleccionar Variables y Zoom">⚙️ Variables</button>
+                                <button type="button" class="cad-btn-win" onclick="minimizeViewport('plot')" title="Minimizar Ventana">_</button>
+                                <button type="button" class="cad-btn-win" id="btn-max-plot" onclick="toggleMaximizeViewport('plot')" title="Maximizar / Restaurar">🗖</button>
+                                <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('plot')" title="Cerrar Ventana">✕</button>
+                            </div>
+                        </div>
 
-                                <!-- ── Detección en tierra ── -->
-                                <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección en Tierra</div>
-                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>🏠 Vel. Máx (en tierra):</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoAshoreSpeed" value="1.5" min="0" max="5" step="0.1" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">kn</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>⚓ Radio del Puerto:</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoDockRadius" value="300" min="50" max="1000" step="50" style="width: 55px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">m</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div id="chartSection" class="cad-viewport-body" style="flex: 1; position: relative; width: 100%; height: 100%; min-height: 0; padding: 4px 8px; background: #0f172a;">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                    </div>
 
-                                <!-- ── Detección de tramos ── -->
-                                <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección de Tramos</div>
-                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>⏱️ Duración Mínima:</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoMinLegMin" value="5" min="1" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">min</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>🔄 Ángulo Mín. Virada/Trasluchada:</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoTackMinAngle" value="70" min="30" max="150" step="5" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">°</span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <!-- RESIZABLE SPLITTER HORIZONTAL (Gráfica vs Tramos) -->
+                    <div id="splitter-cad-horizontal" class="cad-splitter cad-splitter-h" title="Arrastrar para ajustar altura de Gráfica vs Tramos">
+                        <div class="cad-splitter-handle-h"></div>
+                    </div>
 
-                                <!-- ── Vuelco / Vuelo ── -->
-                                <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Vuelco y Vuelo</div>
-                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>🏊 Rango Rumbos/Vel. Vuelco:</span>
-                                        <div style="display: flex; align-items: center; gap: 2px;">
-                                            <input type="number" id="autoCapsizeMinSpeed" value="0.3" min="0" max="2" step="0.1" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
-                                            <span>–</span>
-                                            <input type="number" id="autoCapsizeMaxSpeed" value="3.0" min="1" max="5" step="0.5" style="width: 40px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 2px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">kn</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>🏊 Escora Mín. Vuelco:</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoCapsizeMinHeel" value="45" min="20" max="90" step="5" style="width: 50px; background: #020617; color: #ef4444; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">°</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span>🛩️ Vel. de Vuelo (Foiler):</span>
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <input type="number" id="autoFlightSpeed" value="10.0" min="4" max="25" step="0.5" style="width: 50px; background: #020617; color: #a855f7; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
-                                            <span style="font-size: 0.65rem; color: #64748b;">kn</span>
-                                        </div>
-                                    </div>
+                    <!-- VENTANA INFERIOR DERECHA: Tramos y Timeline Clipper (50% de columna derecha = 25% total) -->
+                    <div id="vp-timeline-window" class="cad-viewport-window" style="flex: 1; min-height: 110px;">
+                        <div class="cad-viewport-titlebar">
+                            <div class="cad-titlebar-left">
+                                <span>🎬</span>
+                                <span class="cad-title-text">TRAMOS Y CLIPPER</span>
+                                <span id="vpSelectedLegBadge" class="cad-leg-badge">Tramo 1 / 1</span>
+                            </div>
+                            <div class="cad-titlebar-right">
+                                <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('legs', event)" title="Herramientas de Tramos">✂️ Herramientas</button>
+                                <button type="button" class="cad-btn-win" onclick="minimizeViewport('timeline')" title="Minimizar Ventana">_</button>
+                                <button type="button" class="cad-btn-win" id="btn-max-timeline" onclick="toggleMaximizeViewport('timeline')" title="Maximizar / Restaurar">🗖</button>
+                                <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('timeline')" title="Cerrar Ventana">✕</button>
+                            </div>
+                        </div>
+
+                        <div id="timelineSection" class="cad-viewport-body" style="flex: 1; display: flex; flex-direction: column; padding: 6px 12px; gap: 6px; background: #0f172a; overflow-y: auto;">
+                            <!-- Cinta de Tramos Limpia -->
+                            <div id="timelineContainer" style="position: relative; width: 100%; flex: 1; min-height: 60px; display: flex; flex-direction: column; gap: 4px;">
+                                <input type="range" id="timeSlider" min="0" max="100" value="0" step="1" style="display: none; width: 100%; accent-color: #38bdf8; cursor: pointer;">
+                                <div id="segmentRibbon" style="position: relative; flex: 1.2; min-height: 28px; background: #1e293b; border-radius: 6px; overflow: hidden; border: 1px solid #334155;"></div>
+                                <div id="sublegRibbon" style="position: relative; flex: 1; min-height: 20px; background: #0f172a; border-radius: 6px; overflow: hidden; border: 1px solid #1e293b;"></div>
+                            </div>
+
+                            <!-- Barra de Estado Compacta y Limpia -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span id="lblLegDetailInfo" style="color: #cbd5e1; font-weight: 500;">Tramo Activo: Tramo 1 (Ceñida)</span>
                                 </div>
                                 
-                                <button onclick="autoDetectLegs(false); toggleAutoDetectPopover();" style="width: 100%; background: #0284c7; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">
-                                    Aplicar y Redetectar
-                                </button>
-                            </div>
-                        </div>
-                        <button onclick="resetToSingleSessionLeg()" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Resetear a 1 sesión completa">🔄</button>
-                    
-                    <div style="width: 1px; height: 20px; background: #334155; margin: 0 4px;"></div>
-                    
-                    <span style="font-size: 0.75rem; color: #94a3b8; margin-right: 4px; font-weight: bold;">SUBTRAMOS:</span>
-                    <button onclick="createSublegAtPlayhead()" style="background: #1e293b; color: #10b981; border: 1px solid #10b981; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Añadir Subtramo en posición">➕</button>
-                    <button onclick="splitSublegAtScrubber()" style="background: #0284c7; color: white; border: 1px solid #38bdf8; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Cortar subtramo en la posición">✂️</button>
-                    <button onclick="promptRenameSubleg()" style="background: #334155; color: #f8fafc; border: 1px solid #475569; width: 32px; height: 32px; border-radius: 6px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Renombrar Subtramo seleccionado">✏️</button>
-                    <select id="sublegTypeSelector" onchange="changeSelectedSublegType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 5px 6px; border-radius: 6px; font-size: 0.7rem;" title="Cambiar tipo de subtramo">
-                        <option value="upwind">⛵ Ceñida</option>
-                        <option value="downwind">🚀 Empopada</option>
-                        <option value="reach">💨 Travesía</option>
-                    </select>
-                    <select id="sublegMultiSelector" onchange="selectSublegsByName(this.value)" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 5px 6px; border-radius: 6px; font-size: 0.7rem; font-weight: bold;" title="Seleccionar subtramos por nombre / tipo">
-                        <option value="">🔍 Seleccionar Subtramos...</option>
-                        <option value="all">Seleccionar Todos los Subtramos</option>
-                        <option value="ashore">🏠 Seleccionar Todos en Tierra</option>
-                        <option value="capsize">🏊 Seleccionar Todas las Volcadas</option>
-                        <option value="upwind">⛵ Seleccionar Todas las Ceñidas</option>
-                        <option value="downwind">🚀 Seleccionar Todas las Empopadas</option>
-                        <option value="reach">💨 Seleccionar Todos los Traveses</option>
-                        <option value="fly">🛩️ Seleccionar Todos en Vuelo</option>
-                        <option value="low">🌊 Seleccionar Todos en Desplazamiento</option>
-                        <option value="tack">🔄 Seleccionar Todas las Viradas</option>
-                        <option value="gybe">🌪️ Seleccionar Todas las Trasluchadas</option>
-                        <option value="deselect">❌ Deseleccionar Todos</option>
-                    </select>
-                    <button onclick="deleteSelectedSubleg()" style="background: #334155; color: #fca5a5; border: 1px solid #64748b; padding: 0 6px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Eliminar Etiqueta de Subtramo(s) (Mantiene los datos)">🗑️ Etiqueta</button>
-                    <button onclick="eraseSelectedSublegData()" style="background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; padding: 0 6px; height: 32px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Borrar Datos de Telemetría de Subtramo(s) (Elimina puntos con confirmación)">💥 Borrar Datos</button>
-                    <button onclick="goToSelectedSublegStart()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ir al Inicio del Subtramo">⏮️</button>
-                    <button onclick="goToSelectedSublegEnd()" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; width: 28px; height: 32px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ir al Final del Subtramo">⏭️</button>
-                        
-                        <div style="flex: 1;"></div>
-                        
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <button onclick="chartZoom(1)" style="background: #1e293b; color: white; border: 1px solid #334155; width: 28px; height: 28px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Acercar gráfico">➕</button>
-                            <button onclick="chartZoom(-1)" style="background: #1e293b; color: white; border: 1px solid #334155; width: 28px; height: 28px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Alejar gráfico">➖</button>
-                            <button onclick="resetChartZoom()" style="background: #1e293b; color: white; border: 1px solid #334155; width: 28px; height: 28px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Ajustar / Resetear zoom">↔</button>
-                        </div>
-                    </div>
-
-                    <div id="timelineContainer" style="position: relative; width: 100%; flex: 1; min-height: 64px; display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
-                        <input type="range" id="timeSlider" min="0" max="100" value="0" step="1" style="display: none; width: 100%; accent-color: #38bdf8; cursor: pointer;">
-                        <div id="segmentRibbon" style="position: relative; flex: 1.2; min-height: 32px; background: #1e293b; border-radius: 6px; overflow: hidden; border: 1px solid #334155;"></div>
-                        <div id="sublegRibbon" style="position: relative; flex: 1; min-height: 24px; background: #0f172a; border-radius: 6px; overflow: hidden; border: 1px solid #1e293b;"></div>
-                    </div>
-
-                    <div style="height: 140px; position: relative;">
-                        <canvas id="timelineChart"></canvas>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px;">
-                        <div style="position: relative; display: inline-block;">
-                            <button onclick="document.getElementById('filterPopover').style.display = document.getElementById('filterPopover').style.display==='flex'?'none':'flex'" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Filtros de datos">
-                                🔧 <span id="activeSailingBadge" style="font-size: 0.7rem;">Filtros</span>
-                            </button>
-                            <div id="filterPopover" style="display: none; position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 999; flex-direction: column; gap: 10px; min-width: 240px; box-shadow: 0 -8px 24px rgba(0,0,0,0.5);">
-                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚙️ Filtros de Datos</span>
-                                <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">
-                                        <input type="checkbox" id="enableNonSailingFilter" onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
-                                        <span>🐌 Filtro Baja Velocidad</span>
-                                    </label>
-                                    <div style="display: flex; align-items: center; gap: 6px; margin-left: 22px;">
-                                        <span style="font-size: 0.7rem; color: #64748b;">Borrar por debajo de:</span>
-                                        <input type="number" id="nonSailingSpeedThreshold" value="1.0" min="0" max="10" step="0.5" onchange="updateNonSailingFilter()" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
-                                        <span style="font-size: 0.7rem; color: #64748b;">kn</span>
-                                    </div>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; margin-left: 22px;">
-                                        <input type="checkbox" id="actAsHiddenLeg" checked onchange="updateNonSailingFilter()" style="accent-color: #f59e0b;">
-                                        <span>Marcar como tramo oculto</span>
-                                    </label>
-                                </div>
-                                <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">
-                                        <input type="checkbox" id="enableFoilingFilter" onchange="updateNonSailingFilter()" style="accent-color: #a78bfa;">
-                                        <span>🛩️ Filtro Foiling (Low-Ride)</span>
-                                    </label>
-                                    <div style="display: flex; align-items: center; gap: 6px; margin-left: 22px;">
-                                        <span style="font-size: 0.7rem; color: #64748b;">Borrar por debajo de:</span>
-                                        <input type="number" id="foilingSpeedThreshold" value="8.0" min="0" max="30" step="0.5" onchange="updateNonSailingFilter()" style="width: 50px; background: #020617; color: #a78bfa; border: 1px solid #475569; font-size: 0.75rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
-                                        <span style="font-size: 0.7rem; color: #64748b;">kn</span>
+                                <div style="position: relative; display: inline-block;">
+                                    <button onclick="document.getElementById('filterPopover').style.display = document.getElementById('filterPopover').style.display==='flex'?'none':'flex'" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 2px 7px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Filtros de datos">
+                                        🔧 <span id="activeSailingBadge" style="font-size: 0.68rem;">Filtros</span>
+                                    </button>
+                                    <div id="filterPopover" style="display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 6px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; z-index: 999; flex-direction: column; gap: 10px; min-width: 240px; box-shadow: 0 -8px 24px rgba(0,0,0,0.5);">
+                                        <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚙️ Filtros de Datos</span>
+                                        <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+                                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">
+                                                <input type="checkbox" id="enableNonSailingFilter" onchange="updateNonSailingFilter()" style="accent-color: #38bdf8;">
+                                                <span>🐌 Filtro Baja Velocidad</span>
+                                            </label>
+                                            <div style="display: flex; align-items: center; gap: 6px; margin-left: 22px;">
+                                                <span style="font-size: 0.7rem; color: #64748b;">Borrar por debajo de:</span>
+                                                <input type="number" id="nonSailingSpeedThreshold" value="1.0" min="0" max="10" step="0.5" onchange="updateNonSailingFilter()" style="width: 50px; background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.75rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
+                                                <span style="font-size: 0.7rem; color: #64748b;">kn</span>
+                                            </div>
+                                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; margin-left: 22px;">
+                                                <input type="checkbox" id="actAsHiddenLeg" checked onchange="updateNonSailingFilter()" style="accent-color: #f59e0b;">
+                                                <span>Marcar como tramo oculto en cinta</span>
+                                            </label>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+                                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer;">
+                                                <input type="checkbox" id="enableFoilingFilter" onchange="updateNonSailingFilter()" style="accent-color: #a78bfa;">
+                                                <span>🛩️ Filtro Foiling (Low-Ride)</span>
+                                            </label>
+                                            <div style="display: flex; align-items: center; gap: 6px; margin-left: 22px;">
+                                                <span style="font-size: 0.7rem; color: #64748b;">Borrar por debajo de:</span>
+                                                <input type="number" id="foilingSpeedThreshold" value="8.0" min="0" max="30" step="0.5" onchange="updateNonSailingFilter()" style="width: 50px; background: #020617; color: #a78bfa; border: 1px solid #475569; font-size: 0.75rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
+                                                <span style="font-size: 0.7rem; color: #64748b;">kn</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Barra Dock Inferior para Ventanas Minimizadas / Cerradas -->
+                <div id="cad-dock-bar" style="display: none; position: absolute; bottom: 8px; left: 8px; z-index: 1000; gap: 6px;"></div>
             </div>
         </div>
 
@@ -1542,6 +1815,350 @@ main#top {
 .btn-chart.inactive {
     opacity: 0.4;
     color: #94a3b8;
+}
+
+/* Barra de Opciones Dinámica Contextual (Ribbon) */
+.desktop-ribbon-bar {
+    height: 36px;
+    min-height: 36px;
+    background: #090e1a;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    padding: 0 0.85rem;
+    user-select: none;
+    z-index: 1050;
+    position: relative;
+    flex-shrink: 0;
+}
+.ribbon-tab-content {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+}
+.ribbon-tab-content.active {
+    display: flex;
+}
+.ribbon-action-btn {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.ribbon-action-btn:hover {
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
+}
+.ribbon-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.ribbon-dropdown-btn {
+    background: #131c31;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.ribbon-dropdown-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
+.ribbon-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.85);
+    padding: 6px 0;
+    z-index: 3100;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.ribbon-dropdown-menu.active {
+    display: block;
+}
+.ribbon-menu-section-header {
+    padding: 5px 14px 2px;
+    font-size: 0.65rem;
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+.ribbon-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    font-size: 0.76rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.ribbon-menu-item:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
+.ribbon-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 0.76rem;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+.ribbon-checkbox-item:hover {
+    background: #1e293b;
+    color: #ffffff;
+}
+.ribbon-checkbox-item input {
+    accent-color: #38bdf8;
+}
+.ribbon-mini-btn {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ribbon-mini-btn:hover {
+    background: #334155;
+    color: white;
+}
+.ribbon-shortcut {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    margin-left: 12px;
+    font-family: monospace;
+}
+.ribbon-dropdown-divider {
+    height: 1px;
+    background: #1e293b;
+    margin: 4px 0;
+}
+
+/* Sistema Multi-Ventana CAD (Estilo Rhino / Star-CCM+) */
+.cad-viewport-container {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    background: #020617;
+}
+.cad-viewport-container.cad-layout-rows {
+    flex-direction: column !important;
+}
+.cad-viewport-container.cad-layout-rows #vp-map-window {
+    flex: 0 0 33.33% !important;
+    width: 100% !important;
+    height: 33.33% !important;
+}
+.cad-viewport-container.cad-layout-rows #splitter-cad-vertical {
+    display: none !important;
+}
+.cad-viewport-container.cad-layout-rows #vp-right-container {
+    flex: 1 !important;
+    width: 100% !important;
+    flex-direction: column !important;
+}
+.cad-viewport-container.cad-layout-cols {
+    flex-direction: row !important;
+}
+.cad-viewport-container.cad-layout-cols #vp-map-window {
+    flex: 0 0 33.33% !important;
+    width: 33.33% !important;
+}
+.cad-viewport-container.cad-layout-cols #vp-right-container {
+    flex-direction: row !important;
+}
+.cad-viewport-container.cad-layout-cols #vp-plot-window {
+    flex: 0 0 50% !important;
+    height: 100% !important;
+    width: 50% !important;
+}
+.cad-viewport-container.cad-layout-cols #splitter-cad-horizontal {
+    width: 6px !important;
+    height: 100% !important;
+    cursor: col-resize !important;
+}
+.cad-viewport-container.cad-layout-cols #vp-timeline-window {
+    flex: 1 !important;
+    height: 100% !important;
+}
+
+.cad-viewport-window {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    background: #0b1120;
+}
+.cad-viewport-titlebar {
+    height: 26px;
+    min-height: 26px;
+    background: #0c1427;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    user-select: none;
+    z-index: 100;
+}
+.cad-titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.4px;
+}
+.cad-titlebar-left .cad-title-text {
+    color: #f8fafc;
+}
+.cad-size-badge {
+    font-size: 0.6rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    font-family: monospace;
+}
+.cad-vars-pill {
+    font-size: 0.62rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+}
+.cad-leg-badge {
+    font-size: 0.62rem;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.cad-titlebar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.cad-btn-quick {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    font-size: 0.64rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.cad-btn-quick:hover {
+    background: #334155;
+    color: white;
+}
+.cad-btn-win {
+    width: 18px;
+    height: 18px;
+    background: #1e293b;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.12s;
+}
+.cad-btn-win:hover {
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
+}
+.cad-btn-close:hover {
+    background: #ef4444 !important;
+    color: white !important;
+    border-color: #ef4444 !important;
+}
+
+/* Splitters Divisores Ajustables */
+.cad-splitter {
+    user-select: none;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.12s;
+}
+.cad-splitter-v {
+    width: 6px;
+    cursor: col-resize;
+    background: #0b1120;
+    border-left: 1px solid #1e293b;
+    border-right: 1px solid #1e293b;
+}
+.cad-splitter-v:hover, .cad-splitter-v.dragging {
+    background: #0284c7 !important;
+}
+.cad-splitter-handle-v {
+    width: 2px;
+    height: 24px;
+    background: #475569;
+    border-radius: 1px;
+}
+.cad-splitter-h {
+    height: 6px;
+    cursor: row-resize;
+    background: #0b1120;
+    border-top: 1px solid #1e293b;
+    border-bottom: 1px solid #1e293b;
+}
+.cad-splitter-h:hover, .cad-splitter-h.dragging {
+    background: #0284c7 !important;
+}
+.cad-splitter-handle-h {
+    height: 2px;
+    width: 24px;
+    background: #475569;
+    border-radius: 1px;
 }
 
 /* Informes Multipágina Estilo Overleaf A4 */

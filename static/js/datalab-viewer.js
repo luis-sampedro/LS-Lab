@@ -55,31 +55,462 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthHandler();
     setupKeyboardShortcuts();
     setupPopoverDismiss();
-    initExcelRowResizers();
+    initCadSplitters();
     if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
 });
 
-window.applyLayoutPreset = function(preset) {
-    const mapSec = document.getElementById('mapSection');
-    const chartSec = document.getElementById('chartSection');
-    const container = document.getElementById('shared-visualizer');
-    if (!container || !mapSec || !chartSec) return;
-    
-    if (preset === 'equal') {
-        mapSec.style.height = '30vh';
-        chartSec.style.height = '28vh';
-    } else if (preset === 'map') {
-        mapSec.style.height = '48vh';
-        chartSec.style.height = '20vh';
-    } else if (preset === 'chart') {
-        mapSec.style.height = '20vh';
-        chartSec.style.height = '44vh';
+// CAD VIEWPORT STATE & MANAGEMENT (Rhino / Star-CCM+ Style)
+const cadViewportState = {
+    layout: 'cad', // 'cad' (50% Map / 25% Plot / 25% Timeline), 'map', 'plot', 'timeline', 'rows', 'cols'
+    maximized: null, // null | 'map' | 'plot' | 'timeline'
+    visible: {
+        map: true,
+        plot: true,
+        timeline: true
+    },
+    minimized: {
+        map: false,
+        plot: false,
+        timeline: false
+    },
+    splitters: {
+        verticalPct: 50,
+        horizontalPct: 50
     }
+};
+
+window.applyViewportPreset = function(preset) {
+    cadViewportState.layout = preset;
+    cadViewportState.maximized = null;
     
+    const vpMap = document.getElementById('vp-map-window');
+    const vpRight = document.getElementById('vp-right-container');
+    const vpPlot = document.getElementById('vp-plot-window');
+    const vpTimeline = document.getElementById('vp-timeline-window');
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const splitH = document.getElementById('splitter-cad-horizontal');
+    const vis = document.getElementById('shared-visualizer');
+
+    if (!vpMap || !vpRight || !vpPlot || !vpTimeline || !vis) return;
+
+    // Reset minimized
+    cadViewportState.minimized = { map: false, plot: false, timeline: false };
+    
+    // Clear layout modifier classes and inline displays
+    vis.classList.remove('cad-layout-rows', 'cad-layout-cols');
+    vpMap.style.removeProperty('display');
+    vpRight.style.removeProperty('display');
+    vpPlot.style.removeProperty('display');
+    vpTimeline.style.removeProperty('display');
+    if (splitV) splitV.style.removeProperty('display');
+    if (splitH) splitH.style.removeProperty('display');
+
+    if (preset === 'cad') {
+        // Standard CAD Viewport: 50% Left Map | 25% Right-Top Plot | 25% Right-Bottom Timeline
+        cadViewportState.visible = { map: true, plot: true, timeline: true };
+        cadViewportState.splitters.verticalPct = 50;
+        cadViewportState.splitters.horizontalPct = 50;
+        vpMap.style.flex = '0 0 50%';
+        vpMap.style.width = '50%';
+        vpRight.style.flex = '1';
+        vpPlot.style.flex = '0 0 50%';
+        vpPlot.style.height = '50%';
+        vpTimeline.style.flex = '1';
+    } else if (preset === 'map') {
+        // 100% Map
+        cadViewportState.visible = { map: true, plot: false, timeline: false };
+        vpMap.style.flex = '1';
+        vpMap.style.width = '100%';
+        vpRight.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+    } else if (preset === 'plot') {
+        // 100% Plot
+        cadViewportState.visible = { map: false, plot: true, timeline: false };
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpPlot.style.flex = '1';
+        vpPlot.style.height = '100%';
+        vpTimeline.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+    } else if (preset === 'timeline') {
+        // 100% Timeline Clipper
+        cadViewportState.visible = { map: false, plot: false, timeline: true };
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpPlot.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        vpTimeline.style.flex = '1';
+        vpTimeline.style.height = '100%';
+    } else if (preset === 'rows') {
+        // 3 Horizontal Stacked Rows
+        vis.classList.add('cad-layout-rows');
+        cadViewportState.visible = { map: true, plot: true, timeline: true };
+    } else if (preset === 'cols') {
+        // 3 Vertical Columns
+        vis.classList.add('cad-layout-cols');
+        cadViewportState.visible = { map: true, plot: true, timeline: true };
+    }
+
+    updateCadWindowControlsUI();
+    updateCadDock();
+
     setTimeout(() => {
         if (map) map.invalidateSize();
         if (timeChart) timeChart.resize();
-    }, 50);
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+        if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
+    }, 60);
+};
+
+window.applyLayoutPreset = window.applyViewportPreset; // Backwards compatibility
+
+window.toggleMaximizeViewport = function(vpId) {
+    const vpMap = document.getElementById('vp-map-window');
+    const vpRight = document.getElementById('vp-right-container');
+    const vpPlot = document.getElementById('vp-plot-window');
+    const vpTimeline = document.getElementById('vp-timeline-window');
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const splitH = document.getElementById('splitter-cad-horizontal');
+
+    if (!vpMap || !vpRight || !vpPlot || !vpTimeline) return;
+
+    if (cadViewportState.maximized === vpId) {
+        // Restore layout
+        cadViewportState.maximized = null;
+        window.applyViewportPreset(cadViewportState.layout || 'cad');
+        return;
+    }
+
+    // Maximize viewport
+    cadViewportState.maximized = vpId;
+    
+    if (vpId === 'map') {
+        vpMap.style.display = 'flex';
+        vpMap.style.flex = '1';
+        vpMap.style.width = '100%';
+        vpRight.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+    } else if (vpId === 'plot') {
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpPlot.style.display = 'flex';
+        vpPlot.style.flex = '1';
+        vpPlot.style.height = '100%';
+        vpTimeline.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+    } else if (vpId === 'timeline') {
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        vpPlot.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        vpTimeline.style.display = 'flex';
+        vpTimeline.style.flex = '1';
+        vpTimeline.style.height = '100%';
+    }
+
+    updateCadWindowControlsUI();
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (timeChart) timeChart.resize();
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    }, 60);
+};
+
+window.minimizeViewport = function(vpId) {
+    if (cadViewportState.maximized === vpId) {
+        cadViewportState.maximized = null;
+    }
+    cadViewportState.minimized[vpId] = !cadViewportState.minimized[vpId];
+    
+    const vpEl = document.getElementById(`vp-${vpId}-window`);
+    const bodyEl = vpEl ? vpEl.querySelector('.cad-viewport-body') : null;
+    if (bodyEl) {
+        if (cadViewportState.minimized[vpId]) {
+            bodyEl.style.display = 'none';
+            if (vpEl) {
+                vpEl.style.flex = '0 0 28px';
+                vpEl.style.minHeight = '28px';
+            }
+        } else {
+            bodyEl.style.display = '';
+            if (vpEl) {
+                vpEl.style.removeProperty('min-height');
+                if (vpId === 'map') {
+                    vpEl.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
+                    vpEl.style.width = `${cadViewportState.splitters.verticalPct}%`;
+                } else if (vpId === 'plot') {
+                    vpEl.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
+                    vpEl.style.height = `${cadViewportState.splitters.horizontalPct}%`;
+                } else if (vpId === 'timeline') {
+                    vpEl.style.flex = '1';
+                }
+            }
+        }
+    }
+
+    updateCadWindowControlsUI();
+    updateCadDock();
+
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (timeChart) timeChart.resize();
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    }, 60);
+};
+
+window.closeViewport = function(vpId) {
+    cadViewportState.visible[vpId] = false;
+    if (cadViewportState.maximized === vpId) {
+        cadViewportState.maximized = null;
+    }
+    
+    const vpMap = document.getElementById('vp-map-window');
+    const vpRight = document.getElementById('vp-right-container');
+    const vpPlot = document.getElementById('vp-plot-window');
+    const vpTimeline = document.getElementById('vp-timeline-window');
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const splitH = document.getElementById('splitter-cad-horizontal');
+
+    if (vpId === 'map' && vpMap) {
+        vpMap.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        if (vpRight) {
+            vpRight.style.flex = '1';
+            vpRight.style.width = '100%';
+        }
+    } else if (vpId === 'plot' && vpPlot) {
+        vpPlot.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        if (vpTimeline) {
+            vpTimeline.style.flex = '1';
+            vpTimeline.style.height = '100%';
+        }
+    } else if (vpId === 'timeline' && vpTimeline) {
+        vpTimeline.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        if (vpPlot) {
+            vpPlot.style.flex = '1';
+            vpPlot.style.height = '100%';
+        }
+    }
+
+    // If both right windows are closed, give map 100%
+    if (!cadViewportState.visible.plot && !cadViewportState.visible.timeline) {
+        if (vpRight) vpRight.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        if (vpMap) {
+            vpMap.style.display = 'flex';
+            vpMap.style.flex = '1';
+            vpMap.style.width = '100%';
+        }
+    }
+
+    updateCadWindowControlsUI();
+    updateCadDock();
+
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (timeChart) timeChart.resize();
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    }, 60);
+};
+
+window.toggleViewport = function(vpId, forceShow) {
+    const isVisible = forceShow !== undefined ? forceShow : !cadViewportState.visible[vpId];
+    if (isVisible) {
+        cadViewportState.visible[vpId] = true;
+        cadViewportState.minimized[vpId] = false;
+        window.applyViewportPreset(cadViewportState.layout || 'cad');
+    } else {
+        window.closeViewport(vpId);
+    }
+};
+
+window.updateCadWindowControlsUI = function() {
+    ['map', 'plot', 'timeline'].forEach(vp => {
+        const btnMax = document.getElementById(`btn-max-${vp}`);
+        if (btnMax) {
+            btnMax.textContent = (cadViewportState.maximized === vp) ? '❐' : '🗖';
+            btnMax.title = (cadViewportState.maximized === vp) ? 'Restaurar ventana' : 'Maximizar ventana';
+        }
+        const chk = document.getElementById(`chk-vp-${vp}`);
+        if (chk) {
+            chk.checked = !!cadViewportState.visible[vp];
+        }
+    });
+};
+
+window.updateCadDock = function() {
+    const dock = document.getElementById('cad-dock-bar');
+    if (!dock) return;
+    
+    const closedOrMin = [];
+    ['map', 'plot', 'timeline'].forEach(vp => {
+        if (!cadViewportState.visible[vp] || cadViewportState.minimized[vp]) {
+            closedOrMin.push(vp);
+        }
+    });
+
+    if (closedOrMin.length === 0) {
+        dock.style.display = 'none';
+        dock.innerHTML = '';
+        return;
+    }
+
+    dock.style.display = 'flex';
+    dock.innerHTML = closedOrMin.map(vp => {
+        const labels = {
+            map: '🗺️ Mapa Tracker',
+            plot: '📈 Gráfica Telemetría',
+            timeline: '🎬 Tramos Clipper'
+        };
+        const statusText = !cadViewportState.visible[vp] ? 'Cerrado' : 'Minimizado';
+        return `
+            <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; border-radius: 6px; padding: 4px 9px; font-size: 0.72rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.6);">
+                <span style="color: #38bdf8; font-weight: 700;">${labels[vp]} <span style="font-size:0.65rem; color:#94a3b8;">(${statusText})</span></span>
+                <button onclick="toggleViewport('${vp}', true)" style="background: #0284c7; color: white; border: none; border-radius: 4px; padding: 2px 7px; font-size: 0.68rem; cursor: pointer; font-weight: bold;">Restaurar ⮌</button>
+            </div>
+        `;
+    }).join('');
+};
+
+window.initCadSplitters = function() {
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const splitH = document.getElementById('splitter-cad-horizontal');
+    const vpMap = document.getElementById('vp-map-window');
+    const vpRight = document.getElementById('vp-right-container');
+    const vpPlot = document.getElementById('vp-plot-window');
+    const vpTimeline = document.getElementById('vp-timeline-window');
+    const container = document.getElementById('shared-visualizer');
+
+    if (!splitV || !splitH || !vpMap || !vpRight || !vpPlot || !vpTimeline || !container) return;
+
+    let isDraggingV = false;
+    let isDraggingH = false;
+    let startX = 0;
+    let startY = 0;
+    let startMapW = 0;
+    let startPlotH = 0;
+
+    splitV.addEventListener('mousedown', (e) => {
+        isDraggingV = true;
+        startX = e.clientX;
+        startMapW = vpMap.offsetWidth;
+        document.body.style.cursor = 'col-resize';
+        splitV.classList.add('dragging');
+        e.preventDefault();
+    });
+
+    splitH.addEventListener('mousedown', (e) => {
+        isDraggingH = true;
+        startY = e.clientY;
+        startPlotH = vpPlot.offsetHeight;
+        document.body.style.cursor = 'row-resize';
+        splitH.classList.add('dragging');
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDraggingV) {
+            const dx = e.clientX - startX;
+            const containerW = container.offsetWidth;
+            const newMapW = Math.max(160, Math.min(containerW - 160, startMapW + dx));
+            const pct = Math.round((newMapW / containerW) * 100);
+            cadViewportState.splitters.verticalPct = pct;
+            vpMap.style.flex = `0 0 ${pct}%`;
+            vpMap.style.width = `${pct}%`;
+            if (map) map.invalidateSize();
+            if (timeChart) timeChart.resize();
+        } else if (isDraggingH) {
+            const dy = e.clientY - startY;
+            const rightH = vpRight.offsetHeight;
+            const newPlotH = Math.max(80, Math.min(rightH - 80, startPlotH + dy));
+            const pct = Math.round((newPlotH / rightH) * 100);
+            cadViewportState.splitters.horizontalPct = pct;
+            vpPlot.style.flex = `0 0 ${pct}%`;
+            vpPlot.style.height = `${pct}%`;
+            if (timeChart) timeChart.resize();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDraggingV || isDraggingH) {
+            isDraggingV = false;
+            isDraggingH = false;
+            document.body.style.cursor = '';
+            splitV.classList.remove('dragging');
+            splitH.classList.remove('dragging');
+            if (map) map.invalidateSize();
+            if (timeChart) timeChart.resize();
+            if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+        }
+    });
+};
+
+window.toggleRibbonDropdown = function(name, event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById(`dropdown-ribbon-${name}`);
+    if (!dropdown) return;
+    const isShowing = dropdown.classList.contains('active');
+    document.querySelectorAll('.ribbon-dropdown-menu').forEach(d => d.classList.remove('active'));
+    if (!isShowing) {
+        dropdown.classList.add('active');
+    }
+};
+
+window.applyChartPreset = function(preset) {
+    if (!timeChart) return;
+    const allVars = ['sog', 'cog', 'hdg', 'heel', 'pitch', 'rot', 'tws', 'twd', 'twa', 'vmg', 'vmc', 'leeway', 'cspd', 'cdir'];
+    let activeVars = [];
+    if (preset === 'basic') {
+        activeVars = ['sog', 'hdg'];
+    } else if (preset === 'wind') {
+        activeVars = ['tws', 'twd', 'twa', 'vmg'];
+    } else if (preset === 'dynamics') {
+        activeVars = ['heel', 'pitch', 'rot'];
+    } else if (preset === 'current') {
+        activeVars = ['leeway', 'cspd', 'cdir'];
+    } else if (preset === 'all') {
+        activeVars = allVars;
+    } else if (preset === 'none') {
+        activeVars = [];
+    }
+
+    allVars.forEach(id => {
+        const btn = document.getElementById('btn-chart-' + id);
+        const dataset = timeChart.data.datasets.find(ds => ds.id === id);
+        const shouldShow = activeVars.includes(id);
+        if (dataset) {
+            dataset.hidden = !shouldShow;
+        }
+        if (btn) {
+            if (shouldShow) btn.classList.remove('inactive');
+            else btn.classList.add('inactive');
+        }
+    });
+
+    const needsY1 = timeChart.data.datasets.some(ds => ds.yAxisID === 'y1' && !ds.hidden);
+    timeChart.options.scales.y1.display = needsY1;
+    timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
+};
+
+window.updateActiveVarsPill = function() {
+    const pill = document.getElementById('activeVarsPill');
+    if (!pill || !timeChart) return;
+    const active = timeChart.data.datasets.filter(ds => !ds.hidden).map(ds => (ds.label || ds.id || '').toUpperCase());
+    pill.textContent = active.length > 0 ? active.slice(0, 3).join(', ') + (active.length > 3 ? ` +${active.length - 3}` : '') : 'Ninguna';
 };
 
 window.toggleTelemetryOverlay = function() {
@@ -97,65 +528,6 @@ window.toggleTelemetryOverlay = function() {
         lbl.textContent = isEs ? '+ Expandir' : '+ Expand';
         if (overlay) overlay.style.width = 'auto';
     }
-};
-
-window.initExcelRowResizers = function() {
-    const mapSec = document.getElementById('mapSection');
-    const chartSec = document.getElementById('chartSection');
-    const resizer1 = document.getElementById('resizerMapChart');
-    const resizer2 = document.getElementById('resizerChartTimeline');
-
-    if (!resizer1 || !resizer2 || !mapSec || !chartSec) return;
-
-    let isDragging1 = false;
-    let isDragging2 = false;
-    let startY = 0;
-    let startMapH = 0;
-    let startChartH = 0;
-
-    resizer1.addEventListener('mousedown', (e) => {
-        isDragging1 = true;
-        startY = e.clientY;
-        startMapH = mapSec.offsetHeight;
-        startChartH = chartSec.offsetHeight;
-        document.body.style.cursor = 'row-resize';
-        e.preventDefault();
-    });
-
-    resizer2.addEventListener('mousedown', (e) => {
-        isDragging2 = true;
-        startY = e.clientY;
-        startChartH = chartSec.offsetHeight;
-        document.body.style.cursor = 'row-resize';
-        e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isDragging1) {
-            const dy = e.clientY - startY;
-            const newMapH = Math.max(100, startMapH + dy);
-            const newChartH = Math.max(80, startChartH - dy);
-            mapSec.style.height = `${newMapH}px`;
-            chartSec.style.height = `${newChartH}px`;
-            if (map) map.invalidateSize();
-            if (timeChart) timeChart.resize();
-        } else if (isDragging2) {
-            const dy = e.clientY - startY;
-            const newChartH = Math.max(80, startChartH + dy);
-            chartSec.style.height = `${newChartH}px`;
-            if (timeChart) timeChart.resize();
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDragging1 || isDragging2) {
-            isDragging1 = false;
-            isDragging2 = false;
-            document.body.style.cursor = '';
-            if (map) map.invalidateSize();
-            if (timeChart) timeChart.resize();
-        }
-    });
 };
 
 function initMap() {
@@ -486,15 +858,23 @@ window.switchTab = function(tabId) {
     const activePanel = document.getElementById(`panel-${tabId}`);
     if (activePanel) activePanel.classList.add('active');
 
+    // Update Contextual Ribbon Bar
+    document.querySelectorAll('.ribbon-tab-content').forEach(el => el.style.display = 'none');
+    const activeRibbon = document.getElementById(`ribbon-tab-${tabId}`);
+    if (activeRibbon) activeRibbon.style.display = 'flex';
+
     const visualizer = document.getElementById('shared-visualizer');
     const visualizerTabs = ['telemetry', 'performance', 'maneuvers', 'compare'];
     if (visualizerTabs.includes(tabId)) {
-        visualizer.style.display = 'flex';
+        if (visualizer) visualizer.style.display = 'flex';
+        if (tabId === 'telemetry' && typeof applyViewportPreset === 'function') {
+            applyViewportPreset(cadViewportState.layout || 'cad');
+        }
         refreshVisualizer();
         setTimeout(() => { if (map) map.invalidateSize(); }, 60);
         setTimeout(() => { if (map) map.invalidateSize(); }, 250);
     } else {
-        visualizer.style.display = 'none';
+        if (visualizer) visualizer.style.display = 'none';
     }
 
     if (tabId === 'performance') {
@@ -520,6 +900,7 @@ function refreshVisualizer() {
         if (timeChart) {
             timeChart.resize();
             timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
         }
         if (sessionData && sessionData.track) {
             updateFrame(playbackIndex);
@@ -594,6 +975,7 @@ function setupPopoverDismiss() {
     document.addEventListener('click', (e) => {
         const tzPop = document.getElementById('tzPopover');
         const startPop = document.getElementById('startPopover');
+        const autoPop = document.getElementById('autoDetectPopover');
         
         if (tzPop && tzPop.style.display === 'flex') {
             if (!e.target.closest('#tzPopover') && !e.target.closest('[onclick*="tzPopover"]')) {
@@ -604,6 +986,17 @@ function setupPopoverDismiss() {
             if (!e.target.closest('#startPopover') && !e.target.closest('[onclick*="startPopover"]')) {
                 startPop.style.display = 'none';
             }
+        }
+        if (autoPop && autoPop.style.display === 'flex') {
+            if (!e.target.closest('#autoDetectPopover') && !e.target.closest('[onclick*="toggleAutoDetectPopover"]')) {
+                autoPop.style.display = 'none';
+            }
+        }
+        // Dismiss ribbon dropdown menus
+        if (!e.target.closest('.ribbon-dropdown-wrapper')) {
+            document.querySelectorAll('.ribbon-dropdown-menu.active').forEach(menu => {
+                menu.classList.remove('active');
+            });
         }
     });
 }
@@ -1284,6 +1677,7 @@ window.refreshChartData = function() {
     setDatasetData('cdir', cdirs);
 
     timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
     
     if (document.getElementById('totalTimeDisplay')) {
         document.getElementById('totalTimeDisplay').innerText = formatTimecode(totalDuration);
@@ -1391,6 +1785,7 @@ function autoFitVisualsToRemainingClips() {
             timeChart.options.scales.x.min = minTime;
             timeChart.options.scales.x.max = maxTime;
             timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
         }
 
         if (map && boundsPoints.length > 0) {
@@ -3788,6 +4183,7 @@ function registerBoatToFleet(boatData, name, color, filename) {
             yAxisID: 'y'
         });
         timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
     }
 
     const boat = {
@@ -3827,6 +4223,7 @@ window.removeFleetBoat = function(boatId) {
         if (dsIdx !== -1) {
             timeChart.data.datasets.splice(dsIdx, 1);
             timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
         }
     }
 
@@ -3855,6 +4252,7 @@ window.toggleBoatVisibility = function(boatId) {
         if (ds) {
             ds.hidden = !boat.visible;
             timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
         }
     }
 
@@ -4590,6 +4988,8 @@ function toggleVariable(id) {
     const needsY1 = timeChart.data.datasets.some(ds => ds.yAxisID === 'y1' && !ds.hidden);
     timeChart.options.scales.y1.display = needsY1;
     timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
 }
 window.toggleVariable = toggleVariable;
 
@@ -4611,6 +5011,7 @@ function chartZoom(delta) {
         scale.min = Math.max(0, center - newRange / 2);
         scale.max = Math.min(totalElapsed, center + newRange / 2);
         timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
     }
     if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
     if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
@@ -4625,6 +5026,7 @@ function resetChartZoom() {
         timeChart.options.scales.x.min = 0;
         timeChart.options.scales.x.max = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
         timeChart.update();
+    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
     }
     if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
     if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
