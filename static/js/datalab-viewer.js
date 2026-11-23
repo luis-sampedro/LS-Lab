@@ -56,13 +56,24 @@ document.addEventListener('DOMContentLoaded', () => {
     setupKeyboardShortcuts();
     setupPopoverDismiss();
     initCadSplitters();
+    initCadFloatingDrag();
     if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
 });
 
-// CAD VIEWPORT STATE & MANAGEMENT (Rhino / Star-CCM+ Style)
+// CAD VIEWPORT STATE & MANAGEMENT (Rhino / Star-CCM+ Style & Windows 11 Snap)
 const cadViewportState = {
-    layout: 'cad', // 'cad' (50% Map / 25% Plot / 25% Timeline), 'map', 'plot', 'timeline', 'rows', 'cols'
+    layout: 'cad', // 'cad' (50% Map / 25% Plot / 25% Timeline - Default), 'split-50', 'split-65', 'rows-3', 'map', 'plot', 'timeline', 'rows', 'cols'
     maximized: null, // null | 'map' | 'plot' | 'timeline'
+    floating: {
+        map: false,
+        plot: false,
+        timeline: false
+    },
+    floatingPos: {
+        map: { left: 30, top: 30, width: 480, height: 350 },
+        plot: { left: 60, top: 60, width: 500, height: 300 },
+        timeline: { left: 80, top: 100, width: 520, height: 260 }
+    },
     visible: {
         map: true,
         plot: true,
@@ -93,29 +104,69 @@ window.applyViewportPreset = function(preset) {
 
     if (!vpMap || !vpRight || !vpPlot || !vpTimeline || !vis) return;
 
-    // Reset minimized
+    // Reset minimized & floating
     cadViewportState.minimized = { map: false, plot: false, timeline: false };
+    cadViewportState.floating = { map: false, plot: false, timeline: false };
     
     // Clear layout modifier classes and inline displays
     vis.classList.remove('cad-layout-rows', 'cad-layout-cols');
-    vpMap.style.removeProperty('display');
+    [vpMap, vpPlot, vpTimeline].forEach(w => {
+        w.classList.remove('cad-pip-floating');
+        w.style.removeProperty('display');
+        w.style.removeProperty('left');
+        w.style.removeProperty('top');
+        w.style.removeProperty('width');
+        w.style.removeProperty('height');
+    });
+    document.querySelectorAll('.cad-btn-pip').forEach(b => {
+        b.classList.remove('active');
+        b.innerHTML = '🗗';
+        b.title = 'Picture-in-Picture / Modo Ventana Flotante (Grab & Move)';
+    });
+
     vpRight.style.removeProperty('display');
-    vpPlot.style.removeProperty('display');
-    vpTimeline.style.removeProperty('display');
     if (splitV) splitV.style.removeProperty('display');
     if (splitH) splitH.style.removeProperty('display');
 
-    if (preset === 'cad') {
-        // Standard CAD Viewport: 50% Left Map | 25% Right-Top Plot | 25% Right-Bottom Timeline
+    const badgeMap = document.getElementById('badge-vp-map');
+
+    if (preset === 'cad' || preset === 'default-cad') {
+        // Standard CAD Viewport (Default Bottom-Left Snap): 50% Left Map | 25% Right-Top Plot | 25% Right-Bottom Timeline
         cadViewportState.visible = { map: true, plot: true, timeline: true };
         cadViewportState.splitters.verticalPct = 50;
         cadViewportState.splitters.horizontalPct = 50;
         vpMap.style.flex = '0 0 50%';
         vpMap.style.width = '50%';
         vpRight.style.flex = '1';
+        vpRight.style.width = '50%';
         vpPlot.style.flex = '0 0 50%';
         vpPlot.style.height = '50%';
         vpTimeline.style.flex = '1';
+        if (badgeMap) badgeMap.textContent = '50%';
+    } else if (preset === 'split-50') {
+        // 50% Map | 50% Plot (Top-Left Snap)
+        cadViewportState.visible = { map: true, plot: true, timeline: false };
+        vpMap.style.flex = '0 0 50%';
+        vpMap.style.width = '50%';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '50%';
+        vpPlot.style.flex = '1';
+        vpPlot.style.height = '100%';
+        vpTimeline.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        if (badgeMap) badgeMap.textContent = '50%';
+    } else if (preset === 'split-65') {
+        // 65% Map | 35% Right (Top-Right Snap)
+        cadViewportState.visible = { map: true, plot: true, timeline: true };
+        cadViewportState.splitters.verticalPct = 65;
+        vpMap.style.flex = '0 0 65%';
+        vpMap.style.width = '65%';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '35%';
+        vpPlot.style.flex = '0 0 50%';
+        vpPlot.style.height = '50%';
+        vpTimeline.style.flex = '1';
+        if (badgeMap) badgeMap.textContent = '65%';
     } else if (preset === 'map') {
         // 100% Map
         cadViewportState.visible = { map: true, plot: false, timeline: false };
@@ -123,6 +174,7 @@ window.applyViewportPreset = function(preset) {
         vpMap.style.width = '100%';
         vpRight.style.display = 'none';
         if (splitV) splitV.style.display = 'none';
+        if (badgeMap) badgeMap.textContent = '100%';
     } else if (preset === 'plot') {
         // 100% Plot
         cadViewportState.visible = { map: false, plot: true, timeline: false };
@@ -145,14 +197,16 @@ window.applyViewportPreset = function(preset) {
         if (splitH) splitH.style.display = 'none';
         vpTimeline.style.flex = '1';
         vpTimeline.style.height = '100%';
-    } else if (preset === 'rows') {
+    } else if (preset === 'rows' || preset === 'rows-3') {
         // 3 Horizontal Stacked Rows
         vis.classList.add('cad-layout-rows');
         cadViewportState.visible = { map: true, plot: true, timeline: true };
+        if (badgeMap) badgeMap.textContent = 'Fila 1';
     } else if (preset === 'cols') {
         // 3 Vertical Columns
         vis.classList.add('cad-layout-cols');
         cadViewportState.visible = { map: true, plot: true, timeline: true };
+        if (badgeMap) badgeMap.textContent = 'Col 1';
     }
 
     updateCadWindowControlsUI();
@@ -455,6 +509,207 @@ window.initCadSplitters = function() {
             if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
         }
     });
+};
+
+// WINDOWS 11 SNAP FLYOUT & PICTURE-IN-PICTURE (PiP) ENGINE
+let snapFlyoutTimer = null;
+window.openSnapFlyout = function(targetVpId, event) {
+    if (snapFlyoutTimer) clearTimeout(snapFlyoutTimer);
+    const flyout = document.getElementById('windowsSnapFlyout');
+    if (!flyout) return;
+    
+    if (event) {
+        event.stopPropagation();
+        const btn = event.currentTarget || event.target;
+        const rect = btn.getBoundingClientRect();
+        const cont = document.getElementById('shared-visualizer') || document.body;
+        const contRect = cont.getBoundingClientRect();
+        
+        let top = rect.bottom - contRect.top + 6;
+        let left = rect.left - contRect.left - 180;
+        if (left < 10) left = 10;
+        if (left + 310 > contRect.width) left = Math.max(10, contRect.width - 320);
+        if (top + 230 > contRect.height) top = Math.max(10, rect.top - contRect.top - 235);
+        
+        flyout.style.top = `${top}px`;
+        flyout.style.left = `${left}px`;
+    }
+    flyout.classList.add('active');
+};
+
+window.closeSnapFlyoutDelay = function() {
+    snapFlyoutTimer = setTimeout(() => {
+        const flyout = document.getElementById('windowsSnapFlyout');
+        if (flyout) flyout.classList.remove('active');
+    }, 280);
+};
+
+window.closeSnapFlyout = function() {
+    if (snapFlyoutTimer) clearTimeout(snapFlyoutTimer);
+    const flyout = document.getElementById('windowsSnapFlyout');
+    if (flyout) flyout.classList.remove('active');
+};
+
+window.applySnapLayout = function(layoutType) {
+    window.closeSnapFlyout();
+    if (layoutType === 'pip-map') {
+        window.toggleFloatingViewport('map', true);
+    } else {
+        window.applyViewportPreset(layoutType);
+    }
+};
+
+window.toggleFloatingViewport = function(vpId, forceState) {
+    const windowEl = document.getElementById(`vp-${vpId}-window`);
+    const container = document.getElementById('shared-visualizer');
+    const vpRight = document.getElementById('vp-right-container');
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const pipBtn = document.getElementById(`btn-pip-${vpId}`);
+    if (!windowEl || !container) return;
+
+    const isFloating = windowEl.classList.contains('cad-pip-floating');
+    const targetState = typeof forceState === 'boolean' ? forceState : !isFloating;
+
+    cadViewportState.floating[vpId] = targetState;
+
+    if (targetState) {
+        // Pop out to Floating PiP Window
+        windowEl.classList.add('cad-pip-floating');
+        if (pipBtn) {
+            pipBtn.classList.add('active');
+            pipBtn.innerHTML = '⚓';
+            pipBtn.title = 'Anclar a la cuadrícula (Dock to Grid)';
+        }
+
+        const contRect = container.getBoundingClientRect();
+        const pos = cadViewportState.floatingPos[vpId] || {
+            left: Math.max(20, contRect.width - 480),
+            top: 40,
+            width: 460,
+            height: 320
+        };
+
+        windowEl.style.left = `${Math.max(10, Math.min(contRect.width - 320, pos.left))}px`;
+        windowEl.style.top = `${Math.max(10, Math.min(contRect.height - 180, pos.top))}px`;
+        windowEl.style.width = `${pos.width || 460}px`;
+        windowEl.style.height = `${pos.height || 320}px`;
+        windowEl.style.flex = 'none';
+
+        const badgeMap = document.getElementById('badge-vp-map');
+        if (vpId === 'map' && badgeMap) badgeMap.textContent = 'PiP Flotante';
+
+        // Expand remaining docked container to fill background
+        if (vpId === 'map' && vpRight) {
+            vpRight.style.flex = '1';
+            vpRight.style.width = '100%';
+            if (splitV) splitV.style.display = 'none';
+        }
+    } else {
+        // Dock back to Grid
+        windowEl.classList.remove('cad-pip-floating');
+        windowEl.style.removeProperty('left');
+        windowEl.style.removeProperty('top');
+        windowEl.style.removeProperty('width');
+        windowEl.style.removeProperty('height');
+        if (pipBtn) {
+            pipBtn.classList.remove('active');
+            pipBtn.innerHTML = '🗗';
+            pipBtn.title = 'Picture-in-Picture / Modo Ventana Flotante (Grab & Move)';
+        }
+
+        // Restore active preset
+        window.applyViewportPreset(cadViewportState.layout || 'cad');
+    }
+
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (timeChart) timeChart.resize();
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    }, 60);
+};
+
+window.initCadFloatingDrag = function() {
+    const titlebars = document.querySelectorAll('.cad-viewport-titlebar');
+    const container = document.getElementById('shared-visualizer');
+    if (!container) return;
+
+    titlebars.forEach(tb => {
+        tb.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button, select, input, .cad-size-badge, .cad-vars-pill, .cad-leg-badge')) return;
+
+            const win = tb.closest('.cad-viewport-window');
+            if (!win) return;
+            const vpId = win.id.replace('vp-', '').replace('-window', '');
+
+            const isFloating = win.classList.contains('cad-pip-floating');
+            const startMouseX = e.clientX;
+            const startMouseY = e.clientY;
+            const contRect = container.getBoundingClientRect();
+
+            let initialLeft = win.offsetLeft;
+            let initialTop = win.offsetTop;
+            let hasPoppedOut = false;
+
+            function onMouseMove(moveEv) {
+                const dx = moveEv.clientX - startMouseX;
+                const dy = moveEv.clientY - startMouseY;
+
+                // Pop out into PiP if dragged > 8px while docked
+                if (!win.classList.contains('cad-pip-floating') && !hasPoppedOut) {
+                    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                        hasPoppedOut = true;
+                        window.toggleFloatingViewport(vpId, true);
+                        const w = win.offsetWidth || 440;
+                        const h = win.offsetHeight || 300;
+                        initialLeft = Math.max(10, Math.min(contRect.width - w - 10, moveEv.clientX - contRect.left - w / 2));
+                        initialTop = Math.max(10, Math.min(contRect.height - h - 10, moveEv.clientY - contRect.top - 14));
+                        win.style.left = `${initialLeft}px`;
+                        win.style.top = `${initialTop}px`;
+                    }
+                    return;
+                }
+
+                document.body.style.cursor = 'grabbing';
+                const w = win.offsetWidth;
+                const h = win.offsetHeight;
+                const maxL = contRect.width - w - 4;
+                const maxT = contRect.height - h - 4;
+
+                const curL = Math.max(4, Math.min(maxL, initialLeft + dx));
+                const curT = Math.max(4, Math.min(maxT, initialTop + dy));
+
+                win.style.left = `${curL}px`;
+                win.style.top = `${curT}px`;
+
+                cadViewportState.floatingPos[vpId] = {
+                    left: curL,
+                    top: curT,
+                    width: w,
+                    height: h
+                };
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.style.cursor = '';
+                if (map) map.invalidateSize();
+                if (timeChart) timeChart.resize();
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    });
+
+    if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+            if (map) map.invalidateSize();
+            if (timeChart) timeChart.resize();
+            if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+        });
+        document.querySelectorAll('.cad-viewport-window').forEach(w => ro.observe(w));
+    }
 };
 
 window.toggleRibbonDropdown = function(name, event) {
@@ -990,6 +1245,13 @@ function setupPopoverDismiss() {
         if (autoPop && autoPop.style.display === 'flex') {
             if (!e.target.closest('#autoDetectPopover') && !e.target.closest('[onclick*="toggleAutoDetectPopover"]')) {
                 autoPop.style.display = 'none';
+            }
+        }
+        // Dismiss Windows 11 snap flyout
+        const snapFlyout = document.getElementById('windowsSnapFlyout');
+        if (snapFlyout && snapFlyout.classList.contains('active')) {
+            if (!e.target.closest('#windowsSnapFlyout') && !e.target.closest('.cad-btn-snap')) {
+                snapFlyout.classList.remove('active');
             }
         }
         // Dismiss ribbon dropdown menus

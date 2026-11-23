@@ -380,9 +380,24 @@
                         </label>
 
                         <div class="ribbon-dropdown-divider"></div>
-                        <div class="ribbon-menu-section-header">DISPOSICIÓN DE VISTAS (PRESETS CAD)</div>
-                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cad')">
-                            <span>📐 <strong>CAD Estándar</strong> (50% Mapa | 25% Plot | 25% Tramos)</span>
+                        <div class="ribbon-menu-section-header">DISTRIBUCIÓN WINDOWS SNAP &amp; PIP</div>
+                        <div class="ribbon-menu-item" onclick="applySnapLayout('default-cad')">
+                            <span>★ <strong>Predeterminada Snap</strong> (50% Mapa | 25% Plot | 25% Tramos)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applySnapLayout('pip-map')">
+                            <span>📌 <strong>Picture-in-Picture</strong> (Mapa Flotante - Grab &amp; Move)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('split-50')">
+                            <span>◫ <strong>2 Columnas Iguales</strong> (50% Mapa | 50% Gráfica)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('split-65')">
+                            <span>◫ <strong>Columna Ancha Izquierda</strong> (65% Mapa | 35% Derecha)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('rows')">
+                            <span>☰ <strong>3 Filas Horizontales</strong> (Mapa / Plot / Tramos)</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cols')">
+                            <span>◫ <strong>3 Columnas Verticales</strong></span>
                         </div>
                         <div class="ribbon-menu-item" onclick="applyViewportPreset('map')">
                             <span>🗺️ <strong>Solo Mapa</strong> (100% Pantalla Completa)</span>
@@ -392,12 +407,6 @@
                         </div>
                         <div class="ribbon-menu-item" onclick="applyViewportPreset('timeline')">
                             <span>🎬 <strong>Solo Tramos &amp; Scrubber</strong> (100% Completa)</span>
-                        </div>
-                        <div class="ribbon-menu-item" onclick="applyViewportPreset('rows')">
-                            <span>☰ <strong>3 Filas Horizontales</strong> (Mapa / Plot / Tramos)</span>
-                        </div>
-                        <div class="ribbon-menu-item" onclick="applyViewportPreset('cols')">
-                            <span>◫ <strong>3 Columnas Verticales</strong></span>
                         </div>
 
                         <div class="ribbon-dropdown-divider"></div>
@@ -693,11 +702,12 @@
                         <div class="cad-titlebar-left">
                             <span>🗺️</span>
                             <span class="cad-title-text">TRACKER DE MAPA</span>
-                            <span class="cad-size-badge">50%</span>
+                            <span class="cad-size-badge" id="badge-vp-map">50%</span>
                         </div>
                         <div class="cad-titlebar-right">
+                            <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-map" onclick="toggleFloatingViewport('map')" title="Picture-in-Picture / Modo Ventana Flotante (Grab &amp; Move)">🗗</button>
                             <button type="button" class="cad-btn-win" onclick="minimizeViewport('map')" title="Minimizar Ventana">_</button>
-                            <button type="button" class="cad-btn-win" id="btn-max-map" onclick="toggleMaximizeViewport('map')" title="Maximizar / Restaurar">🗖</button>
+                            <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-map" onclick="openSnapFlyout('map', event)" onmouseenter="openSnapFlyout('map', event)" title="Windows Snap Layouts / Maximizar">🗖</button>
                             <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('map')" title="Cerrar Ventana">✕</button>
                         </div>
                     </div>
@@ -904,8 +914,9 @@
                             </div>
                             <div class="cad-titlebar-right">
                                 <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('plots', event)" title="Seleccionar Variables y Zoom">⚙️ Variables</button>
+                                <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-plot" onclick="toggleFloatingViewport('plot')" title="Picture-in-Picture / Modo Ventana Flotante">🗗</button>
                                 <button type="button" class="cad-btn-win" onclick="minimizeViewport('plot')" title="Minimizar Ventana">_</button>
-                                <button type="button" class="cad-btn-win" id="btn-max-plot" onclick="toggleMaximizeViewport('plot')" title="Maximizar / Restaurar">🗖</button>
+                                <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-plot" onclick="openSnapFlyout('plot', event)" onmouseenter="openSnapFlyout('plot', event)" title="Windows Snap Layouts / Maximizar">🗖</button>
                                 <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('plot')" title="Cerrar Ventana">✕</button>
                             </div>
                         </div>
@@ -930,8 +941,9 @@
                             </div>
                             <div class="cad-titlebar-right">
                                 <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('legs', event)" title="Herramientas de Tramos">✂️ Herramientas</button>
+                                <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-timeline" onclick="toggleFloatingViewport('timeline')" title="Picture-in-Picture / Modo Ventana Flotante">🗗</button>
                                 <button type="button" class="cad-btn-win" onclick="minimizeViewport('timeline')" title="Minimizar Ventana">_</button>
-                                <button type="button" class="cad-btn-win" id="btn-max-timeline" onclick="toggleMaximizeViewport('timeline')" title="Maximizar / Restaurar">🗖</button>
+                                <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-timeline" onclick="openSnapFlyout('timeline', event)" onmouseenter="openSnapFlyout('timeline', event)" title="Windows Snap Layouts / Maximizar">🗖</button>
                                 <button type="button" class="cad-btn-win cad-btn-close" onclick="closeViewport('timeline')" title="Cerrar Ventana">✕</button>
                             </div>
                         </div>
@@ -991,6 +1003,54 @@
 
                 <!-- Barra Dock Inferior para Ventanas Minimizadas / Cerradas -->
                 <div id="cad-dock-bar" style="display: none; position: absolute; bottom: 8px; left: 8px; z-index: 1000; gap: 6px;"></div>
+
+                <!-- Windows 11 Snap Layouts Flyout -->
+                <div id="windowsSnapFlyout" class="windows-snap-flyout" onmouseenter="clearTimeout(snapFlyoutTimer)" onmouseleave="closeSnapFlyoutDelay()">
+                    <div class="snap-flyout-header">
+                        <span>🪟 Windows Snap Layouts</span>
+                        <span style="font-size: 0.62rem; color: #64748b;">Elige distribución</span>
+                    </div>
+                    <div class="snap-cards-grid">
+                        <!-- 1. Top-Left: 50% | 50% -->
+                        <div class="snap-card" onclick="applySnapLayout('split-50')" title="Dos columnas iguales (50% | 50%)">
+                            <div class="snap-zone" style="flex: 1; height: 100%;">50%</div>
+                            <div class="snap-zone" style="flex: 1; height: 100%;">50%</div>
+                        </div>
+
+                        <!-- 2. Top-Right: 65% | 35% -->
+                        <div class="snap-card" onclick="applySnapLayout('split-65')" title="Columna ancha izquierda (65% | 35%)">
+                            <div class="snap-zone" style="flex: 1.8; height: 100%;">65%</div>
+                            <div class="snap-zone" style="flex: 1; height: 100%;">35%</div>
+                        </div>
+
+                        <!-- 3. Bottom-Left: DEFAULT (50% Map | 25% Plot + 25% Legs) -->
+                        <div class="snap-card active-default" onclick="applySnapLayout('default-cad')" title="Configuración Predeterminada CAD (50% Mapa | 25% Gráfica / 25% Tramos)">
+                            <span class="snap-card-badge">★ Default</span>
+                            <div class="snap-zone" style="flex: 1; height: 100%; font-size: 0.58rem; text-align: center;">Mapa<br>50%</div>
+                            <div style="flex: 1; height: 100%; display: flex; flex-direction: column; gap: 3px;">
+                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">Plot 25%</div>
+                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">Legs 25%</div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Bottom-Right: 3 Filas Horizontales -->
+                        <div class="snap-card" onclick="applySnapLayout('rows-3')" title="3 Filas horizontales apiladas">
+                            <div style="width: 100%; height: 100%; display: flex; flex-direction: column; gap: 2px;">
+                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">1. Mapa</div>
+                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">2. Gráfica</div>
+                                <div class="snap-zone" style="flex: 1; font-size: 0.55rem;">3. Tramos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick PiP Picture-in-Picture card -->
+                    <div class="snap-card" style="height: auto; padding: 6px 8px; justify-content: space-between; align-items: center;" onclick="applySnapLayout('pip-map')" title="Modo Picture-in-Picture con Mapa Flotante (Grab &amp; Move)">
+                        <span style="font-size: 0.72rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                            <span>📌</span> <strong>Picture-in-Picture (Mapa Flotante)</strong>
+                        </span>
+                        <span style="font-size: 0.65rem; color: #38bdf8; font-weight: bold;">Grab &amp; Move ➔</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2159,6 +2219,120 @@ main#top {
     width: 24px;
     background: #475569;
     border-radius: 1px;
+}
+
+/* Picture-in-Picture (PiP) / Modo Ventana Flotante (Grab & Move) */
+.cad-viewport-window.cad-pip-floating {
+    position: absolute !important;
+    z-index: 2500 !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 0 2px #0284c7 !important;
+    border-radius: 8px !important;
+    resize: both !important;
+    overflow: hidden !important;
+    min-width: 320px !important;
+    min-height: 220px !important;
+    background: #0b1120 !important;
+}
+.cad-viewport-window.cad-pip-floating .cad-viewport-titlebar {
+    cursor: grab;
+    background: #0e1e38;
+    border-bottom: 1px solid #0284c7;
+}
+.cad-viewport-window.cad-pip-floating .cad-viewport-titlebar:active {
+    cursor: grabbing;
+}
+.cad-btn-pip.active {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+}
+
+/* Windows 11 Snap Layouts Flyout (Distribuciones Visuales Estilo Windows Snap) */
+.windows-snap-flyout {
+    position: absolute;
+    z-index: 4000;
+    background: #1e1f22;
+    border: 1px solid #383a40;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.9);
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 290px;
+    backdrop-filter: blur(14px);
+    user-select: none;
+}
+.windows-snap-flyout.active {
+    display: flex;
+}
+.snap-flyout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2e3035;
+}
+.snap-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.snap-card {
+    height: 72px;
+    background: #2b2d31;
+    border: 1px solid #3e4046;
+    border-radius: 6px;
+    padding: 5px;
+    display: flex;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+.snap-card:hover {
+    border-color: #38bdf8;
+    background: #313338;
+}
+.snap-card.active-default {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 1px #0284c7;
+}
+.snap-card-badge {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 0.55rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.snap-zone {
+    background: #1e1f22;
+    border: 1px solid #4e5058;
+    border-radius: 3px;
+    transition: all 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: #80848e;
+}
+.snap-card:hover .snap-zone {
+    background: #232428;
+    border-color: #6d6f78;
+}
+.snap-zone:hover {
+    background: #0284c7 !important;
+    border-color: #38bdf8 !important;
+    color: white !important;
 }
 
 /* Informes Multipágina Estilo Overleaf A4 */
