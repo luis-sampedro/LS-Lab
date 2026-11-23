@@ -715,151 +715,7 @@
                     <div id="mapSection" class="cad-viewport-body" style="flex: 1; position: relative; min-height: 0; width: 100%; height: 100%; overflow: hidden;">
                     <div id="map" style="width: 100%; height: 100%; background: #020617;"></div>
                     
-                    <div id="mapTelemetryOverlay" style="position: absolute; top: 10px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; width: 380px; max-height: calc(100% - 20px);">
-                        <!-- Telemetry Cards Container -->
-                        <div style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 0.6rem 0.75rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #f8fafc; display: flex; flex-direction: column; max-height: 100%;">
-                            
-                            <!-- Header with Minimize / Expand Toggle -->
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px;">
-                                <span style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
-                                    <span>📊</span> <span>TELEMETRÍA EN VIVO</span>
-                                </span>
-                                <button type="button" id="btnToggleTelemetryOverlay" onclick="toggleTelemetryOverlay()" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #475569; color: #cbd5e1; border-radius: 4px; font-size: 0.65rem; padding: 2px 7px; cursor: pointer; font-weight: 600;" title="Minimizar / Expandir panel">
-                                    <span id="lblToggleTelemetryOverlay">− Minimizar</span>
-                                </button>
-                            </div>
-                            
-                            <div id="telemetryOverlayScrollContent" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1;">
-                            
-                            <!-- Group 1: Raw Telemetry (Read from file) -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>TELEMETRÍA DIRECTA (ARCHIVO)</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">SOG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-sog">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f59e0b;">COG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-cog">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">RUMBO MAG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-hdg">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ef4444;">ESCORA</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #ef4444;"><span id="val-heel">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ec4899;">PITCH</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #ec4899;"><span id="val-pitch">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #a855f7;">ROT</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #a855f7;"><span id="val-rot">0.0</span><span style="font-size:0.6rem;">°/s</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Group 2: Derived Telemetry -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>TELEMETRÍA DERIVADA</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #10b981;">VMG</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #10b981;"><span id="val-vmg">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #06b6d4;">VMC</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #06b6d4;"><span id="val-vmc">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #8b5cf6;">TWA</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #8b5cf6;"><span id="val-twa">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f43f5e;">TWD</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f43f5e;"><span id="val-twd">0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #eab308;">ABATIMIENTO</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #eab308;"><span id="val-leeway">0.0°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #3b82f6;">CORRIENTE</div>
-                                    <div style="font-size: 0.75rem; font-weight: 700; color: #3b82f6; margin-top:2px;"><span id="val-current">0.0kn @ 0°</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Group 3: Racecourse Marks & Live Race Metrics -->
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                                <span>CAMPO DE REGATA</span>
-                                <span style="font-size: 0.6rem; color: #64748b;">BOYAS Y MÉTRICAS</span>
-                            </div>
-                            
-                            <!-- Selección y Autodetcción de Viento -->
-                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; background: rgba(2, 6, 23, 0.5); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-                                <span style="font-size: 0.7rem; color: #38bdf8; font-weight: bold;">💨 VIENTO:</span>
-                                <select id="telemetryWindSource" onchange="updateTelemetryWindCustomization()" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
-                                    <option value="calibrated">TWD Calibrado (<span id="sel-twd-val">215°</span>)</option>
-                                    <option value="custom">Ángulo Personalizado...</option>
-                                </select>
-                                <input type="number" id="telemetryCustomTwd" value="215" min="0" max="360" onchange="updateTelemetryWindCustomization()" style="display:none; width: 55px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
-                                <button onclick="autoDetectWindTwd()" title="Autodetectar TWD por Simetría GPS o Baliza" style="background: #0284c7; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 3px;">⚡ Detectar</button>
-                            </div>
-
-                            <!-- Controls for adding marks -->
-                            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
-                                <select id="raceMarkTypeSelect" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
-                                    <option value="windward">Barlovento (W)</option>
-                                    <option value="offset">Desmarque (Offset)</option>
-                                    <option value="offset2">Desmarque 2</option>
-                                    <option value="leeward">Sotavento (L)</option>
-                                    <option value="gate1">Puerta 1</option>
-                                    <option value="gate2">Puerta 2</option>
-                                    <option value="pin">Pin (Boya Salida)</option>
-                                    <option value="finish1">Llegada 1</option>
-                                    <option value="finish2">Llegada 2</option>
-                                    <option value="rc">Comité (RC)</option>
-                                </select>
-                                <button onclick="placeMarkAtBoat()" title="Colocar boya en posición del barco" style="background: #3b82f6; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 Barco</button>
-                                <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Hacer clic en el mapa" style="background: #475569; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Mapa</button>
-                                <button onclick="clearAllMarks()" title="Borrar boyas" style="background: #dc2626; color: white; border: none; font-size: 0.7rem; padding: 4px 6px; border-radius: 4px; cursor: pointer;">🗑</button>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #f59e0b;">RUMBO W</div>
-                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-top-brg">--°</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #10b981;">VENTAJA SALIDA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #10b981; margin-top:2px;"><span id="val-line-bias">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #38bdf8;">LONG SALIDA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-top:2px;"><span id="val-line-len">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #a855f7;">TRAMO</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #a855f7; margin-top:2px;"><span id="val-leg-type">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #ec4899;">BOYA OBJETIVO</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #ec4899; margin-top:2px;"><span id="val-target-mark">--</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: #eab308;">DIST BOYA</div>
-                                    <div style="font-size: 0.85rem; font-weight: 700; color: #eab308; margin-top:2px;"><span id="val-dist-mark">--</span></div>
-                                </div>
-                            </div>
-                            </div><!-- END telemetryOverlayScrollContent -->
-                        </div>
-                    </div>
+                    
 
                     <div style="position: absolute; bottom: 12px; left: 12px; z-index: 1000; display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
                         <button id="playBtn" style="background: #38bdf8; color: #0f172a; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">▶</button>
@@ -1004,6 +860,160 @@
                 <!-- Barra Dock Inferior para Ventanas Minimizadas / Cerradas -->
                 <div id="cad-dock-bar" style="display: none; position: absolute; bottom: 8px; left: 8px; z-index: 1000; gap: 6px;"></div>
 
+                <!-- LIVE TELEMETRY HUD OVERLAY (PiP Floating, Default On Top of Map) -->
+                <div id="mapTelemetryOverlay" class="cad-hud-pip" style="position: absolute; top: 34px; right: calc(50% + 14px); z-index: 2200; width: 380px; max-height: calc(100% - 46px); display: flex; flex-direction: column;">
+                        <!-- Telemetry Cards Container -->
+                        <div style="background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 0.6rem 0.75rem; box-shadow: 0 16px 40px rgba(0,0,0,0.85); color: #f8fafc; display: flex; flex-direction: column; max-height: 100%;">
+                            <!-- Header with Grab Bar, Reset to Map, and Minimize / Expand Toggle -->
+                            <div id="hudTitlebar" class="cad-hud-titlebar" style="cursor: grab; display: flex; align-items: center; justify-content: space-between; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px; user-select: none;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 0.75rem; color: #64748b; cursor: grab;" title="Arrastrar y Mover HUD libremente">⠿</span>
+                                    <span style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
+                                        <span>📊</span> <span>TELEMETRÍA EN VIVO HUD</span>
+                                    </span>
+                                    <span id="lblHudPipBadge" style="font-size: 0.6rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 3px; padding: 1px 4px; font-weight: 700;">En Mapa</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" onclick="resetHudToMapDefault()" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #475569; color: #38bdf8; border-radius: 4px; font-size: 0.65rem; padding: 2px 6px; cursor: pointer; font-weight: 600;" title="Reanclar encima del mapa">
+                                        ⚓ Reanclar
+                                    </button>
+                                    <button type="button" id="btnToggleTelemetryOverlay" onclick="toggleTelemetryOverlay()" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #475569; color: #cbd5e1; border-radius: 4px; font-size: 0.65rem; padding: 2px 7px; cursor: pointer; font-weight: 600;" title="Minimizar / Expandir panel de telemetría">
+                                        <span id="lblToggleTelemetryOverlay">− Minimizar</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="telemetryOverlayScrollContent" style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                            
+                            <!-- Group 1: Raw Telemetry (Read from file) -->
+                            <div style="font-size: 0.7rem; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <span>TELEMETRÍA DIRECTA (ARCHIVO)</span>
+                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #38bdf8;">SOG</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-sog">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #f59e0b;">COG</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-cog">0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #38bdf8;">RUMBO MAG</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #38bdf8;"><span id="val-hdg">0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #ef4444;">ESCORA</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #ef4444;"><span id="val-heel">0.0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #ec4899;">PITCH</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #ec4899;"><span id="val-pitch">0.0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #a855f7;">ROT</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #a855f7;"><span id="val-rot">0.0</span><span style="font-size:0.6rem;">°/s</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Group 2: Derived Telemetry -->
+                            <div style="font-size: 0.7rem; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <span>TELEMETRÍA DERIVADA</span>
+                                <span style="font-size: 0.6rem; color: #64748b;">6 VARIABLES</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #10b981;">VMG</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #10b981;"><span id="val-vmg">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #06b6d4;">VMC</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #06b6d4;"><span id="val-vmc">0.0</span> <span style="font-size:0.6rem;">kn</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #8b5cf6;">TWA</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #8b5cf6;"><span id="val-twa">0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #f43f5e;">TWD</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #f43f5e;"><span id="val-twd">0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #eab308;">ABATIMIENTO</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #eab308;"><span id="val-leeway">0.0°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #3b82f6;">CORRIENTE</div>
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: #3b82f6; margin-top:2px;"><span id="val-current">0.0kn @ 0°</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Group 3: Racecourse Marks & Live Race Metrics -->
+                            <div style="font-size: 0.7rem; font-weight: bold; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <span>CAMPO DE REGATA</span>
+                                <span style="font-size: 0.6rem; color: #64748b;">BOYAS Y MÉTRICAS</span>
+                            </div>
+                            
+                            <!-- Selección y Autodetcción de Viento -->
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; background: rgba(2, 6, 23, 0.5); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                                <span style="font-size: 0.7rem; color: #38bdf8; font-weight: bold;">💨 VIENTO:</span>
+                                <select id="telemetryWindSource" onchange="updateTelemetryWindCustomization()" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
+                                    <option value="calibrated">TWD Calibrado (<span id="sel-twd-val">215°</span>)</option>
+                                    <option value="custom">Ángulo Personalizado...</option>
+                                </select>
+                                <input type="number" id="telemetryCustomTwd" value="215" min="0" max="360" onchange="updateTelemetryWindCustomization()" style="display:none; width: 55px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 3px 4px; border-radius: 4px; text-align: center;">
+                                <button onclick="autoDetectWindTwd()" title="Autodetectar TWD por Simetría GPS o Baliza" style="background: #0284c7; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 3px;">⚡ Detectar</button>
+                            </div>
+
+                            <!-- Controls for adding marks -->
+                            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                                <select id="raceMarkTypeSelect" style="flex: 1; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.7rem; padding: 4px; border-radius: 4px;">
+                                    <option value="windward">Barlovento (W)</option>
+                                    <option value="offset">Desmarque (Offset)</option>
+                                    <option value="offset2">Desmarque 2</option>
+                                    <option value="leeward">Sotavento (L)</option>
+                                    <option value="gate1">Puerta 1</option>
+                                    <option value="gate2">Puerta 2</option>
+                                    <option value="pin">Pin (Boya Salida)</option>
+                                    <option value="finish1">Llegada 1</option>
+                                    <option value="finish2">Llegada 2</option>
+                                    <option value="rc">Comité (RC)</option>
+                                </select>
+                                <button onclick="placeMarkAtBoat()" title="Colocar boya en posición del barco" style="background: #3b82f6; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 Barco</button>
+                                <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Hacer clic en el mapa" style="background: #475569; color: white; border: none; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Mapa</button>
+                                <button onclick="clearAllMarks()" title="Borrar boyas" style="background: #dc2626; color: white; border: none; font-size: 0.7rem; padding: 4px 6px; border-radius: 4px; cursor: pointer;">🗑</button>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; background: rgba(2, 6, 23, 0.5); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #f59e0b;">RUMBO W</div>
+                                    <div style="font-size: 1rem; font-weight: 700; color: #f59e0b;"><span id="val-top-brg">--°</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #10b981;">VENTAJA SALIDA</div>
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #10b981; margin-top:2px;"><span id="val-line-bias">--</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #38bdf8;">LONG SALIDA</div>
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-top:2px;"><span id="val-line-len">--</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #a855f7;">TRAMO</div>
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #a855f7; margin-top:2px;"><span id="val-leg-type">--</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #ec4899;">BOYA OBJETIVO</div>
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #ec4899; margin-top:2px;"><span id="val-target-mark">--</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.6rem; color: #eab308;">DIST BOYA</div>
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #eab308; margin-top:2px;"><span id="val-dist-mark">--</span></div>
+                                </div>
+                            </div>
+                            </div><!-- END telemetryOverlayScrollContent -->
+                        </div>
+                    </div>
+
                 <!-- Windows 11 Snap Layouts Flyout -->
                 <div id="windowsSnapFlyout" class="windows-snap-flyout" onmouseenter="clearTimeout(snapFlyoutTimer)" onmouseleave="closeSnapFlyoutDelay()">
                     <div class="snap-flyout-header">
@@ -1043,12 +1053,19 @@
                         </div>
                     </div>
 
-                    <!-- Quick PiP Picture-in-Picture card -->
-                    <div class="snap-card" style="height: auto; padding: 6px 8px; justify-content: space-between; align-items: center;" onclick="applySnapLayout('pip-map')" title="Modo Picture-in-Picture con Mapa Flotante (Grab &amp; Move)">
-                        <span style="font-size: 0.72rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
-                            <span>📌</span> <strong>Picture-in-Picture (Mapa Flotante)</strong>
-                        </span>
-                        <span style="font-size: 0.65rem; color: #38bdf8; font-weight: bold;">Grab &amp; Move ➔</span>
+                    <!-- Opciones rápidas de PiP y Anclar Todo en Flyout -->
+                    <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                        <div class="snap-card" style="height: auto; padding: 6px 8px; justify-content: center; align-items: center; background: #0c1c38; border: 1px solid #0284c7;" onclick="applySnapLayout('dock-all')" title="Reanclar todas las ventanas ocupando el 100% de la pantalla y fijar HUD sobre el mapa">
+                            <span style="font-size: 0.72rem; color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                                <span>⚓</span> <span>Reanclar Todo (100% Pantalla)</span>
+                            </span>
+                        </div>
+                        <div class="snap-card" style="height: auto; padding: 6px 8px; justify-content: space-between; align-items: center;" onclick="applySnapLayout('pip-map')" title="Modo Picture-in-Picture con Mapa Flotante (Grab &amp; Move)">
+                            <span style="font-size: 0.72rem; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                                <span>🗗</span> <strong>Mapa Flotante PiP</strong>
+                            </span>
+                            <span style="font-size: 0.65rem; color: #38bdf8; font-weight: bold;">Grab &amp; Move ➔</span>
+                        </div>
                     </div>
                 </div>
             </div>

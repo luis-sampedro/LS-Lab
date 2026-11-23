@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPopoverDismiss();
     initCadSplitters();
     initCadFloatingDrag();
+    if (typeof window.resetHudToMapDefault === 'function') window.resetHudToMapDefault();
+    if (typeof window.adjustDockedWindowsFill === 'function') window.adjustDockedWindowsFill();
     if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
 });
 
@@ -143,6 +145,11 @@ window.applyViewportPreset = function(preset) {
         vpPlot.style.height = '50%';
         vpTimeline.style.flex = '1';
         if (badgeMap) badgeMap.textContent = '50%';
+        const badgePlot = document.getElementById('badge-vp-plot');
+        const badgeTimeline = document.getElementById('badge-vp-timeline');
+        if (badgePlot) badgePlot.textContent = '25%';
+        if (badgeTimeline) badgeTimeline.textContent = '25%';
+        if (typeof window.resetHudToMapDefault === 'function') window.resetHudToMapDefault();
     } else if (preset === 'split-50') {
         // 50% Map | 50% Plot (Top-Left Snap)
         cadViewportState.visible = { map: true, plot: true, timeline: false };
@@ -483,6 +490,10 @@ window.initCadSplitters = function() {
             cadViewportState.splitters.verticalPct = pct;
             vpMap.style.flex = `0 0 ${pct}%`;
             vpMap.style.width = `${pct}%`;
+            const hud = document.getElementById('mapTelemetryOverlay');
+            if (hud && hud.style.left === 'auto') {
+                hud.style.right = `calc(${100 - pct}% + 14px)`;
+            }
             if (map) map.invalidateSize();
             if (timeChart) timeChart.resize();
         } else if (isDraggingH) {
@@ -554,16 +565,163 @@ window.applySnapLayout = function(layoutType) {
     window.closeSnapFlyout();
     if (layoutType === 'pip-map') {
         window.toggleFloatingViewport('map', true);
+    } else if (layoutType === 'pip-plot') {
+        window.toggleFloatingViewport('plot', true);
+    } else if (layoutType === 'pip-timeline') {
+        window.toggleFloatingViewport('timeline', true);
+    } else if (layoutType === 'dock-all') {
+        window.applyViewportPreset('default-cad');
+        window.resetHudToMapDefault();
     } else {
         window.applyViewportPreset(layoutType);
     }
 };
 
+window.resetHudToMapDefault = function() {
+    const hud = document.getElementById('mapTelemetryOverlay');
+    const badge = document.getElementById('lblHudPipBadge');
+    if (!hud) return;
+
+    const vPct = (cadViewportState && cadViewportState.splitters && cadViewportState.splitters.verticalPct) ? cadViewportState.splitters.verticalPct : 50;
+    hud.style.position = 'absolute';
+    hud.style.top = '34px';
+    hud.style.right = `calc(${100 - vPct}% + 14px)`;
+    hud.style.left = 'auto';
+    hud.style.bottom = 'auto';
+    hud.style.zIndex = '2200';
+
+    if (badge) {
+        const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+        badge.textContent = isEs ? 'En Mapa' : 'On Map';
+    }
+};
+
+window.adjustDockedWindowsFill = function() {
+    const vpMap = document.getElementById('vp-map-window');
+    const vpRight = document.getElementById('vp-right-container');
+    const vpPlot = document.getElementById('vp-plot-window');
+    const vpTimeline = document.getElementById('vp-timeline-window');
+    const splitV = document.getElementById('splitter-cad-vertical');
+    const splitH = document.getElementById('splitter-cad-horizontal');
+    const badgeMap = document.getElementById('badge-vp-map');
+    const badgePlot = document.getElementById('badge-vp-plot');
+    const badgeTimeline = document.getElementById('badge-vp-timeline');
+
+    if (!vpMap || !vpRight || !vpPlot || !vpTimeline) return;
+
+    const fMap = !!cadViewportState.floating.map;
+    const fPlot = !!cadViewportState.floating.plot;
+    const fTimeline = !!cadViewportState.floating.timeline;
+
+    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+    const pipText = isEs ? 'PiP Flotante' : 'Floating PiP';
+
+    if (badgeMap) badgeMap.textContent = fMap ? pipText : `${cadViewportState.splitters.verticalPct}%`;
+    if (badgePlot) badgePlot.textContent = fPlot ? pipText : '25%';
+    if (badgeTimeline) badgeTimeline.textContent = fTimeline ? pipText : '25%';
+
+    // Allow floating children in vp-right-container to cross boundaries without clipping
+    if (fPlot || fTimeline) {
+        vpRight.style.overflow = 'visible';
+    } else {
+        vpRight.style.overflow = 'hidden';
+    }
+
+    if (fMap && fPlot && fTimeline) {
+        // ALL 3 ARE FLOATING
+        vpRight.style.display = 'none';
+        if (splitV) splitV.style.display = 'none';
+        if (splitH) splitH.style.display = 'none';
+        return;
+    }
+
+    if (fMap) {
+        // MAP IS FLOATING -> Right container expands to fill 100% width
+        vpRight.style.display = 'flex';
+        vpRight.style.flex = '1';
+        vpRight.style.width = '100%';
+        if (splitV) splitV.style.display = 'none';
+
+        if (fPlot && !fTimeline) {
+            // Plot is floating, timeline fills 100% height
+            vpTimeline.style.display = 'flex';
+            vpTimeline.style.flex = '1';
+            vpTimeline.style.height = '100%';
+            if (splitH) splitH.style.display = 'none';
+            if (badgeTimeline) badgeTimeline.textContent = '100%';
+        } else if (!fPlot && fTimeline) {
+            // Timeline is floating, plot fills 100% height
+            vpPlot.style.display = 'flex';
+            vpPlot.style.flex = '1';
+            vpPlot.style.height = '100%';
+            if (splitH) splitH.style.display = 'none';
+            if (badgePlot) badgePlot.textContent = '100%';
+        } else if (!fPlot && !fTimeline) {
+            // Both plot and timeline docked, 50% height each across 100% width
+            vpPlot.style.display = 'flex';
+            vpPlot.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
+            vpPlot.style.height = `${cadViewportState.splitters.horizontalPct}%`;
+            vpTimeline.style.display = 'flex';
+            vpTimeline.style.flex = '1';
+            vpTimeline.style.removeProperty('height');
+            if (splitH) splitH.style.display = 'flex';
+            if (badgePlot) badgePlot.textContent = '50%';
+            if (badgeTimeline) badgeTimeline.textContent = '50%';
+        }
+    } else {
+        // MAP IS DOCKED
+        vpMap.style.display = 'flex';
+
+        if (fPlot && fTimeline) {
+            // Both right windows are floating -> Map fills 100% width and 100% height!
+            vpMap.style.flex = '1';
+            vpMap.style.width = '100%';
+            vpRight.style.display = 'none';
+            if (splitV) splitV.style.display = 'none';
+            if (splitH) splitH.style.display = 'none';
+            if (badgeMap) badgeMap.textContent = '100%';
+        } else {
+            // At least one of plot or timeline is docked
+            vpMap.style.flex = `0 0 ${cadViewportState.splitters.verticalPct}%`;
+            vpMap.style.width = `${cadViewportState.splitters.verticalPct}%`;
+            vpRight.style.display = 'flex';
+            vpRight.style.flex = '1';
+            vpRight.style.width = `${100 - cadViewportState.splitters.verticalPct}%`;
+            if (splitV) splitV.style.display = 'flex';
+
+            if (fPlot && !fTimeline) {
+                // Plot is floating, timeline fills 100% of right column
+                vpTimeline.style.display = 'flex';
+                vpTimeline.style.flex = '1';
+                vpTimeline.style.height = '100%';
+                if (splitH) splitH.style.display = 'none';
+                if (badgeTimeline) badgeTimeline.textContent = '50%';
+            } else if (!fPlot && fTimeline) {
+                // Timeline is floating, plot fills 100% of right column
+                vpPlot.style.display = 'flex';
+                vpPlot.style.flex = '1';
+                vpPlot.style.height = '100%';
+                if (splitH) splitH.style.display = 'none';
+                if (badgePlot) badgePlot.textContent = '50%';
+            } else {
+                // Both docked: Standard 50% / 25% / 25% occupying 100% screen
+                vpPlot.style.display = 'flex';
+                vpPlot.style.flex = `0 0 ${cadViewportState.splitters.horizontalPct}%`;
+                vpPlot.style.height = `${cadViewportState.splitters.horizontalPct}%`;
+                vpTimeline.style.display = 'flex';
+                vpTimeline.style.flex = '1';
+                vpTimeline.style.removeProperty('height');
+                if (splitH) splitH.style.display = 'flex';
+            }
+        }
+    }
+};
+
+let cadMaxZ = 2500;
+
 window.toggleFloatingViewport = function(vpId, forceState) {
     const windowEl = document.getElementById(`vp-${vpId}-window`);
     const container = document.getElementById('shared-visualizer');
-    const vpRight = document.getElementById('vp-right-container');
-    const splitV = document.getElementById('splitter-cad-vertical');
     const pipBtn = document.getElementById(`btn-pip-${vpId}`);
     if (!windowEl || !container) return;
 
@@ -575,6 +733,7 @@ window.toggleFloatingViewport = function(vpId, forceState) {
     if (targetState) {
         // Pop out to Floating PiP Window
         windowEl.classList.add('cad-pip-floating');
+        windowEl.style.zIndex = (++cadMaxZ).toString();
         if (pipBtn) {
             pipBtn.classList.add('active');
             pipBtn.innerHTML = '⚓';
@@ -582,28 +741,18 @@ window.toggleFloatingViewport = function(vpId, forceState) {
         }
 
         const contRect = container.getBoundingClientRect();
-        const pos = cadViewportState.floatingPos[vpId] || {
-            left: Math.max(20, contRect.width - 480),
-            top: 40,
-            width: 460,
-            height: 320
+        const defaultPositions = {
+            map: { left: 30, top: 30, width: Math.max(380, Math.min(560, contRect.width * 0.52)), height: Math.max(260, Math.min(420, contRect.height * 0.6)) },
+            plot: { left: Math.max(20, contRect.width - 530), top: 40, width: Math.max(380, Math.min(520, contRect.width * 0.5)), height: Math.max(220, Math.min(320, contRect.height * 0.45)) },
+            timeline: { left: Math.max(20, contRect.width - 550), top: Math.max(60, contRect.height - 300), width: Math.max(400, Math.min(540, contRect.width * 0.52)), height: 260 }
         };
+        const pos = cadViewportState.floatingPos[vpId] || defaultPositions[vpId] || { left: 40, top: 40, width: 480, height: 320 };
 
-        windowEl.style.left = `${Math.max(10, Math.min(contRect.width - 320, pos.left))}px`;
-        windowEl.style.top = `${Math.max(10, Math.min(contRect.height - 180, pos.top))}px`;
-        windowEl.style.width = `${pos.width || 460}px`;
+        windowEl.style.left = `${Math.max(10, Math.min(contRect.width - 240, pos.left))}px`;
+        windowEl.style.top = `${Math.max(10, Math.min(contRect.height - 140, pos.top))}px`;
+        windowEl.style.width = `${pos.width || 480}px`;
         windowEl.style.height = `${pos.height || 320}px`;
         windowEl.style.flex = 'none';
-
-        const badgeMap = document.getElementById('badge-vp-map');
-        if (vpId === 'map' && badgeMap) badgeMap.textContent = 'PiP Flotante';
-
-        // Expand remaining docked container to fill background
-        if (vpId === 'map' && vpRight) {
-            vpRight.style.flex = '1';
-            vpRight.style.width = '100%';
-            if (splitV) splitV.style.display = 'none';
-        }
     } else {
         // Dock back to Grid
         windowEl.classList.remove('cad-pip-floating');
@@ -611,15 +760,16 @@ window.toggleFloatingViewport = function(vpId, forceState) {
         windowEl.style.removeProperty('top');
         windowEl.style.removeProperty('width');
         windowEl.style.removeProperty('height');
+        windowEl.style.removeProperty('flex');
+        windowEl.style.removeProperty('z-index');
         if (pipBtn) {
             pipBtn.classList.remove('active');
             pipBtn.innerHTML = '🗗';
             pipBtn.title = 'Picture-in-Picture / Modo Ventana Flotante (Grab & Move)';
         }
-
-        // Restore active preset
-        window.applyViewportPreset(cadViewportState.layout || 'cad');
     }
+
+    window.adjustDockedWindowsFill();
 
     setTimeout(() => {
         if (map) map.invalidateSize();
@@ -633,6 +783,7 @@ window.initCadFloatingDrag = function() {
     const container = document.getElementById('shared-visualizer');
     if (!container) return;
 
+    // Viewport Windows (Map, Plot, Timeline) Titlebars Grab & Move
     titlebars.forEach(tb => {
         tb.addEventListener('mousedown', (e) => {
             if (e.target.closest('button, select, input, .cad-size-badge, .cad-vars-pill, .cad-leg-badge')) return;
@@ -641,13 +792,18 @@ window.initCadFloatingDrag = function() {
             if (!win) return;
             const vpId = win.id.replace('vp-', '').replace('-window', '');
 
+            // Lift window on click
+            win.style.zIndex = (++cadMaxZ).toString();
+
             const isFloating = win.classList.contains('cad-pip-floating');
             const startMouseX = e.clientX;
             const startMouseY = e.clientY;
             const contRect = container.getBoundingClientRect();
+            const winRect = win.getBoundingClientRect();
 
-            let initialLeft = win.offsetLeft;
-            let initialTop = win.offsetTop;
+            // Calculate precise position relative to container
+            let initialLeft = winRect.left - contRect.left;
+            let initialTop = winRect.top - contRect.top;
             let hasPoppedOut = false;
 
             function onMouseMove(moveEv) {
@@ -701,6 +857,66 @@ window.initCadFloatingDrag = function() {
             document.addEventListener('mouseup', onMouseUp);
         });
     });
+
+    // Live HUD Telemetry Grab & Move
+    const hudTb = document.getElementById('hudTitlebar');
+    const hudOverlay = document.getElementById('mapTelemetryOverlay');
+    if (hudTb && hudOverlay) {
+        hudOverlay.addEventListener('mousedown', () => {
+            hudOverlay.style.zIndex = (++cadMaxZ).toString();
+        });
+
+        hudTb.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button, select, input')) return;
+            e.preventDefault();
+
+            hudOverlay.style.zIndex = (++cadMaxZ).toString();
+
+            const startMouseX = e.clientX;
+            const startMouseY = e.clientY;
+            const contRect = container.getBoundingClientRect();
+            const hudRect = hudOverlay.getBoundingClientRect();
+
+            const initialLeft = hudRect.left - contRect.left;
+            const initialTop = hudRect.top - contRect.top;
+
+            document.body.style.cursor = 'grabbing';
+            hudTb.style.cursor = 'grabbing';
+
+            function onHudMouseMove(moveEv) {
+                const dx = moveEv.clientX - startMouseX;
+                const dy = moveEv.clientY - startMouseY;
+
+                const w = hudOverlay.offsetWidth;
+                const h = hudOverlay.offsetHeight;
+                const maxL = contRect.width - w - 4;
+                const maxT = contRect.height - h - 4;
+
+                const curL = Math.max(4, Math.min(maxL, initialLeft + dx));
+                const curT = Math.max(4, Math.min(maxT, initialTop + dy));
+
+                hudOverlay.style.left = `${curL}px`;
+                hudOverlay.style.top = `${curT}px`;
+                hudOverlay.style.right = 'auto'; // detach from right lock
+
+                const badge = document.getElementById('lblHudPipBadge');
+                if (badge) {
+                    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+                    badge.textContent = isEs ? 'PiP Flotante' : 'Floating PiP';
+                }
+            }
+
+            function onHudMouseUp() {
+                document.removeEventListener('mousemove', onHudMouseMove);
+                document.removeEventListener('mouseup', onHudMouseUp);
+                document.body.style.cursor = '';
+                if (hudTb) hudTb.style.cursor = 'grab';
+            }
+
+            document.addEventListener('mousemove', onHudMouseMove);
+            document.addEventListener('mouseup', onHudMouseUp);
+        });
+    }
 
     if (window.ResizeObserver) {
         const ro = new ResizeObserver(() => {
