@@ -25,6 +25,22 @@ let activeTab = 'upload';
 let polarTargets = null;
 let reportImages = [];
 
+const LEG_PALETTE = [
+    '#38bdf8', // 0: Sky Blue
+    '#f59e0b', // 1: Amber / Orange
+    '#10b981', // 2: Emerald Green
+    '#ec4899', // 3: Pink / Magenta
+    '#a855f7', // 4: Purple / Violet
+    '#06b6d4', // 5: Cyan
+    '#f97316', // 6: Deep Orange
+    '#84cc16', // 7: Lime Green
+    '#6366f1', // 8: Indigo
+    '#e11d48', // 9: Rose Red
+    '#14b8a6', // 10: Teal
+    '#eab308'  // 11: Yellow
+];
+window.trackLegLayers = [];
+
 let customStartMs = null;
 let customUtcOffsetMinutes = 0;
 
@@ -972,36 +988,152 @@ async function fetchForecastTwd() {
     return 0;
 }
 
-function loadSessionToVisuals() {
-    if (!sessionData || !sessionData.track) return;
+window.renderTrackOnMap = function() {
+    if (!map || !sessionData || !sessionData.track || sessionData.track.length === 0) {
+        if (window.trackLegLayers && window.trackLegLayers.length > 0) {
+            window.trackLegLayers.forEach(l => {
+                try { map.removeLayer(l); } catch(e) {}
+            });
+            window.trackLegLayers = [];
+        }
+        if (trackPolyline) {
+            try { map.removeLayer(trackPolyline); } catch(e) {}
+            trackPolyline = null;
+        }
+        if (boatMarker) {
+            try { map.removeLayer(boatMarker); } catch(e) {}
+            boatMarker = null;
+        }
+        return;
+    }
 
-    if (trackPolyline) map.removeLayer(trackPolyline);
-    if (boatMarker) map.removeLayer(boatMarker);
-    
-    const trackPoints = sessionData.track;
-    if (!trackPoints || trackPoints.length === 0) return;
+    // 1. Remove previous leg layers
+    if (window.trackLegLayers && window.trackLegLayers.length > 0) {
+        window.trackLegLayers.forEach(l => {
+            try { map.removeLayer(l); } catch(e) {}
+        });
+    }
+    window.trackLegLayers = [];
 
-    trackPolyline = L.polyline(trackPoints, { color: '#38bdf8', weight: 4 }).addTo(map);
+    if (trackPolyline) {
+        try { map.removeLayer(trackPolyline); } catch(e) {}
+        trackPolyline = null;
+    }
 
-    const redIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: "<div style='background-color:#ef4444; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; box-shadow: 0 0 6px rgba(0,0,0,0.5); cursor: grab;'></div>",
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-    });
-    
-    boatMarker = L.marker(trackPoints[0], { icon: redIcon, draggable: true }).addTo(map);
+    const track = sessionData.track;
+    const trackLen = track.length;
 
-    boatMarker.on('drag', (e) => {
-        if (isPlaying) togglePlay();
-        const idx = findNearestTrackPoint(e.target.getLatLng());
-        playbackIndex = idx;
-        updateFrame(idx);
-    });
+    // Invisible full-track reference polyline for bounds calculation across visualizer
+    trackPolyline = L.polyline(track, {
+        color: '#38bdf8',
+        weight: 1,
+        opacity: 0,
+        interactive: false
+    }).addTo(map);
+    window.trackLegLayers.push(trackPolyline);
 
-    boatMarker.on('dragend', (e) => {
-        boatMarker.setLatLng(sessionData.track[playbackIndex]);
-    });
+    // 2. Determine segments to render on track
+    let segmentsToRender = [];
+    if (activeSegments && activeSegments.length > 1) {
+        segmentsToRender = activeSegments;
+    } else if (activeSublegs && activeSublegs.length > 0) {
+        segmentsToRender = activeSublegs;
+    } else if (activeSegments && activeSegments.length === 1) {
+        segmentsToRender = activeSegments;
+    }
+
+    if (segmentsToRender.length > 0) {
+        segmentsToRender.forEach((seg, idx) => {
+            if (seg.startIdx >= trackLen) return;
+            const sIdx = Math.max(0, seg.startIdx);
+            const eIdx = Math.min(trackLen - 1, seg.endIdx);
+            if (sIdx > eIdx) return;
+
+            // Connect legs seamlessly by including adjacent point
+            const sliceEnd = Math.min(trackLen, eIdx + 2);
+            const legPts = track.slice(sIdx, sliceEnd);
+            if (legPts.length === 0) return;
+
+            // Assign distinct color from LEG_PALETTE if default or undefined
+            let color = seg.color;
+            if (!color || color.startsWith('rgba(2, 132, 199') || (segmentsToRender.length > 1 && color === '#38bdf8' && idx > 0)) {
+                color = LEG_PALETTE[idx % LEG_PALETTE.length];
+                seg.color = color;
+            }
+
+            const isHidden = (seg.type === 'hidden' || seg.mode === 'ashore');
+            const poly = L.polyline(legPts, {
+                color: isHidden ? '#64748b' : color,
+                weight: isHidden ? 2 : 4,
+                opacity: isHidden ? 0.35 : 0.95,
+                dashArray: isHidden ? '4, 6' : null
+            }).addTo(map);
+
+            const twdInfo = seg.twd ? ` • TWD: ${Math.round(seg.twd)}°` : '';
+            const legName = seg.label || `Leg ${idx + 1}`;
+            poly.bindTooltip(`<div style="font-weight:700; color:${color}; font-size:0.8rem;">${legName}</div><div style="font-size:0.7rem; color:#cbd5e1;">${twdInfo}</div>`, {
+                sticky: true
+            });
+
+            poly.on('click', (e) => {
+                L.DomEvent.stopPropagation(e);
+                if (seg.type === 'subleg' || seg.type === 'maneuver') {
+                    selectedSublegId = seg.id;
+                    if (typeof renderSublegRibbon === 'function') renderSublegRibbon();
+                } else {
+                    selectedSegmentId = seg.id;
+                    if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+                }
+                playbackIndex = sIdx;
+                updateScrubberPosition();
+                updateFrame(playbackIndex);
+            });
+
+            window.trackLegLayers.push(poly);
+        });
+    } else {
+        const singlePoly = L.polyline(track, {
+            color: '#38bdf8',
+            weight: 4,
+            opacity: 0.95
+        }).addTo(map);
+        window.trackLegLayers.push(singlePoly);
+    }
+
+    // 3. Keep or create boat marker
+    if (playbackIndex >= trackLen) {
+        playbackIndex = Math.max(0, trackLen - 1);
+    }
+    const curPos = track[playbackIndex] || track[0];
+
+    if (!boatMarker) {
+        const redIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div style='background-color:#ef4444; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; box-shadow: 0 0 6px rgba(0,0,0,0.5); cursor: grab;'></div>",
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+        boatMarker = L.marker(curPos, { icon: redIcon, draggable: true }).addTo(map);
+        boatMarker.on('drag', (e) => {
+            if (isPlaying) togglePlay();
+            const idx = findNearestTrackPoint(e.target.getLatLng());
+            playbackIndex = idx;
+            updateFrame(idx);
+        });
+        boatMarker.on('dragend', (e) => {
+            if (sessionData && sessionData.track && sessionData.track[playbackIndex]) {
+                boatMarker.setLatLng(sessionData.track[playbackIndex]);
+            }
+        });
+    } else {
+        boatMarker.setLatLng(curPos);
+        if (!map.hasLayer(boatMarker)) {
+            boatMarker.addTo(map);
+        }
+    }
+};
+
+window.setupMap = window.renderTrackOnMap;
 
 window.refreshChartData = function() {
     if (!sessionData || !sessionData.elapsed || sessionData.elapsed.length === 0) return;
@@ -1107,9 +1239,15 @@ window.refreshChartData = function() {
     }
 };
 
+function loadSessionToVisuals() {
+    if (!sessionData || !sessionData.track) return;
+    const trackPoints = sessionData.track;
+    if (!trackPoints || trackPoints.length === 0) return;
+
     // Initialize as a SINGLE SESSION LEG (Instagram Reels / CapCut default state)
     resetToSingleSessionLeg();
 
+    renderTrackOnMap();
     refreshChartData();
 
     playbackIndex = 0;
@@ -1226,7 +1364,7 @@ window.resetToSingleSessionLeg = function() {
         endIdx: sessionData.track.length - 1,
         type: 'leg',
         label: isEs ? '🎬 Sesión Completa' : '🎬 Full Session',
-        color: 'rgba(2, 132, 199, 0.45)',
+        color: LEG_PALETTE[0],
         twd: sessionData.calibratedTwd
     }];
     activeSublegs = [];
@@ -1236,6 +1374,7 @@ window.resetToSingleSessionLeg = function() {
     renderSegmentRibbon();
     updateReelsInspectorPill();
     autoFitVisualsToRemainingClips();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 };
 
 window.splitSegmentAtPlayhead = function() {
@@ -1281,10 +1420,14 @@ window.splitSegmentAtPlayhead = function() {
     });
 
     if (splitOccurred) {
+        newSegs.forEach((seg, i) => {
+            seg.color = LEG_PALETTE[i % LEG_PALETTE.length];
+        });
         activeSegments = newSegs;
         recalculateAllLegsTwd();
         renderSegmentRibbon();
         updateReelsInspectorPill();
+        if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
     } else {
         const isEs = window.location.href.includes('lang=es');
         alert(isEs ? "El cabezal debe estar dentro de un tramo para marcar la salida." : "Playhead must be inside a segment to mark a new start.");
@@ -1324,10 +1467,14 @@ window.splitClipAtScrubber = function() {
     });
 
     if (splitOccurred) {
+        newSegs.forEach((seg, i) => {
+            seg.color = LEG_PALETTE[i % LEG_PALETTE.length];
+        });
         activeSegments = newSegs;
         recalculateAllLegsTwd();
         renderSegmentRibbon();
         updateReelsInspectorPill();
+        if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
     } else {
         const isEs = window.location.href.includes('lang=es');
         alert(isEs ? "Mueve la barra de reproducción sobre un tramo para cortarlo en dos." : "Move the playhead inside a clip to split it into two.");
@@ -1346,6 +1493,7 @@ window.promptRenameClip = function() {
         seg.label = newTitle.trim();
         renderSegmentRibbon();
         updateReelsInspectorPill();
+        if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
     }
 };
 
@@ -1371,6 +1519,7 @@ window.changeSelectedClipType = function(typeVal) {
     recalculateAllLegsTwd();
     renderSegmentRibbon();
     updateReelsInspectorPill();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 };
 
 window.deleteSelectedClip = function() {
@@ -1393,6 +1542,7 @@ window.deleteSelectedClip = function() {
     recalculateAllLegsTwd();
     renderSegmentRibbon();
     updateScrubberPosition();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
     updateFrame(playbackIndex);
 };
 
@@ -2119,6 +2269,7 @@ window.autoDetectLegs = function(silent = false) {
     activeSublegs = finalSublegs;
     if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
     renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 
     if (!silent) {
         const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
@@ -2199,12 +2350,16 @@ window.createLegFromSelectedSubleg = function() {
 
         nextSegments.push(newLeg);
         nextSegments.sort((a, b) => a.startIdx - b.startIdx);
+        nextSegments.forEach((seg, i) => {
+            seg.color = LEG_PALETTE[i % LEG_PALETTE.length];
+        });
         activeSegments = nextSegments;
         selectedSegmentId = newLeg.id;
         createdCount++;
     });
 
     renderSegmentRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 
     if (createdCount === 1) {
         const cleanLabel = targetSublegs[0].label.replace(/^[^\w\s]+/, '').trim();
@@ -2390,6 +2545,11 @@ function deleteDataRange(startIdx, endIdx) {
     }
     if (playbackIndex >= sessionData.elapsed.length) {
         playbackIndex = Math.max(0, sessionData.elapsed.length - 1);
+    }
+
+    // Immediately refresh the map so deleted points physically disappear
+    if (typeof renderTrackOnMap === 'function') {
+        renderTrackOnMap();
     }
 }
 

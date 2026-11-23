@@ -4,54 +4,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <div class="datalab-container" style="display: flex; flex-direction: column; height: 100%; flex: 1; background: #0b0f17; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow: hidden;">
-    <!-- DESKTOP APPLICATION TOP MENUBAR -->
-    <!-- 1. TOP HORIZONTAL STEP NAVIGATION BAR (~40px height) -->
-    <div class="desktop-steps-bar">
-        <div class="desktop-steps-left">
-            <div class="desktop-steps-brand">
-                <span style="font-size: 1.15rem;">📈</span>
-                <span class="desktop-brand-name">LS Data Lab</span>
-                <span class="desktop-brand-badge">PRO v4.2</span>
-            </div>
-            <nav class="desktop-steps-nav">
-                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn active" onclick="switchTab('upload')">
-                    <span class="step-num">1</span>
-                    <span class="step-label">1. Cargar y Calibrar</span>
-                </button>
-                <button type="button" id="btn-tab-telemetry" class="step-tab-btn tab-btn disabled" onclick="switchTab('telemetry')" disabled>
-                    <span class="step-num">2</span>
-                    <span class="step-label">2. Visor de Telemetría</span>
-                </button>
-                <button type="button" id="btn-tab-performance" class="step-tab-btn tab-btn disabled" onclick="switchTab('performance')" disabled>
-                    <span class="step-num">3</span>
-                    <span class="step-label">3. Tramos y Polares</span>
-                </button>
-                <button type="button" id="btn-tab-maneuvers" class="step-tab-btn tab-btn disabled" onclick="switchTab('maneuvers')" disabled>
-                    <span class="step-num">4</span>
-                    <span class="step-label">4. Registro Maniobras</span>
-                </button>
-                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn disabled" onclick="switchTab('compare')" disabled>
-                    <span class="step-num">5</span>
-                    <span class="step-label">5. Comparar Sesiones</span>
-                </button>
-                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn disabled" onclick="switchTab('report')" disabled>
-                    <span class="step-num">6</span>
-                    <span class="step-label">6. Informe Técnico PDF</span>
-                </button>
-            </nav>
-        </div>
-        <div class="desktop-steps-right">
-            <div id="active-profile-pill" class="steps-profile-pill">
-                <span style="color: #64748b;">Barco:</span> <strong id="lbl-active-boat" style="color: #38bdf8;">Sesión Principal</strong>
-                <span style="color: #475569; margin: 0 4px;">•</span>
-                <span style="color: #64748b;">Log:</span> <strong id="lbl-active-file" style="color: #f59e0b; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom;">Sin Archivo</strong>
-            </div>
-            <span id="lbl-active-wind" class="steps-wind-pill" title="Dirección de Viento Calibrada">TWD: --°</span>
-        </div>
-    </div>
-
-    <!-- 2. DESKTOP APPLICATION TOOLBAR & MENUBAR (~36px height) -->
-    <div class="desktop-menubar">
+    <!-- 1. TOP APPLICATION OPTIONS & MENUBAR (~34px height) -->
+    <div class="desktop-menubar" style="height: 34px; min-height: 34px; background: #080d19; border-bottom: 1px solid #1e293b;">
         <div class="desktop-menu-left">
             <!-- ARCHIVO MENU -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
@@ -177,20 +131,56 @@
             </div>
         </div>
 
-        <!-- ACCIONES RÁPIDAS DERECHA -->
+        <!-- RIGHT TOOLBAR: Minimal save button -->
         <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" onclick="document.getElementById('logFile')?.click();" class="quick-tool-btn" style="background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                <span>📂</span> Abrir Log
+            <button type="button" onclick="saveProjectToCloud()" class="quick-tool-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: 1px solid #38bdf8; color: white; padding: 3px 10px; border-radius: 4px; font-size: 0.73rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
+                <span>💾</span> Guardar Proyecto <span style="font-size: 0.58rem; background: #f59e0b; color: #0f172a; padding: 1px 4px; border-radius: 4px; font-weight: 800;">PRO</span>
             </button>
-            <button type="button" onclick="switchTab('compare')" class="quick-tool-btn" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                <span>👥</span> Comparar Flota
-            </button>
-            <button type="button" onclick="switchTab('report')" class="quick-tool-btn" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                <span>📑</span> Informe PDF
-            </button>
-            <button type="button" onclick="saveProjectToCloud()" class="quick-tool-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: 1px solid #38bdf8; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
-                <span>💾</span> Guardar Proyecto <span style="font-size: 0.6rem; background: #f59e0b; color: #0f172a; padding: 1px 4px; border-radius: 8px; font-weight: 800;">LS PRO</span>
-            </button>
+        </div>
+    </div>
+
+    <!-- 2. APPLICATION STEP NAVIGATION BAR (~38px height) -->
+    <div class="desktop-steps-bar" style="height: 38px; min-height: 38px; background: #0c1222; border-bottom: 1px solid #1e293b;">
+        <div class="desktop-steps-left">
+            <div class="desktop-steps-brand">
+                <span style="font-size: 1.15rem;">📈</span>
+                <span class="desktop-brand-name">LS Data Lab</span>
+                <span class="desktop-brand-badge">PRO v4.2</span>
+            </div>
+            <nav class="desktop-steps-nav">
+                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn active" onclick="switchTab('upload')">
+                    <span class="step-num">1</span>
+                    <span class="step-label">1. Cargar y Calibrar</span>
+                </button>
+                <button type="button" id="btn-tab-telemetry" class="step-tab-btn tab-btn disabled" onclick="switchTab('telemetry')" disabled>
+                    <span class="step-num">2</span>
+                    <span class="step-label">2. Visor de Telemetría</span>
+                </button>
+                <button type="button" id="btn-tab-performance" class="step-tab-btn tab-btn disabled" onclick="switchTab('performance')" disabled>
+                    <span class="step-num">3</span>
+                    <span class="step-label">3. Tramos y Polares</span>
+                </button>
+                <button type="button" id="btn-tab-maneuvers" class="step-tab-btn tab-btn disabled" onclick="switchTab('maneuvers')" disabled>
+                    <span class="step-num">4</span>
+                    <span class="step-label">4. Registro Maniobras</span>
+                </button>
+                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn disabled" onclick="switchTab('compare')" disabled>
+                    <span class="step-num">5</span>
+                    <span class="step-label">5. Comparar Sesiones</span>
+                </button>
+                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn disabled" onclick="switchTab('report')" disabled>
+                    <span class="step-num">6</span>
+                    <span class="step-label">6. Informe Técnico PDF</span>
+                </button>
+            </nav>
+        </div>
+        <div class="desktop-steps-right" style="display: flex; align-items: center; gap: 8px;">
+            <div id="active-profile-pill" class="steps-profile-pill" style="display: none; padding: 2px 8px; font-size: 0.72rem;">
+                <span style="color: #64748b;">Barco:</span> <strong id="lbl-active-boat" style="color: #38bdf8; font-weight: 600;"></strong>
+            </div>
+            <!-- Hidden DOM anchors for JS compatibility -->
+            <span id="lbl-active-file" style="display: none;"></span>
+            <span id="lbl-active-wind" style="display: none;"></span>
         </div>
     </div>
 
