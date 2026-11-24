@@ -231,6 +231,23 @@
                 </div>
             </div>
 
+            <!-- VIENTO MENU -->
+            <div class="desktop-menu-item" id="menu-wind" onclick="toggleDesktopMenu('wind', event)">
+                <span>💨 Viento</span>
+                <div class="desktop-dropdown" id="dropdown-wind">
+                    <div class="desktop-dropdown-header">Calibración de Viento</div>
+                    <div class="desktop-dropdown-item" onclick="calibrateWindFromUpwindTacks(false)">
+                        <span style="color: #38bdf8; font-weight: bold;">⚡ Calibrar desde Ceñida (&gt;5m + Viradas)</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="promptManualTwd()">
+                        <span>🧭 Fijar TWD Manual...</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="if(typeof recalculateAllLegsTwd==='function'){recalculateAllLegsTwd();renderSegmentRibbon();updateFrame(playbackIndex);}">
+                        <span>🔄 Recalcular TWD por Tramo</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- AYUDA MENU -->
             <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
                 <span>Ayuda</span>
