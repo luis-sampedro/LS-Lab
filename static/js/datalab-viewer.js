@@ -7618,3 +7618,106 @@ window.deleteSelectedManeuver = function() {
     renderSublegRibbon();
     if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 };
+
+
+// ==========================================
+// UNDO / REDO HISTORY STACK (CTRL+Z / CTRL+Y)
+// ==========================================
+window.undoStack = [];
+window.redoStack = [];
+
+window.saveUndoState = function() {
+    if (!sessionData) return;
+    const snapshot = {
+        activeSegments: JSON.parse(JSON.stringify(activeSegments || [])),
+        activeSublegs: JSON.parse(JSON.stringify(activeSublegs || [])),
+        selectedSegmentId: selectedSegmentId,
+        selectedSublegId: selectedSublegId,
+        playbackIndex: playbackIndex
+    };
+    window.undoStack.push(snapshot);
+    if (window.undoStack.length > 40) window.undoStack.shift();
+    window.redoStack = [];
+};
+
+window.undoLastAction = function() {
+    if (!sessionData || !window.undoStack || window.undoStack.length === 0) return;
+    const currentSnapshot = {
+        activeSegments: JSON.parse(JSON.stringify(activeSegments || [])),
+        activeSublegs: JSON.parse(JSON.stringify(activeSublegs || [])),
+        selectedSegmentId: selectedSegmentId,
+        selectedSublegId: selectedSublegId,
+        playbackIndex: playbackIndex
+    };
+    window.redoStack.push(currentSnapshot);
+
+    const prev = window.undoStack.pop();
+    activeSegments = prev.activeSegments;
+    activeSublegs = prev.activeSublegs;
+    selectedSegmentId = prev.selectedSegmentId;
+    selectedSublegId = prev.selectedSublegId;
+    playbackIndex = prev.playbackIndex;
+
+    if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
+    if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    if (typeof renderSublegRibbon === 'function') renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+    if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
+    if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+};
+
+window.redoLastAction = function() {
+    if (!sessionData || !window.redoStack || window.redoStack.length === 0) return;
+    const currentSnapshot = {
+        activeSegments: JSON.parse(JSON.stringify(activeSegments || [])),
+        activeSublegs: JSON.parse(JSON.stringify(activeSublegs || [])),
+        selectedSegmentId: selectedSegmentId,
+        selectedSublegId: selectedSublegId,
+        playbackIndex: playbackIndex
+    };
+    window.undoStack.push(currentSnapshot);
+
+    const next = window.redoStack.pop();
+    activeSegments = next.activeSegments;
+    activeSublegs = next.activeSublegs;
+    selectedSegmentId = next.selectedSegmentId;
+    selectedSublegId = next.selectedSublegId;
+    playbackIndex = next.playbackIndex;
+
+    if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
+    if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+    if (typeof renderSublegRibbon === 'function') renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+    if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
+    if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+};
+
+// Keyboard shortcuts Ctrl+Z (Undo) and Ctrl+Y / Ctrl+Shift+Z (Redo)
+document.addEventListener('keydown', function(e) {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+            window.redoLastAction();
+        } else {
+            window.undoLastAction();
+        }
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        window.redoLastAction();
+    }
+});
+
+// Automatically snapshot before key mutations
+['splitSegmentAtPlayhead', 'splitClipAtScrubber', 'deleteSelectedClip', 'combineSelectedLegs',
+ 'splitSublegAtScrubber', 'deleteSelectedSubleg', 'createManeuverAtPlayhead', 'moveSelectedManeuver',
+ 'setManeuverTime', 'setManeuverDuration', 'deleteSelectedManeuver', 'autoDetectLegs'].forEach(fnName => {
+    const orig = window[fnName];
+    if (typeof orig === 'function') {
+        window[fnName] = function(...args) {
+            window.saveUndoState();
+            return orig.apply(this, args);
+        };
+    }
+});
