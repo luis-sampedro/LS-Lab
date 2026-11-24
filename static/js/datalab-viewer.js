@@ -2312,11 +2312,21 @@ window.resetToSingleSessionLeg = function() {
         color: LEG_PALETTE[0],
         twd: sessionData.calibratedTwd
     }];
-    activeSublegs = [];
+    activeSublegs = [{
+        id: 'subleg_single_session',
+        startIdx: 0,
+        endIdx: sessionData.track.length - 1,
+        type: 'subleg',
+        label: isEs ? '🔴 Babor / Subtramo 1' : '🔴 Port / Subleg 1',
+        color: '#ef4444',
+        mode: 'port'
+    }];
     selectedSegmentId = 'leg_single_session';
-    selectedSublegId = null;
+    selectedSublegId = 'subleg_single_session';
+    window.selectedSublegIds = ['subleg_single_session'];
     recalculateAllLegsTwd();
     renderSegmentRibbon();
+    renderSublegRibbon();
     updateReelsInspectorPill();
     autoFitVisualsToRemainingClips();
     
@@ -2700,49 +2710,59 @@ window.goToSelectedSublegEnd = function() {
     }
 };
 
-window.createSublegAtPlayhead = function() {
-    if (!sessionData) return;
-    const idx = playbackIndex;
-    
-    // Find the main leg that contains the playhead
-    const mainSeg = activeSegments.find(s => idx >= s.startIdx && idx <= s.endIdx);
-    if (!mainSeg) {
-        const isEs = window.location.href.includes('lang=es');
-        alert(isEs ? "El cabezal debe estar dentro de un tramo principal." : "Playhead must be inside a main segment to create a subleg.");
-        return;
-    }
-    
-    // Default duration: up to 150 points (15s at 10Hz) or end of main segment
-    const endIdx = Math.min(idx + 150, mainSeg.endIdx);
-    
-    // Check if it overlaps with an existing subleg
-    const overlap = activeSublegs.find(s => (idx >= s.startIdx && idx <= s.endIdx) || (endIdx >= s.startIdx && endIdx <= s.endIdx) || (idx <= s.startIdx && endIdx >= s.endIdx));
-    if (overlap) {
-        const isEs = window.location.href.includes('lang=es');
-        alert(isEs ? "El nuevo subtramo se solapa con uno existente." : "New subleg overlaps with an existing one.");
-        return;
-    }
+// SUBLEGS LIKE LEGS: DEFAULT SINGLE SUBLEG + SCISSOR SPLITTING LOGIC
 
-    const id = 'subleg_' + Date.now();
-    activeSublegs.push({
-        id: id,
-        startIdx: idx,
-        endIdx: endIdx,
-        label: 'Subleg',
+window.resetToSingleSessionSubleg = function() {
+    if (!sessionData || !sessionData.track) return;
+    const isEs = window.location.href.includes('lang=es');
+    activeSublegs = [{
+        id: 'subleg_single_session',
+        startIdx: 0,
+        endIdx: sessionData.track.length - 1,
         type: 'subleg',
-        color: '#f59e0b'
-    });
-    
-    activeSublegs.sort((a, b) => a.startIdx - b.startIdx);
-    selectedSublegId = id;
+        label: isEs ? '🔴 Babor / Subtramo Completo' : '🔴 Port / Full Subleg',
+        color: '#ef4444',
+        mode: 'port'
+    }];
+    selectedSublegId = 'subleg_single_session';
+    window.selectedSublegIds = ['subleg_single_session'];
     renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 };
 
 window.splitSublegAtScrubber = function() {
     if (!sessionData) return;
-    const idx = playbackIndex;
+    let idx = playbackIndex;
     let splitOccurred = false;
     let newSegs = [];
+
+    // If no sublegs exist, initialize one spanning the entire session first!
+    if (!activeSublegs || activeSublegs.length === 0) {
+        window.resetToSingleSessionSubleg();
+    }
+
+    // Find target subleg under playhead or selected
+    let targetSub = activeSublegs.find(s => idx >= s.startIdx && idx <= s.endIdx);
+    if (!targetSub && selectedSublegId) {
+        targetSub = activeSublegs.find(s => s.id === selectedSublegId);
+    }
+
+    // If playhead is on the exact boundary (startIdx or endIdx) or out of range, clamp safely to interior
+    if (targetSub) {
+        if (idx <= targetSub.startIdx) {
+            idx = Math.min(targetSub.endIdx - 1, targetSub.startIdx + Math.max(1, Math.floor((targetSub.endIdx - targetSub.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        } else if (idx >= targetSub.endIdx) {
+            idx = Math.max(targetSub.startIdx + 1, targetSub.startIdx + Math.max(1, Math.floor((targetSub.endIdx - targetSub.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        }
+    }
+
+    const SUBLEG_PALETTE = ['#ef4444', '#10b981', '#38bdf8', '#f59e0b', '#ec4899', '#a855f7', '#06b6d4', '#eab308'];
 
     activeSublegs.forEach(s => {
         if (idx > s.startIdx && idx < s.endIdx) {
@@ -2750,32 +2770,47 @@ window.splitSublegAtScrubber = function() {
             const idA = 'subleg_' + Date.now() + '_A';
             const idB = 'subleg_' + Date.now() + '_B';
             
+            // Clean base title (e.g. "Port Tack", "Starboard", "Subleg 1")
+            const baseName = (s.label || 'Subleg').replace(/ \([AB]\)$/, '').replace(/ [A-Z0-9]+$/, '');
+            
             newSegs.push({
                 ...s,
                 id: idA,
                 endIdx: idx,
-                label: `${s.label} (A)`
+                label: `${baseName} (A)`
             });
             newSegs.push({
                 ...s,
                 id: idB,
                 startIdx: idx,
-                label: `${s.label} (B)`
+                label: `${baseName} (B)`
             });
             selectedSublegId = idB;
+            window.selectedSublegIds = [idB];
         } else {
             newSegs.push(s);
         }
     });
 
     if (splitOccurred) {
+        newSegs.forEach((seg, i) => {
+            if (!seg.color || seg.color === '#ef4444' || seg.color === '#10b981') {
+                // Toggle between port red and stbd green by default for sailing tacks
+                seg.color = (i % 2 === 0) ? '#ef4444' : '#10b981';
+                seg.mode = (i % 2 === 0) ? 'port' : 'starboard';
+            }
+        });
         activeSublegs = newSegs;
         renderSublegRibbon();
+        if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
     } else {
         const isEs = window.location.href.includes('lang=es');
-        alert(isEs ? "Mueve la barra de reproducción sobre un subtramo para cortarlo." : "Move the playhead inside a subleg to split it.");
+        alert(isEs ? "Mueve la barra de reproducción sobre un subtramo para cortarlo en dos." : "Move the playhead inside a subleg to split it into two.");
     }
 };
+
+window.splitSublegAtPlayhead = window.splitSublegAtScrubber;
+
 
 window.promptRenameSubleg = function() {
     const seg = activeSublegs.find(s => s.id === selectedSublegId) || 
@@ -2849,7 +2884,6 @@ window.deleteSelectedSubleg = function() {
         if (seg) idsToDelete = [seg.id];
     }
 
-    // Output 1: No subleg detected or selected
     if (idsToDelete.length === 0 || !activeSublegs || activeSublegs.length === 0) {
         alert(isEs ? "No hay subtramos detectados ni seleccionados." : "No subleg detected or selected.");
         return;
@@ -2857,21 +2891,36 @@ window.deleteSelectedSubleg = function() {
 
     const countToDelete = idsToDelete.length;
     activeSublegs = activeSublegs.filter(s => !idsToDelete.includes(s.id));
-    window.selectedSublegIds = [];
-    selectedSublegId = null;
+    
+    // Always keep at least 1 default subleg (like legs!)
+    if (activeSublegs.length === 0 && sessionData && sessionData.track) {
+        activeSublegs = [{
+            id: 'subleg_single_session',
+            startIdx: 0,
+            endIdx: sessionData.track.length - 1,
+            type: 'subleg',
+            label: isEs ? '🔴 Babor / Subtramo 1' : '🔴 Port / Subleg 1',
+            color: '#ef4444',
+            mode: 'port'
+        }];
+    }
+
+    window.selectedSublegIds = [activeSublegs[0].id];
+    selectedSublegId = activeSublegs[0].id;
     
     const sel = document.getElementById('sublegMultiSelector');
     if (sel) sel.value = '';
 
     renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 
-    // Output 2 & Output 3
     if (countToDelete === 1) {
-        alert(isEs ? "Subtramo eliminado." : "Subleg deleted.");
+        alert(isEs ? "Subtramo restablecido / eliminado." : "Subleg reset / deleted.");
     } else {
         alert(isEs ? `Todos los ${countToDelete} subtramos seleccionados han sido eliminados.` : `All ${countToDelete} selected sublegs deleted.`);
     }
 };
+
 
 function renderSublegRibbon() {
     const ribbon = document.getElementById('sublegRibbon');

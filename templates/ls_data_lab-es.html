@@ -258,9 +258,12 @@
                         <div class="ribbon-dropdown-divider"></div>
 
                         <div class="ribbon-menu-section-header">➕ SUBTRAMOS Y MANIOBRAS (SUBLEGS)</div>
-                        <div class="ribbon-menu-item" onclick="createSublegAtPlayhead()">
-                            <span style="color: #10b981;">➕ Añadir Subtramo en Cursor</span>
-                            <span class="ribbon-shortcut">+</span>
+                        <div class="ribbon-menu-item" onclick="splitSublegAtScrubber()">
+                            <span style="color: #10b981; font-weight: bold;">✂️ Cortar Subtramo en Cursor (Dividir en dos)</span>
+                            <span class="ribbon-shortcut">✂</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="resetToSingleSessionSubleg()">
+                            <span>🔄 Restablecer a 1 Solo Subtramo Completo</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="splitSublegAtScrubber()">
                             <span>✂️ Cortar Subtramo</span>
