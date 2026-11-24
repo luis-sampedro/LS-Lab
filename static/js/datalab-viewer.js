@@ -2254,14 +2254,44 @@ window.resetToSingleSessionLeg = function() {
     renderSegmentRibbon();
     updateReelsInspectorPill();
     autoFitVisualsToRemainingClips();
+    
+    // Position playhead nicely at 50% midpoint so user can immediately split
+    if (sessionData.track.length > 1) {
+        playbackIndex = Math.floor(sessionData.track.length / 2);
+    } else {
+        playbackIndex = 0;
+    }
+    updateFrame(playbackIndex);
+    updateScrubberPosition();
+
     if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
 };
 
 window.splitSegmentAtPlayhead = function() {
     if (!sessionData) return;
-    const idx = playbackIndex;
+    let idx = playbackIndex;
     let splitOccurred = false;
     let newSegs = [];
+
+    // Find the target segment under playhead or selected
+    let targetSeg = activeSegments.find(s => idx >= s.startIdx && idx <= s.endIdx);
+    if (!targetSeg && selectedSegmentId) {
+        targetSeg = activeSegments.find(s => s.id === selectedSegmentId);
+    }
+
+    if (targetSeg) {
+        if (idx <= targetSeg.startIdx) {
+            idx = Math.min(targetSeg.endIdx - 1, targetSeg.startIdx + Math.max(1, Math.floor((targetSeg.endIdx - targetSeg.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        } else if (idx >= targetSeg.endIdx) {
+            idx = Math.max(targetSeg.startIdx + 1, targetSeg.startIdx + Math.max(1, Math.floor((targetSeg.endIdx - targetSeg.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        }
+    }
 
     let raceCount = 1;
     activeSegments.forEach(s => {
@@ -2316,9 +2346,30 @@ window.splitSegmentAtPlayhead = function() {
 
 window.splitClipAtScrubber = function() {
     if (!sessionData) return;
-    const idx = playbackIndex;
+    let idx = playbackIndex;
     let splitOccurred = false;
     let newSegs = [];
+
+    // Find the target segment under playhead or selected
+    let targetSeg = activeSegments.find(s => idx >= s.startIdx && idx <= s.endIdx);
+    if (!targetSeg && selectedSegmentId) {
+        targetSeg = activeSegments.find(s => s.id === selectedSegmentId);
+    }
+
+    // If playhead is on the exact boundary (startIdx or endIdx) or out of range, clamp safely to interior
+    if (targetSeg) {
+        if (idx <= targetSeg.startIdx) {
+            idx = Math.min(targetSeg.endIdx - 1, targetSeg.startIdx + Math.max(1, Math.floor((targetSeg.endIdx - targetSeg.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        } else if (idx >= targetSeg.endIdx) {
+            idx = Math.max(targetSeg.startIdx + 1, targetSeg.startIdx + Math.max(1, Math.floor((targetSeg.endIdx - targetSeg.startIdx) / 2)));
+            playbackIndex = idx;
+            updateFrame(playbackIndex);
+            updateScrubberPosition();
+        }
+    }
 
     activeSegments.forEach(s => {
         if (idx > s.startIdx && idx < s.endIdx) {
