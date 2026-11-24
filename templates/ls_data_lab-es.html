@@ -232,6 +232,9 @@
                                 <option value="upwind">⛵ Ceñida (Upwind)</option>
                                 <option value="downwind">🚀 Popa (Downwind)</option>
                                 <option value="reach">💨 Través (Reach)</option>
+                                <option value="pre_start">⏱️ Pre-Salida (Pre-Start)</option>
+                                <option value="break">☕ Pausa / No Importante (Borrable)</option>
+                                <option value="race">🏁 Manga / Regata Completa</option>
                                 <option value="hidden">🙈 Oculto (Hidden)</option>
                             </select>
                         </div>
@@ -242,6 +245,10 @@
                         <div class="ribbon-menu-item" onclick="eraseSelectedLegData()">
                             <span style="color: #ef4444; font-weight: bold;">💥 Borrar Datos de Tramo (Limpiar GPS)</span>
                             <span class="ribbon-shortcut">2 pasos</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="eraseAllBreakData()">
+                            <span style="color: #f87171;">☕ Borrar Todas las Pausas / Datos No Importantes</span>
+                            <span class="ribbon-shortcut">Limpiar</span>
                         </div>
                         <div style="display: flex; gap: 4px; padding: 4px 12px;">
                             <button type="button" onclick="goToSelectedLegStart()" class="ribbon-mini-btn" style="flex: 1;">⏮️ Ir al Inicio</button>
@@ -264,27 +271,39 @@
                             <span class="ribbon-shortcut">✏</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="font-size: 0.74rem; color: #cbd5e1;">Tipo Subtramo:</span>
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Modo Subtramo:</span>
                             <select id="sublegTypeSelector" onchange="changeSelectedSublegType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="upwind">⛵ Ceñida (Upwind)</option>
-                                <option value="downwind">🚀 Popa (Downwind)</option>
-                                <option value="reach">💨 Través (Reach)</option>
+                                <option value="port">🔴 Babor (Port Tack)</option>
+                                <option value="starboard">🟢 Estribor (Starboard Tack)</option>
+                                <option value="upwind">⛵ Ceñida</option>
+                                <option value="downwind">🚀 Popa</option>
+                                <option value="reach">💨 Través</option>
+                                <option value="pre_start">⏱️ Pre-Salida</option>
+                                <option value="break">☕ Pausa / Espera</option>
                             </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptCustomSublegSplit()">
+                            <span>📊 Dividir Subtramos por Variable... (TWA, Escora, SOG)</span>
+                            <span class="ribbon-shortcut">fx</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #38bdf8;">Filtrar / Multi-Select:</span>
                             <select id="sublegMultiSelector" onchange="selectSublegsByName(this.value)" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold;">
                                 <option value="">🔍 Seleccionar Subtramos...</option>
                                 <option value="all">Todos los Subtramos</option>
-                                <option value="ashore">🏠 En Tierra (Ashore)</option>
-                                <option value="capsize">🏊 Vuelcos (Capsize)</option>
+                                <option value="port">🔴 Todos de Babor (Port Tack)</option>
+                                <option value="starboard">🟢 Todos de Estribor (Starboard Tack)</option>
                                 <option value="upwind">⛵ Todas las Ceñidas</option>
                                 <option value="downwind">🚀 Todas las Popas</option>
+                                <option value="pre_start">⏱️ Todas las Pre-Salidas</option>
+                                <option value="break">☕ Pausas y Esperas</option>
                                 <option value="reach">💨 Todos los Traveses</option>
                                 <option value="fly">🛩️ En Vuelo (Foiling)</option>
                                 <option value="low">🌊 Desplazamiento (Low-Ride)</option>
                                 <option value="tack">🔄 Viradas (Tacks)</option>
                                 <option value="gybe">🌪️ Trasluchadas (Gybes)</option>
+                                <option value="ashore">🏠 En Tierra (Ashore)</option>
+                                <option value="capsize">🏊 Vuelcos (Capsize)</option>
                                 <option value="deselect">❌ Deseleccionar</option>
                             </select>
                         </div>
@@ -458,12 +477,40 @@
                             </div>
                         </div>
 
-                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección de Tramos</div>
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Estructura de Sesión y Regatas (Races &amp; Legs)</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🏆 Estructura Regata:</span>
+                                <select id="autoRaceStructurePreset" style="background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px;">
+                                    <option value="auto" selected>Detección Automática (Salidas y Pausas)</option>
+                                    <option value="single_race">1 Sola Regata (Pre-salida + Ceñidas/Popas)</option>
+                                    <option value="windward_leeward_2">2 Mangas / Regatas (Barlovento-Sotavento)</option>
+                                    <option value="windward_leeward_3">3 Mangas Estándar (Grand Prix)</option>
+                                    <option value="training_intervals">Intervalos de Entrenamiento / Test</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>⏱️ Duración Pre-Salida:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoPreStartMin" value="5" min="1" max="15" step="1" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>☕ Pausa Mínima entre Regatas:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoBreakMinDuration" value="4" min="1" max="30" step="1" style="width: 50px; background: #020617; color: #94a3b8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Detección de Tramos y Subtramos</div>
                         <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span>⏱️ Duración Mínima Tramo:</span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <input type="number" id="autoMinLegMin" value="5" min="1" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <input type="number" id="autoMinLegMin" value="3.5" min="0.5" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
                                     <span style="font-size: 0.65rem; color: #64748b;">min</span>
                                 </div>
                             </div>
@@ -473,6 +520,13 @@
                                     <input type="number" id="autoTackMinAngle" value="70" min="30" max="150" step="5" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
                                     <span style="font-size: 0.65rem; color: #64748b;">°</span>
                                 </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🎯 Subtramos Babor / Estribor:</span>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #38bdf8; cursor: pointer;">
+                                    <input type="checkbox" id="autoSublegsByTack" checked style="accent-color: #38bdf8;">
+                                    <span>Babor / Estribor</span>
+                                </label>
                             </div>
                         </div>
 
@@ -958,6 +1012,7 @@
                             <div class="cad-titlebar-left">
                                 <span>📈</span>
                                 <span class="cad-title-text">GRÁFICA DE TELEMETRÍA</span>
+                                <span class="cad-size-badge" id="badge-vp-plot">33%</span>
                                 <span id="activeVarsPill" class="cad-vars-pill">SOG, HDG</span>
                             </div>
                             <div class="cad-titlebar-right">
@@ -985,6 +1040,7 @@
                             <div class="cad-titlebar-left">
                                 <span>🎬</span>
                                 <span class="cad-title-text">TRAMOS Y CLIPPER</span>
+                                <span class="cad-size-badge" id="badge-vp-timeline">33%</span>
                                 <span id="vpSelectedLegBadge" class="cad-leg-badge">Tramo 1 / 1</span>
                             </div>
                             <div class="cad-titlebar-right">

@@ -2975,6 +2975,7 @@ window.toggleAutoDetectPopover = function() {
 };
 
 // Upwind/Downwind Leg & Subleg Autodetection Engine
+// Upwind/Downwind Leg, Race & Subleg Autodetection Engine
 window.autoDetectLegs = function(silent = false) {
     if (!sessionData || !sessionData.metrics || !sessionData.metrics.sog) return;
     
@@ -2986,11 +2987,13 @@ window.autoDetectLegs = function(silent = false) {
     const n = sogs.length;
     if (n < 10) return;
 
+    const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+
     // Boat Profile & Foiler Detection (Default: NON-FOILING unless user explicitly checked)
     const foilerCheckbox = document.getElementById('chkIsFoilerBoat') || document.getElementById('autoFoilerActive');
     const isFoiler = foilerCheckbox ? foilerCheckbox.checked : false;
 
-    // Configurable thresholds — read from UI (with sensible defaults)
+    // Configurable thresholds — read from UI
     const ashoreMaxSpeed   = parseFloat(document.getElementById('autoAshoreSpeed')?.value      || 1.5);
     const capsizeMinSpeed  = parseFloat(document.getElementById('autoCapsizeMinSpeed')?.value  || 0.3);
     const capsizeMaxSpeed  = parseFloat(document.getElementById('autoCapsizeMaxSpeed')?.value  || 3.0);
@@ -2999,22 +3002,27 @@ window.autoDetectLegs = function(silent = false) {
         ? parseFloat(document.getElementById('autoFlightSpeed')?.value || 10.0)
         : 999.0;
 
-    // Minimum leg duration (samples ≈ seconds at 1Hz)
-    // Sailing legs (upwind/downwind/reach) need a longer minimum than ashore blocks.
-    const minLegMinutes   = parseFloat(document.getElementById('autoMinLegMin')?.value   || 5);   // UI: minutes
-    const MIN_SAILING_LEG = Math.round(minLegMinutes * 60);                                       // → samples
-    const MIN_CHUNK_ASHORE = 45;   // ashore blocks can be short (pre/post-session)
+    // Minimum leg duration (samples ≈ seconds at 1Hz or /10 at 10Hz)
+    const minLegMinutes   = parseFloat(document.getElementById('autoMinLegMin')?.value   || 3.5);
+    const MIN_SAILING_LEG = Math.max(30, Math.round(minLegMinutes * 60));
+    const MIN_CHUNK_ASHORE = 45;
 
-    // Minimum heading change to call something a tack or gybe (degrees)
+    // Minimum heading change for tack / gybe
     const tackMinAngle = parseFloat(document.getElementById('autoTackMinAngle')?.value || 70);
 
-    // Dock proximity radius (converted from metres to NM)
+    // Dock proximity radius
     const dockRadiusM  = parseFloat(document.getElementById('autoDockRadius')?.value || 300);
     const DOCK_RADIUS_NM = dockRadiusM / 1852;
 
-    // ── A: Rolling circular std of HDG (ashore = stable heading) ────────────
-    const HDG_WIN      = 30;   // samples each side
-    const HDG_STD_MAX  = 20;   // °  — below this = heading stable = ashore candidate
+    // Pre-start duration & Break minimums
+    const preStartMinutes = parseFloat(document.getElementById('autoPreStartMin')?.value || 5);
+    const PRE_START_SAMPLES = Math.round(preStartMinutes * 60);
+    const breakMinutes = parseFloat(document.getElementById('autoBreakMinDuration')?.value || 4);
+    const BREAK_SAMPLES = Math.round(breakMinutes * 60);
+
+    // ── A: Rolling circular std of HDG ────────────────────────────────────────
+    const HDG_WIN      = 30;
+    const HDG_STD_MAX  = 20;
     const hdgStd = new Float32Array(n);
     for (let i = 0; i < n; i++) {
         const lo = Math.max(0, i - HDG_WIN);
@@ -3029,10 +3037,8 @@ window.autoDetectLegs = function(silent = false) {
         hdgStd[i] = Math.sqrt(-2 * Math.log(Math.max(R, 1e-9))) * 180 / Math.PI;
     }
 
-    // ── B: Rolling circular mean of TWA (smoothed tack assignment) ──────────
-    // TWA oscillates wildly sample-to-sample. Use a 60-s window circular mean
-    // so the "dominant tack" drives classification, not individual noisy points.
-    const TWA_WIN = 30;
+    // ── B: Rolling circular mean of TWA ───────────────────────────────────────
+    const TWA_WIN = 25;
     const smoothTwa = new Float32Array(n);
     for (let i = 0; i < n; i++) {
         const lo = Math.max(0, i - TWA_WIN);
@@ -3042,16 +3048,13 @@ window.autoDetectLegs = function(silent = false) {
             const r = (twas[j] || 0) * Math.PI / 180;
             sx += Math.cos(r); sy += Math.sin(r);
         }
-        smoothTwa[i] = Math.atan2(sy, sx) * 180 / Math.PI; // –180…+180
+        smoothTwa[i] = Math.atan2(sy, sx) * 180 / Math.PI;
     }
 
     // ── C: Auto-detect dock/port reference point ─────────────────────────────
-    // Use the centroid of the first cluster of low-SOG track positions.
-    // This is far more robust than track[0] which may have GPS startup drift.
     let dockLat = null, dockLng = null;
-    const DOCK_SAMPLE_SOG = 2.0;   // kn — max SOG to be considered a dock sample
-    const DOCK_SAMPLE_MAX = 60;    // how many samples to average for dock centroid
-    // DOCK_RADIUS_NM is now read from UI (autoDockRadius input, converted above)
+    const DOCK_SAMPLE_SOG = 2.0;
+    const DOCK_SAMPLE_MAX = 60;
     if (sessionData.track && sessionData.track.length > 0) {
         let dockSamples = [];
         for (let i = 0; i < Math.min(n, 600); i++) {
@@ -3070,16 +3073,11 @@ window.autoDetectLegs = function(silent = false) {
     }
     const hasDock = dockLat !== null && typeof calculateDistanceNM === 'function';
 
-    // ── D: Raw ashore mask — two independent signals OR-ed ───────────────────
-    //   Signal 1 (Telemetry):  low SOG + stable HDG (heading barely moves)
-    //   Signal 2 (Position):   near dock + low SOG  (GPS cluster at port)
-    // Either signal alone is sufficient to vote ashore.
+    // ── D: Ashore mask ───────────────────────────────────────────────────────
     const rawIsAshore = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
         const sog = sogs[i] || 0;
-        // Signal 1: telemetry — very low speed AND stable heading
         const telemetryAshore = sog <= ashoreMaxSpeed && hdgStd[i] < HDG_STD_MAX;
-        // Signal 2: position — within dock radius AND not moving fast
         let positionAshore = false;
         if (hasDock && sessionData.track && sessionData.track[i]) {
             const distNM = calculateDistanceNM(
@@ -3090,7 +3088,6 @@ window.autoDetectLegs = function(silent = false) {
         rawIsAshore[i] = (telemetryAshore || positionAshore) ? 1 : 0;
     }
 
-    // ── E: Smooth ashore mask — require 60 % majority in a 60-sample window ─
     const ASH_WIN = 30;
     const smoothIsAshore = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
@@ -3101,145 +3098,308 @@ window.autoDetectLegs = function(silent = false) {
         smoothIsAshore[i] = (cnt / (hi - lo + 1) >= 0.60) ? 1 : 0;
     }
 
-    // ── E: Enforce ashore→sailing→ashore — single sailing block ─────────────
     let firstSailing = -1, lastSailing = -1;
     for (let i = 0; i < n; i++)     { if (!smoothIsAshore[i]) { firstSailing = i; break; } }
     for (let i = n - 1; i >= 0; i--) { if (!smoothIsAshore[i]) { lastSailing  = i; break; } }
 
     const finalIsAshore = new Uint8Array(n);
     if (firstSailing < 0) {
-        finalIsAshore.fill(1);  // entire session ashore — edge case
+        finalIsAshore.fill(1);
     } else {
         for (let i = 0; i < firstSailing; i++) finalIsAshore[i] = 1;
-        // interior of sailing block: never force to ashore, even if slow
         for (let i = firstSailing; i <= lastSailing; i++) finalIsAshore[i] = 0;
         for (let i = lastSailing + 1; i < n; i++) finalIsAshore[i] = 1;
     }
 
-    // ── F: Per-sample mode using smoothed TWA ───────────────────────────────
+    // ── E: Classify each point into sailing modes & tacks ─────────────────────
     const rawMode = new Array(n);
     for (let i = 0; i < n; i++) {
         const sog  = sogs[i] || 0;
         const heel = Math.abs(heels[i] || 0);
-        const stwa = smoothTwa[i];      // smoothed TWA (–180…+180)
+        const stwa = smoothTwa[i];
         const absStwa = Math.abs(stwa);
-        // Convention in this data: TWA is computed as (HDG − TWD), so
-        // positive TWA means wind is coming from the LEFT (port) side of the boat.
-        // Positive TWA → Port tack.  Negative TWA → Starboard tack.
-        const tackStr = stwa >= 0 ? 'Port' : 'Stbd';
+        const isPort = (stwa >= 0);
+        const tackLabel = isPort ? 'Port' : 'Starboard';
+        const tackIcon = isPort ? '🔴' : '🟢';
         const isUpwind   = absStwa < 85;
         const isDownwind = absStwa > 105;
 
         if (finalIsAshore[i]) {
-            rawMode[i] = { m: 'ashore', label: '🏠 Ashore / Static', color: '#475569' };
+            rawMode[i] = { m: 'ashore', legType: 'break', label: isEs ? '🏠 En Tierra' : '🏠 Ashore', tack: 'none', color: '#475569' };
         } else if (sog > capsizeMinSpeed && sog <= capsizeMaxSpeed && heel >= capsizeMinHeel) {
-            rawMode[i] = { m: 'capsize', label: '🏊 Capsized', color: '#dc2626' };
+            rawMode[i] = { m: 'capsize', legType: 'break', label: isEs ? '🏊 Vuelco' : '🏊 Capsized', tack: 'none', color: '#dc2626' };
+        } else if (sog <= 1.8 && !finalIsAshore[i]) {
+            rawMode[i] = { m: 'drift', legType: 'break', label: isEs ? '☕ Parada / Espera' : '☕ Break / Waiting', tack: 'none', color: '#334155' };
         } else if (isFoiler) {
             const fly = sog >= flightSpeedThreshold;
             if (fly) {
-                if (isUpwind)        rawMode[i] = { m: 'upwind_fly',   label: `⛵ Upwind Flying (${tackStr})`,   color: 'rgba(56,189,248,0.85)' };
-                else if (isDownwind) rawMode[i] = { m: 'downwind_fly', label: `🚀 Downwind Flying (${tackStr})`, color: 'rgba(236,72,153,0.85)' };
-                else                 rawMode[i] = { m: 'reach_fly',    label: `💨 Reach Flying (${tackStr})`,    color: 'rgba(168,85,247,0.85)' };
+                if (isUpwind)        rawMode[i] = { m: 'upwind_fly', legType: 'upwind', label: `⛵ Upwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#60a5fa' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_fly', legType: 'downwind', label: `🚀 Downwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#f472b6' };
+                else                 rawMode[i] = { m: 'reach_fly', legType: 'reach', label: `💨 Reach Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#a855f7' : '#c084fc' };
             } else {
-                if (isUpwind)        rawMode[i] = { m: 'upwind_low',   label: `⛵ Upwind Low-Ride (${tackStr})`,   color: 'rgba(2,132,199,0.75)' };
-                else if (isDownwind) rawMode[i] = { m: 'downwind_low', label: `🚀 Downwind Low-Ride (${tackStr})`, color: 'rgba(190,24,93,0.75)' };
-                else                 rawMode[i] = { m: 'reach_low',    label: `💨 Reach Low-Ride (${tackStr})`,    color: 'rgba(126,34,206,0.75)' };
+                if (isUpwind)        rawMode[i] = { m: 'upwind_low', legType: 'upwind', label: `⛵ Upwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#0284c7' : '#2563eb' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_low', legType: 'downwind', label: `🚀 Downwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#be185d' : '#db2777' };
+                else                 rawMode[i] = { m: 'reach_low', legType: 'reach', label: `💨 Reach Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#7e22ce' : '#9333ea' };
             }
         } else {
-            if (isUpwind)        rawMode[i] = { m: 'upwind',   label: `⛵ Upwind (${tackStr})`,   color: 'rgba(56,189,248,0.85)' };
-            else if (isDownwind) rawMode[i] = { m: 'downwind', label: `🚀 Downwind (${tackStr})`, color: 'rgba(236,72,153,0.85)' };
-            else                 rawMode[i] = { m: 'reach',    label: `💨 Reach (${tackStr})`,    color: 'rgba(168,85,247,0.85)' };
+            if (isUpwind)        rawMode[i] = { m: 'upwind', legType: 'upwind', label: isEs ? `⛵ Ceñida (${tackIcon} ${isPort?'Babor':'Estribor'})` : `⛵ Upwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#2563eb' };
+            else if (isDownwind) rawMode[i] = { m: 'downwind', legType: 'downwind', label: isEs ? `🚀 Popa (${tackIcon} ${isPort?'Babor':'Estribor'})` : `🚀 Downwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#e11d48' };
+            else                 rawMode[i] = { m: 'reach', legType: 'reach', label: isEs ? `💨 Través (${tackIcon} ${isPort?'Babor':'Estribor'})` : `💨 Reach (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#10b981' : '#059669' };
         }
     }
 
-    // ── G: Build raw chunks ──────────────────────────────────────────────────
-    let chunks = [];
-    let cur = null;
+    // ── F: Build Primary Sailing Chunks ───────────────────────────────────────
+    let rawChunks = [];
+    let curChunk = null;
     for (let i = 0; i < n; i++) {
         const rm = rawMode[i];
-        if (!cur) {
-            cur = { m: rm.m, label: rm.label, color: rm.color, startIdx: i, endIdx: i };
-        } else if (cur.m === rm.m) {
-            cur.endIdx = i;
+        if (!curChunk) {
+            curChunk = { legType: rm.legType, startIdx: i, endIdx: i };
+        } else if (curChunk.legType === rm.legType) {
+            curChunk.endIdx = i;
         } else {
-            chunks.push(cur);
-            cur = { m: rm.m, label: rm.label, color: rm.color, startIdx: i, endIdx: i };
+            rawChunks.push(curChunk);
+            curChunk = { legType: rm.legType, startIdx: i, endIdx: i };
         }
     }
-    if (cur) chunks.push(cur);
-
-    // ── H: Absorb short chunks into their longer neighbor ───────────────────
-    // Use type-aware minimums:
-    //   • Sailing legs (upwind/downwind/reach/capsize) → MIN_SAILING_LEG (e.g. 300s)
-    //   • Ashore blocks                                → MIN_CHUNK_ASHORE (45s)
-    // Iterate until stable — guarantees every sliver is absorbed.
-    const minForChunk = (ch) => ch.m === 'ashore' ? MIN_CHUNK_ASHORE : MIN_SAILING_LEG;
+    if (curChunk) rawChunks.push(curChunk);
 
     let changed = true;
     while (changed) {
         changed = false;
         const merged = [];
-        for (let c = 0; c < chunks.length; c++) {
-            const ch = chunks[c];
+        for (let c = 0; c < rawChunks.length; c++) {
+            const ch = rawChunks[c];
             const dur = ch.endIdx - ch.startIdx + 1;
-            if (dur < minForChunk(ch) && merged.length > 0) {
+            const minDur = (ch.legType === 'break' ? 35 : MIN_SAILING_LEG);
+            if (dur < minDur && merged.length > 0) {
                 merged[merged.length - 1].endIdx = ch.endIdx;
                 changed = true;
             } else {
                 merged.push(ch);
             }
         }
-        chunks = merged;
+        rawChunks = merged;
     }
 
-    // Rebuild labels so merged chunks reflect the dominant mode of their samples
-    chunks = chunks.map(ch => {
-        const mid = Math.round((ch.startIdx + ch.endIdx) / 2);
-        return { ...ch, m: rawMode[mid].m, label: rawMode[mid].label, color: rawMode[mid].color };
-    });
-
-    // Merge adjacent same-mode chunks (may occur after absorption)
-    const tempChunks = [];
-    for (const ch of chunks) {
-        if (tempChunks.length > 0 && tempChunks[tempChunks.length - 1].m === ch.m) {
-            tempChunks[tempChunks.length - 1].endIdx = ch.endIdx;
+    const sailingBlocks = [];
+    for (const ch of rawChunks) {
+        if (sailingBlocks.length > 0 && sailingBlocks[sailingBlocks.length - 1].legType === ch.legType) {
+            sailingBlocks[sailingBlocks.length - 1].endIdx = ch.endIdx;
         } else {
-            tempChunks.push({ ...ch });
+            sailingBlocks.push({ ...ch });
         }
     }
 
-    // ── I: Build sublegs + maneuver markers ─────────────────────────────────
+    // ── G: Detect Races, Pre-Starts and Breaks (Hierarchical Division) ───────
+    let detectedRaces = [];
+    let currentRace = null;
+    let raceIndex = 0;
+
+    for (let b = 0; b < sailingBlocks.length; b++) {
+        const blk = sailingBlocks[b];
+        const dur = blk.endIdx - blk.startIdx + 1;
+
+        if (blk.legType === 'upwind') {
+            if (!currentRace) {
+                raceIndex++;
+                currentRace = {
+                    raceNum: raceIndex,
+                    startIdx: blk.startIdx,
+                    endIdx: blk.endIdx,
+                    legs: []
+                };
+            }
+            currentRace.legs.push({ type: 'upwind', startIdx: blk.startIdx, endIdx: blk.endIdx });
+            currentRace.endIdx = blk.endIdx;
+        } else if (blk.legType === 'downwind') {
+            if (currentRace) {
+                currentRace.legs.push({ type: 'downwind', startIdx: blk.startIdx, endIdx: blk.endIdx });
+                currentRace.endIdx = blk.endIdx;
+            }
+        } else if (blk.legType === 'break' || blk.legType === 'reach') {
+            if (currentRace) {
+                if (dur >= BREAK_SAMPLES || b === sailingBlocks.length - 1) {
+                    detectedRaces.push(currentRace);
+                    currentRace = null;
+                } else {
+                    currentRace.legs.push({ type: blk.legType, startIdx: blk.startIdx, endIdx: blk.endIdx });
+                    currentRace.endIdx = blk.endIdx;
+                }
+            }
+        }
+    }
+    if (currentRace && currentRace.legs.length > 0) {
+        detectedRaces.push(currentRace);
+    }
+
+    if (detectedRaces.length === 0) {
+        let firstS = sailingBlocks.find(b => b.legType === 'upwind' || b.legType === 'downwind');
+        if (firstS) {
+            detectedRaces.push({
+                raceNum: 1,
+                startIdx: firstS.startIdx,
+                endIdx: sailingBlocks[sailingBlocks.length - 1].endIdx,
+                legs: sailingBlocks.filter(b => b.legType === 'upwind' || b.legType === 'downwind')
+            });
+        }
+    }
+
+    // ── H: Construct ActiveSegments (Pre-Start, UW, DW, Breaks) ───────────────
+    let constructedSegments = [];
+    let lastSegmentEnd = 0;
+
+    detectedRaces.forEach((rc, rIdx) => {
+        const rNum = rIdx + 1;
+        const raceStart = rc.legs[0].startIdx;
+
+        // 1. Check for Pre-Start or Non-important break before this race
+        if (raceStart > lastSegmentEnd) {
+            const gapDuration = raceStart - lastSegmentEnd;
+            const preStartLen = Math.min(gapDuration, PRE_START_SAMPLES);
+            const breakLen = gapDuration - preStartLen;
+
+            // Non-important data between races (erasable)
+            if (breakLen > 40) {
+                const breakStart = lastSegmentEnd;
+                const breakEnd = lastSegmentEnd + breakLen - 1;
+                constructedSegments.push({
+                    id: `leg_break_${rNum}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    startIdx: breakStart,
+                    endIdx: breakEnd,
+                    type: 'break',
+                    label: isEs ? `☕ Pausa / Espera R${rNum} (Borrable)` : `☕ Break between Races (Erasable)`,
+                    color: 'rgba(71, 85, 105, 0.65)'
+                });
+            }
+
+            // Pre-start interval
+            if (preStartLen > 15) {
+                const psStart = raceStart - preStartLen;
+                const psEnd = raceStart - 1;
+                constructedSegments.push({
+                    id: `leg_prestart_${rNum}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    startIdx: psStart,
+                    endIdx: psEnd,
+                    type: 'pre_start',
+                    label: isEs ? `⏱️ Pre-Salida ${rNum}` : `⏱️ Pre-Start ${rNum}`,
+                    color: 'rgba(245, 158, 11, 0.75)'
+                });
+            }
+        }
+
+        // 2. Add Race Legs (Upwind 1-1, Downwind 1-1, Upwind 1-2, Downwind 1-2...)
+        let upwindCount = 0;
+        let downwindCount = 0;
+
+        rc.legs.forEach((lg) => {
+            if (lg.type === 'upwind') {
+                upwindCount++;
+                constructedSegments.push({
+                    id: `leg_uw_${rNum}_${upwindCount}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    startIdx: lg.startIdx,
+                    endIdx: lg.endIdx,
+                    type: 'upwind',
+                    label: isEs ? `⛵ Ceñida ${rNum}-${upwindCount}` : `⛵ Upwind ${rNum}-${upwindCount}`,
+                    color: '#38bdf8'
+                });
+            } else if (lg.type === 'downwind') {
+                downwindCount++;
+                constructedSegments.push({
+                    id: `leg_dw_${rNum}_${downwindCount}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    startIdx: lg.startIdx,
+                    endIdx: lg.endIdx,
+                    type: 'downwind',
+                    label: isEs ? `🚀 Popa ${rNum}-${downwindCount}` : `🚀 Downwind ${rNum}-${downwindCount}`,
+                    color: '#ec4899'
+                });
+            } else {
+                constructedSegments.push({
+                    id: `leg_reach_${rNum}_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    startIdx: lg.startIdx,
+                    endIdx: lg.endIdx,
+                    type: 'reach',
+                    label: isEs ? `💨 Través R${rNum}` : `💨 Reach R${rNum}`,
+                    color: '#10b981'
+                });
+            }
+            lastSegmentEnd = lg.endIdx + 1;
+        });
+    });
+
+    // Post-session return to dock / ashore
+    if (lastSegmentEnd < n - 1) {
+        constructedSegments.push({
+            id: `leg_break_post_${Date.now()}`,
+            startIdx: lastSegmentEnd,
+            endIdx: n - 1,
+            type: 'break',
+            label: isEs ? `🏠 Vuelta a Tierra / Fin Sesión (Borrable)` : `🏠 Return to Port / Post-Session (Erasable)`,
+            color: 'rgba(71, 85, 105, 0.65)'
+        });
+    }
+
+    if (constructedSegments.length > 0) {
+        activeSegments = constructedSegments;
+        selectedSegmentId = activeSegments[0].id;
+    }
+
+    // ── I: Build Detailed Sublegs (Tacks: Port / Starboard + Maneuver Markers) ───
     let finalSublegs = [];
     let tackCount = 0, gybeCount = 0, bearAwayCount = 0, roundingCount = 0;
 
-    for (let c = 0; c < tempChunks.length; c++) {
-        const chunk = tempChunks[c];
+    let tackChunks = [];
+    let curTackChunk = null;
+    for (let i = 0; i < n; i++) {
+        const rm = rawMode[i];
+        if (!curTackChunk) {
+            curTackChunk = { m: rm.m, tack: rm.tack, legType: rm.legType, startIdx: i, endIdx: i };
+        } else if (curTackChunk.tack === rm.tack && curTackChunk.legType === rm.legType) {
+            curTackChunk.endIdx = i;
+        } else {
+            tackChunks.push(curTackChunk);
+            curTackChunk = { m: rm.m, tack: rm.tack, legType: rm.legType, startIdx: i, endIdx: i };
+        }
+    }
+    if (curTackChunk) tackChunks.push(curTackChunk);
+
+    let mergedTacks = [];
+    for (let t = 0; t < tackChunks.length; t++) {
+        const tc = tackChunks[t];
+        const dur = tc.endIdx - tc.startIdx + 1;
+        if (dur < 12 && mergedTacks.length > 0) {
+            mergedTacks[mergedTacks.length - 1].endIdx = tc.endIdx;
+        } else {
+            mergedTacks.push(tc);
+        }
+    }
+
+    for (let c = 0; c < mergedTacks.length; c++) {
+        const chunk = mergedTacks[c];
 
         if (c > 0) {
-            const prev = tempChunks[c - 1];
-            const isPrevUp   = prev.m.includes('upwind');
-            const isPrevDown = prev.m.includes('downwind');
-            const isCurUp    = chunk.m.includes('upwind');
-            const isCurDown  = chunk.m.includes('downwind');
+            const prev = mergedTacks[c - 1];
+            const isPrevUp   = prev.legType === 'upwind';
+            const isPrevDown = prev.legType === 'downwind';
+            const isCurUp    = chunk.legType === 'upwind';
+            const isCurDown  = chunk.legType === 'downwind';
 
             const mStart = Math.max(0, chunk.startIdx - 4);
             const mEnd   = Math.min(n - 1, chunk.startIdx + 4);
 
-            // Measure the heading change across the boundary (last hdg of prev → first hdg of cur).
-            // We sample a short window on each side to get a stable reading.
-            const sampleBefore = Math.max(prev.startIdx, chunk.startIdx - 12);
-            const sampleAfter  = Math.min(chunk.endIdx,  chunk.startIdx + 12);
+            const sampleBefore = Math.max(prev.startIdx, chunk.startIdx - 10);
+            const sampleAfter  = Math.min(chunk.endIdx,  chunk.startIdx + 10);
             const hdgBefore    = hdgs[sampleBefore] || 0;
             const hdgAfter     = hdgs[sampleAfter]  || 0;
             let hdgDelta = Math.abs(hdgAfter - hdgBefore);
-            if (hdgDelta > 180) hdgDelta = 360 - hdgDelta;  // shortest arc
+            if (hdgDelta > 180) hdgDelta = 360 - hdgDelta;
 
             const isTackAngle = hdgDelta >= tackMinAngle;
 
-            if (isPrevUp && isCurUp && prev.label !== chunk.label && isTackAngle) {
+            if (isPrevUp && isCurUp && prev.tack !== chunk.tack && isTackAngle) {
                 tackCount++;
                 finalSublegs.push({ id: 'sub_tack_' + tackCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🔄 Tack #${tackCount}`, color: '#f59e0b' });
-            } else if (isPrevDown && isCurDown && prev.label !== chunk.label && isTackAngle) {
+            } else if (isPrevDown && isCurDown && prev.tack !== chunk.tack && isTackAngle) {
                 gybeCount++;
                 finalSublegs.push({ id: 'sub_gybe_' + gybeCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🌪️ Gybe #${gybeCount}`, color: '#10b981' });
             } else if (isPrevUp && isCurDown) {
@@ -3251,29 +3411,48 @@ window.autoDetectLegs = function(silent = false) {
             }
         }
 
+        let subLabel = chunk.tack === 'port' ? (isEs ? '🔴 Babor (Port)' : '🔴 Port Tack') : (chunk.tack === 'starboard' ? (isEs ? '🟢 Estribor (Stbd)' : '🟢 Starboard Tack') : (isEs ? '☕ Espera' : '☕ Break'));
+        let subColor = chunk.tack === 'port' ? '#ef4444' : (chunk.tack === 'starboard' ? '#10b981' : '#64748b');
+
+        if (chunk.legType === 'upwind') {
+            subLabel = (chunk.tack === 'port' ? '🔴 Port Upwind' : '🟢 Starboard Upwind');
+            subColor = chunk.tack === 'port' ? '#38bdf8' : '#2563eb';
+        } else if (chunk.legType === 'downwind') {
+            subLabel = (chunk.tack === 'port' ? '🔴 Port Downwind' : '🟢 Starboard Downwind');
+            subColor = chunk.tack === 'port' ? '#ec4899' : '#e11d48';
+        }
+
         finalSublegs.push({
             id: 'sub_' + c + '_' + Date.now(),
             startIdx: chunk.startIdx,
             endIdx:   chunk.endIdx,
-            type:     chunk.m === 'ashore' ? 'hidden' : 'subleg',
-            label:    chunk.label,
-            color:    chunk.color
+            type:     chunk.tack === 'none' ? 'break' : 'subleg',
+            label:    subLabel,
+            mode:     chunk.tack,
+            color:    subColor
         });
     }
 
     activeSublegs = finalSublegs;
     if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
+
+    // Render ribbons, maps and charts
+    renderSegmentRibbon();
     renderSublegRibbon();
+    if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
     if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+    if (typeof updateScrubberPosition === 'function') updateScrubberPosition();
 
     if (!silent) {
-        const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
-        const ashoreCount = tempChunks.filter(c => c.m === 'ashore').length;
+        const raceCount = detectedRaces.length;
+        const totalLegs = activeSegments.length;
         alert(isEs
-            ? `Autodetectados ${activeSublegs.length} subtramos (${tackCount} Viradas, ${gybeCount} Trasluchadas, ${bearAwayCount} Arribadas, ${ashoreCount} bloque(s) en tierra)`
-            : `Auto-detected ${activeSublegs.length} sublegs (${tackCount} Tacks, ${gybeCount} Gybes, ${bearAwayCount} Bear-Aways, ${ashoreCount} ashore block(s))`);
+            ? `⚡ Autodetección Completada: ${raceCount} Regata(s) detectadas con ${totalLegs} tramos (Pre-salidas, Ceñidas, Popas, Pausas) y ${activeSublegs.length} subtramos (Babor/Estribor, ${tackCount} Viradas, ${gybeCount} Trasluchadas).`
+            : `⚡ Auto-Detection Completed: ${raceCount} Race(s) detected with ${totalLegs} legs (Pre-Starts, Upwinds, Downwinds, Breaks) and ${activeSublegs.length} sublegs (Port/Starboard, ${tackCount} Tacks, ${gybeCount} Gybes).`);
     }
 };
+
+
 
 window.createLegFromSelectedSubleg = function() {
     if (!sessionData || !activeSublegs || activeSublegs.length === 0) return;
@@ -5688,4 +5867,113 @@ window.saveProjectToCloud = async function() {
             setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }
     }
+};
+
+
+// Prompt user to split sublegs by any telemetry variable (TWA, Heel, SOG, Pitch, ROT)
+window.promptCustomSublegSplit = function() {
+    if (!sessionData || !sessionData.metrics) {
+        alert("No telemetry session data loaded.");
+        return;
+    }
+    const isEs = window.location.href.includes('lang=es');
+    const availableVars = Object.keys(sessionData.metrics).filter(k => Array.isArray(sessionData.metrics[k]) && sessionData.metrics[k].length > 0);
+    
+    const varPrompt = isEs 
+        ? `Variables disponibles: ${availableVars.join(', ')}\n\nIntroduce el nombre de la variable para dividir los subtramos:`
+        : `Available variables: ${availableVars.join(', ')}\n\nEnter metric variable name to split sublegs by:`;
+    
+    const chosenVar = prompt(varPrompt, 'twa');
+    if (!chosenVar || !sessionData.metrics[chosenVar.trim()]) {
+        if (chosenVar) alert(isEs ? "Variable no encontrada en los datos de telemetría." : "Variable not found in telemetry data.");
+        return;
+    }
+    
+    const vName = chosenVar.trim();
+    const threshPrompt = isEs
+        ? `Introduce el valor de umbral (threshold) para ${vName}:`
+        : `Enter threshold value for ${vName}:`;
+    
+    const threshVal = parseFloat(prompt(threshPrompt, vName === 'twa' ? '0' : '10.0'));
+    if (isNaN(threshVal)) return;
+
+    const series = sessionData.metrics[vName];
+    const n = series.length;
+    let newSublegs = [];
+    let cur = null;
+
+    for (let i = 0; i < n; i++) {
+        const val = series[i];
+        const isAbove = val >= threshVal;
+        const tag = isAbove ? `${vName} >= ${threshVal}` : `${vName} < ${threshVal}`;
+        const color = isAbove ? '#10b981' : '#f59e0b';
+
+        if (!cur) {
+            cur = { startIdx: i, endIdx: i, tag: tag, color: color };
+        } else if (cur.tag === tag) {
+            cur.endIdx = i;
+        } else {
+            newSublegs.push(cur);
+            cur = { startIdx: i, endIdx: i, tag: tag, color: color };
+        }
+    }
+    if (cur) newSublegs.push(cur);
+
+    let merged = [];
+    for (let s of newSublegs) {
+        if (s.endIdx - s.startIdx + 1 < 5 && merged.length > 0) {
+            merged[merged.length - 1].endIdx = s.endIdx;
+        } else {
+            merged.push(s);
+        }
+    }
+
+    activeSublegs = merged.map((s, idx) => ({
+        id: `sub_custom_${vName}_${idx}_${Date.now()}`,
+        startIdx: s.startIdx,
+        endIdx: s.endIdx,
+        type: 'subleg',
+        label: `📊 ${s.tag}`,
+        mode: vName,
+        color: s.color
+    }));
+
+    if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
+    renderSublegRibbon();
+    alert(isEs 
+        ? `✅ Creados ${activeSublegs.length} subtramos basados en ${vName} (umbral: ${threshVal}).` 
+        : `✅ Created ${activeSublegs.length} sublegs based on ${vName} (threshold: ${threshVal}).`);
+};
+
+// Erase All Non-Important Break / Transit Data across all races
+window.eraseAllBreakData = function() {
+    if (!sessionData || !activeSegments || activeSegments.length === 0) return;
+    const isEs = window.location.href.includes('lang=es');
+    
+    const breakSegments = activeSegments.filter(s => s.type === 'break' || s.label.includes('Break') || s.label.includes('Pausa') || s.label.includes('Espera'));
+    if (breakSegments.length === 0) {
+        alert(isEs ? "No se encontraron tramos de pausa o datos no importantes." : "No break or non-important data segments found.");
+        return;
+    }
+
+    const confirmMsg = isEs
+        ? `⚠️ ¿Borrar PERMANENTEMENTE los datos de ${breakSegments.length} tramos de pausa/espera entre regatas?\n\nEsto limpiará el archivo dejando únicamente las regatas, pre-salidas y tramos de competición.`
+        : `⚠️ PERMANENTLY ERASE data from all ${breakSegments.length} break/transit segments between races?\n\nThis cleans the session, keeping only races, pre-starts and competitive legs.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    const sortedBreaks = [...breakSegments].sort((a, b) => b.startIdx - a.startIdx);
+    sortedBreaks.forEach(seg => {
+        deleteDataRange(seg.startIdx, seg.endIdx);
+    });
+
+    recalculateAllLegsTwd();
+    renderSegmentRibbon();
+    renderSublegRibbon();
+    refreshChartData();
+    autoFitVisualsToRemainingClips();
+    updateScrubberPosition();
+    if (typeof setupMap === 'function') setupMap();
+    updateFrame(playbackIndex);
+    alert(isEs ? `✅ Se han borrado ${breakSegments.length} tramos de pausa.` : `✅ Deleted ${breakSegments.length} break segments.`);
 };

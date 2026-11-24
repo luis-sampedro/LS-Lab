@@ -229,9 +229,12 @@
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #cbd5e1;">Leg Type:</span>
                             <select id="clipTypeSelector" onchange="changeSelectedClipType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="upwind">⛵ Upwind</option>
-                                <option value="downwind">🚀 Downwind</option>
+                                <option value="upwind">⛵ Upwind (UW)</option>
+                                <option value="downwind">🚀 Downwind (DW)</option>
                                 <option value="reach">💨 Reach</option>
+                                <option value="pre_start">⏱️ Pre-Start</option>
+                                <option value="break">☕ Break / Non-Important (Erasable)</option>
+                                <option value="race">🏁 Full Race</option>
                                 <option value="hidden">🙈 Hidden</option>
                             </select>
                         </div>
@@ -242,6 +245,10 @@
                         <div class="ribbon-menu-item" onclick="eraseSelectedLegData()">
                             <span style="color: #ef4444; font-weight: bold;">💥 Erase Leg Telemetry Data (Wipe GPS)</span>
                             <span class="ribbon-shortcut">2-step</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="eraseAllBreakData()">
+                            <span style="color: #f87171;">☕ Erase All Non-Important Break Data (All Races)</span>
+                            <span class="ribbon-shortcut">Clean</span>
                         </div>
                         <div style="display: flex; gap: 4px; padding: 4px 12px;">
                             <button type="button" onclick="goToSelectedLegStart()" class="ribbon-mini-btn" style="flex: 1;">⏮️ Go to Leg Start</button>
@@ -264,27 +271,39 @@
                             <span class="ribbon-shortcut">✏</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="font-size: 0.74rem; color: #cbd5e1;">Subleg Type:</span>
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Subleg Mode:</span>
                             <select id="sublegTypeSelector" onchange="changeSelectedSublegType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="upwind">⛵ Upwind</option>
-                                <option value="downwind">🚀 Downwind</option>
-                                <option value="reach">💨 Reach</option>
+                                <option value="port">🔴 Port Tack (Babor)</option>
+                                <option value="starboard">🟢 Starboard Tack (Estribor)</option>
+                                <option value="upwind">⛵ Upwind Leg</option>
+                                <option value="downwind">🚀 Downwind Leg</option>
+                                <option value="reach">💨 Reaching</option>
+                                <option value="pre_start">⏱️ Pre-Start</option>
+                                <option value="break">☕ Break / Transit</option>
                             </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptCustomSublegSplit()">
+                            <span>📊 Split Sublegs by Custom Metric... (TWA, Heel, SOG)</span>
+                            <span class="ribbon-shortcut">fx</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #38bdf8;">Multi-Select:</span>
                             <select id="sublegMultiSelector" onchange="selectSublegsByName(this.value)" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold;">
                                 <option value="">🔍 Select Sublegs...</option>
                                 <option value="all">Select All Sublegs</option>
-                                <option value="ashore">🏠 Select All Ashore</option>
-                                <option value="capsize">🏊 Select All Capsized</option>
+                                <option value="port">🔴 Select All Port Tack</option>
+                                <option value="starboard">🟢 Select All Starboard Tack</option>
                                 <option value="upwind">⛵ Select All Upwind</option>
                                 <option value="downwind">🚀 Select All Downwind</option>
+                                <option value="pre_start">⏱️ Select All Pre-Starts</option>
+                                <option value="break">☕ Select All Breaks / Transit</option>
                                 <option value="reach">💨 Select All Reach</option>
                                 <option value="fly">🛩️ Select All Flying</option>
                                 <option value="low">🌊 Select All Low-Ride</option>
                                 <option value="tack">🔄 Select All Tacks</option>
                                 <option value="gybe">🌪️ Select All Gybes</option>
+                                <option value="ashore">🏠 Select All Ashore</option>
+                                <option value="capsize">🏊 Select All Capsized</option>
                                 <option value="deselect">❌ Deselect All</option>
                             </select>
                         </div>
@@ -458,12 +477,40 @@
                             </div>
                         </div>
 
-                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Leg Detection</div>
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Session &amp; Race Structure (Regata / Entrenamiento)</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🏆 Structure Preset:</span>
+                                <select id="autoRaceStructurePreset" style="background: #020617; color: #38bdf8; border: 1px solid #475569; font-size: 0.72rem; padding: 2px 4px; border-radius: 4px;">
+                                    <option value="auto" selected>Auto-Detect Races (Starts &amp; Breaks)</option>
+                                    <option value="single_race">Single Race (Pre-Start + Upwinds + Downwinds)</option>
+                                    <option value="windward_leeward_2">2 Races (UW/DW + Breaks)</option>
+                                    <option value="windward_leeward_3">3 Races (Grand Prix Standard)</option>
+                                    <option value="training_intervals">Training Intervals / Speed Tests</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>⏱️ Pre-Start Duration:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoPreStartMin" value="5" min="1" max="15" step="1" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>☕ Min Break between Races:</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="autoBreakMinDuration" value="4" min="1" max="30" step="1" style="width: 50px; background: #020617; color: #94a3b8; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <span style="font-size: 0.65rem; color: #64748b;">min</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Leg &amp; Subleg Detection</div>
                         <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span>⏱️ Min Leg Duration:</span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <input type="number" id="autoMinLegMin" value="5" min="1" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
+                                    <input type="number" id="autoMinLegMin" value="3.5" min="0.5" max="30" step="0.5" style="width: 50px; background: #020617; color: #10b981; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
                                     <span style="font-size: 0.65rem; color: #64748b;">min</span>
                                 </div>
                             </div>
@@ -473,6 +520,13 @@
                                     <input type="number" id="autoTackMinAngle" value="70" min="30" max="150" step="5" style="width: 50px; background: #020617; color: #f59e0b; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
                                     <span style="font-size: 0.65rem; color: #64748b;">°</span>
                                 </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>🎯 Auto Sublegs by Tack:</span>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #38bdf8; cursor: pointer;">
+                                    <input type="checkbox" id="autoSublegsByTack" checked style="accent-color: #38bdf8;">
+                                    <span>Port / Starboard</span>
+                                </label>
                             </div>
                         </div>
 
