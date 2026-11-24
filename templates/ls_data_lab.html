@@ -585,9 +585,49 @@
                 </div>
             </div>
 
-            <div style="flex: 1;"></div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 0.68rem; color: #64748b; font-family: monospace;">CAD Viewports: 50% Map | 25% Plot | 25% Legs</span>
+
+
+            <!-- INLINE LEGS & SUBLEGS COMPLETE BAR -->
+            <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; border-left: 1px solid #334155; padding-left: 8px; margin-left: 2px;">
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.4px;">LEGS:</span>
+                <button type="button" onclick="promptManualRaceStart()" class="ribbon-action-btn" title="Mark Race Start at Time (e.g. 15.00h)" style="padding: 3px 6px; font-size: 0.72rem; border-color: #0284c7; color: #38bdf8;">⏱️</button>
+                <button type="button" onclick="promptDetectLegsInsideRace()" class="ribbon-action-btn" title="Detect UW / DW inside Race (e.g. 2 UW / 2 DW)" style="padding: 3px 6px; font-size: 0.72rem; border-color: #9333ea; color: #c084fc;">🎯</button>
+                <button type="button" onclick="combineSelectedLegs()" class="ribbon-action-btn" title="Combine 2+ Selected Legs into 1" style="padding: 3px 6px; font-size: 0.72rem; border-color: #059669; color: #34d399;">🔗</button>
+                <button type="button" onclick="splitSegmentAtPlayhead()" class="ribbon-action-btn" title="Split Segment at Playhead (New Start)" style="padding: 3px 6px; font-size: 0.72rem;">🏁</button>
+                <button type="button" onclick="splitClipAtScrubber()" class="ribbon-action-btn" title="Split Leg Clip at Scrubber" style="padding: 3px 6px; font-size: 0.72rem;">✂️</button>
+                <button type="button" onclick="promptRenameClip()" class="ribbon-action-btn" title="Rename Selected Leg" style="padding: 3px 6px; font-size: 0.72rem;">✏️</button>
+                <select onchange="changeSelectedClipType(this.value)" title="Leg Type" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; height: 24px;">
+                    <option value="upwind">⛵ UW</option>
+                    <option value="downwind">🚀 DW</option>
+                    <option value="reach">💨 Reach</option>
+                    <option value="pre_start">⏱️ Pre</option>
+                    <option value="break">☕ Break</option>
+                    <option value="race">🏁 Race</option>
+                    <option value="hidden">🙈 Hide</option>
+                </select>
+                <button type="button" onclick="deleteSelectedClip()" class="ribbon-action-btn" title="Delete Leg Label" style="padding: 3px 6px; font-size: 0.72rem; color: #fca5a5;">🗑️</button>
+                <button type="button" onclick="eraseSelectedLegData()" class="ribbon-action-btn" title="Erase Leg Data (Wipe GPS)" style="padding: 3px 6px; font-size: 0.72rem; border-color: #b91c1c; color: #f87171;">💥</button>
+                <button type="button" onclick="goToSelectedLegStart()" class="ribbon-action-btn" title="Go to Leg Start" style="padding: 3px 5px; font-size: 0.7rem;">⏮️</button>
+                <button type="button" onclick="goToSelectedLegEnd()" class="ribbon-action-btn" title="Go to Leg End" style="padding: 3px 5px; font-size: 0.7rem;">⏭️</button>
+
+                <span style="width: 1px; height: 18px; background: #334155; margin: 0 4px;"></span>
+
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.4px;">SUBLEGS:</span>
+                <button type="button" onclick="splitSublegAtScrubber()" class="ribbon-action-btn" title="Split Subleg at Scrubber" style="padding: 3px 6px; font-size: 0.72rem; border-color: #059669; color: #34d399;">✂️</button>
+                <button type="button" onclick="promptRenameSubleg()" class="ribbon-action-btn" title="Rename Selected Subleg" style="padding: 3px 6px; font-size: 0.72rem;">✏️</button>
+                <select onchange="changeSelectedSublegType(this.value)" title="Subleg Mode" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; height: 24px;">
+                    <option value="port">🔴 Port</option>
+                    <option value="starboard">🟢 Stbd</option>
+                    <option value="upwind">⛵ UW</option>
+                    <option value="downwind">🚀 DW</option>
+                    <option value="reach">💨 Reach</option>
+                    <option value="pre_start">⏱️ Pre</option>
+                    <option value="break">☕ Break</option>
+                </select>
+                <button type="button" onclick="promptCustomSublegSplit()" class="ribbon-action-btn" title="Split Sublegs by Custom Metric (TWA, Heel, SOG)" style="padding: 3px 6px; font-size: 0.72rem;">📊</button>
+                <button type="button" onclick="deleteSelectedSubleg()" class="ribbon-action-btn" title="Delete Subleg Label" style="padding: 3px 6px; font-size: 0.72rem; color: #fca5a5;">🗑️</button>
+                <button type="button" onclick="eraseSelectedSublegData()" class="ribbon-action-btn" title="Erase Subleg Data" style="padding: 3px 6px; font-size: 0.72rem; border-color: #b91c1c; color: #f87171;">💥</button>
+                <button type="button" onclick="resetToSingleSessionSubleg()" class="ribbon-action-btn" title="Reset to 1 Single Full Subleg" style="padding: 3px 6px; font-size: 0.72rem;">🔄</button>
             </div>
         </div>
 
