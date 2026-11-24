@@ -7464,3 +7464,157 @@ window.eraseAllBreakData = function() {
     updateFrame(playbackIndex);
     alert(isEs ? `✅ Se han borrado ${breakSegments.length} tramos de pausa.` : `✅ Deleted ${breakSegments.length} break segments.`);
 };
+
+
+// ==========================================
+// MANEUVER TOOLS (NEW, MOVE, TIME, DURATION, DELETE)
+// ==========================================
+function getSelectedOrActiveManeuver() {
+    if (!sessionData || !activeSublegs) return null;
+    let seg = activeSublegs.find(s => s.id === selectedSublegId && s.type === 'maneuver');
+    if (!seg) {
+        seg = activeSublegs.find(s => s.type === 'maneuver' && playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+    }
+    return seg || null;
+}
+
+window.createManeuverAtPlayhead = function() {
+    if (!sessionData || !sessionData.track) return;
+    const isEs = window.location.href.includes('lang=es');
+    const n = sessionData.track.length;
+    const halfDur = 4; // default 8-9s window
+    const sIdx = Math.max(0, playbackIndex - halfDur);
+    const eIdx = Math.min(n - 1, playbackIndex + halfDur);
+    const id = 'maneuver_' + Date.now();
+    const label = isEs ? '🔄 Maniobra' : '🔄 Maneuver';
+
+    activeSublegs.push({
+        id: id,
+        startIdx: sIdx,
+        endIdx: eIdx,
+        type: 'maneuver',
+        label: label,
+        mode: 'tack',
+        color: '#f59e0b'
+    });
+    activeSublegs.sort((a, b) => a.startIdx - b.startIdx);
+    selectedSublegId = id;
+    window.selectedSublegIds = [id];
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};
+
+window.moveSelectedManeuver = function() {
+    const seg = getSelectedOrActiveManeuver();
+    const isEs = window.location.href.includes('lang=es');
+    if (!seg) {
+        alert(isEs ? "Selecciona una maniobra primero." : "Please select a maneuver first.");
+        return;
+    }
+    const dur = seg.endIdx - seg.startIdx;
+    const half = Math.floor(dur / 2);
+    const n = sessionData.track.length;
+    seg.startIdx = Math.max(0, playbackIndex - half);
+    seg.endIdx = Math.min(n - 1, seg.startIdx + dur);
+    activeSublegs.sort((a, b) => a.startIdx - b.startIdx);
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};
+
+window.setManeuverTime = function() {
+    const seg = getSelectedOrActiveManeuver();
+    const isEs = window.location.href.includes('lang=es');
+    if (!seg) {
+        alert(isEs ? "Selecciona una maniobra primero." : "Please select a maneuver first.");
+        return;
+    }
+    const curCenter = Math.floor((seg.startIdx + seg.endIdx) / 2);
+    const curClock = typeof getLocalGpsClockTimeStr === 'function' ? getLocalGpsClockTimeStr(curCenter) : '12:00:00';
+    const input = prompt(
+        isEs ? `Introduce la hora exacta de la maniobra (HH:MM:SS):` : `Enter exact maneuver clock time (HH:MM:SS):`,
+        curClock
+    );
+    if (!input || !input.trim()) return;
+    const parts = input.trim().replace(/\./g, ':').split(':').map(v => parseInt(v, 10));
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return;
+    const targetSec = parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+
+    let bestIdx = curCenter;
+    let minDiff = Infinity;
+    for (let i = 0; i < sessionData.track.length; i++) {
+        const cStr = getLocalGpsClockTimeStr(i);
+        const [ch, cm, cs] = cStr.split(':').map(v => parseInt(v, 10));
+        if (isNaN(ch) || isNaN(cm)) continue;
+        let diff = Math.abs((ch * 3600 + cm * 60 + (cs || 0)) - targetSec);
+        if (diff > 43200) diff = 86400 - diff;
+        if (diff < minDiff) {
+            minDiff = diff;
+            bestIdx = i;
+        }
+    }
+
+    const dur = seg.endIdx - seg.startIdx;
+    const half = Math.floor(dur / 2);
+    seg.startIdx = Math.max(0, bestIdx - half);
+    seg.endIdx = Math.min(sessionData.track.length - 1, seg.startIdx + dur);
+    playbackIndex = bestIdx;
+    updateScrubberPosition();
+    updateFrame(playbackIndex);
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};
+
+window.setManeuverDuration = function() {
+    const seg = getSelectedOrActiveManeuver();
+    const isEs = window.location.href.includes('lang=es');
+    if (!seg) {
+        alert(isEs ? "Selecciona una maniobra primero." : "Please select a maneuver first.");
+        return;
+    }
+    const curDur = Math.max(1, seg.endIdx - seg.startIdx + 1);
+    const val = parseInt(prompt(
+        isEs ? "Introduce la duración de la maniobra (en segundos / puntos):" : "Enter maneuver duration (in seconds / points):",
+        String(curDur)
+    ), 10);
+    if (isNaN(val) || val < 2) return;
+    const center = Math.floor((seg.startIdx + seg.endIdx) / 2);
+    const half = Math.floor(val / 2);
+    seg.startIdx = Math.max(0, center - half);
+    seg.endIdx = Math.min(sessionData.track.length - 1, seg.startIdx + val - 1);
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};
+
+window.changeSelectedManeuverType = function(typeVal) {
+    const seg = getSelectedOrActiveManeuver();
+    if (!seg) return;
+    seg.mode = typeVal;
+    if (typeVal === 'tack') {
+        seg.label = '🔄 Tack';
+        seg.color = '#f59e0b';
+    } else if (typeVal === 'gybe') {
+        seg.label = '🌪️ Gybe';
+        seg.color = '#ec4899';
+    } else if (typeVal === 'rounding') {
+        seg.label = '🚩 Mark Rounding';
+        seg.color = '#a855f7';
+    } else if (typeVal === 'bear_away') {
+        seg.label = '⬇️ Bear Away';
+        seg.color = '#38bdf8';
+    }
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};
+
+window.deleteSelectedManeuver = function() {
+    const seg = getSelectedOrActiveManeuver();
+    const isEs = window.location.href.includes('lang=es');
+    if (!seg) {
+        alert(isEs ? "Selecciona una maniobra primero." : "Please select a maneuver first.");
+        return;
+    }
+    activeSublegs = activeSublegs.filter(s => s.id !== seg.id);
+    if (selectedSublegId === seg.id) selectedSublegId = activeSublegs[0] ? activeSublegs[0].id : null;
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+};

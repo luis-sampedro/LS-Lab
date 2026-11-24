@@ -587,6 +587,49 @@
 
 
 
+            <!-- Desplegable: Maneuver -->
+                <div class="ribbon-dropdown-wrapper">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('maneuver', event)">
+                        <span>🔄</span> <strong>Maneuver</strong> <span>▾</span>
+                    </button>
+                    <div class="ribbon-dropdown-menu" id="dropdown-ribbon-maneuver" style="min-width: 240px;">
+                        <div class="ribbon-menu-section-header">🔄 MANEUVER EDITOR</div>
+                        <div class="ribbon-menu-item" onclick="createManeuverAtPlayhead()">
+                            <span style="color: #10b981; font-weight: bold;">➕ New Maneuver at Playhead</span>
+                            <span class="ribbon-shortcut">New</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="moveSelectedManeuver()">
+                            <span>↔️ Move Maneuver to Playhead</span>
+                            <span class="ribbon-shortcut">Move</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="setManeuverTime()">
+                            <span>⏱️ Set Exact Clock Time...</span>
+                            <span class="ribbon-shortcut">Time</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="setManeuverDuration()">
+                            <span>⏳ Set Duration (sec)...</span>
+                            <span class="ribbon-shortcut">Dur</span>
+                        </div>
+                        <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Type:</span>
+                            <select onchange="changeSelectedManeuverType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
+                                <option value="tack">🔄 Tack</option>
+                                <option value="gybe">🌪️ Gybe</option>
+                                <option value="rounding">🚩 Mark Rounding</option>
+                                <option value="bear_away">⬇️ Bear Away</option>
+                            </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptRenameSubleg()">
+                            <span>✏️ Rename Maneuver</span>
+                            <span class="ribbon-shortcut">✏</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="deleteSelectedManeuver()">
+                            <span style="color: #fca5a5;">🗑️ Delete Maneuver</span>
+                            <span class="ribbon-shortcut">Del</span>
+                        </div>
+                    </div>
+                </div>
+
             <!-- INLINE LEGS & SUBLEGS COMPLETE BAR -->
             <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; border-left: 1px solid #334155; padding-left: 8px; margin-left: 2px;">
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.4px;">LEGS:</span>

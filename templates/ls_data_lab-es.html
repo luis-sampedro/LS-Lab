@@ -590,6 +590,49 @@
                 <span style="font-size: 0.68rem; color: #64748b; font-family: monospace;">Vistas CAD: 50% Mapa | 25% Gráfica | 25% Tramos</span>
             </div>
 
+            <!-- Desplegable: Maniobra -->
+                <div class="ribbon-dropdown-wrapper">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('maneuver', event)">
+                        <span>🔄</span> <strong>Maniobra</strong> <span>▾</span>
+                    </button>
+                    <div class="ribbon-dropdown-menu" id="dropdown-ribbon-maneuver" style="min-width: 240px;">
+                        <div class="ribbon-menu-section-header">🔄 EDITOR DE MANIOBRAS</div>
+                        <div class="ribbon-menu-item" onclick="createManeuverAtPlayhead()">
+                            <span style="color: #10b981; font-weight: bold;">➕ Nueva Maniobra en Cursor</span>
+                            <span class="ribbon-shortcut">Nueva</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="moveSelectedManeuver()">
+                            <span>↔️ Mover Maniobra al Cursor</span>
+                            <span class="ribbon-shortcut">Mover</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="setManeuverTime()">
+                            <span>⏱️ Fijar Hora Exacta...</span>
+                            <span class="ribbon-shortcut">Hora</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="setManeuverDuration()">
+                            <span>⏳ Fijar Duración (seg)...</span>
+                            <span class="ribbon-shortcut">Dur</span>
+                        </div>
+                        <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.74rem; color: #cbd5e1;">Tipo:</span>
+                            <select onchange="changeSelectedManeuverType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
+                                <option value="tack">🔄 Virada (Tack)</option>
+                                <option value="gybe">🌪️ Trasluchada (Gybe)</option>
+                                <option value="rounding">🚩 Paso de Boya</option>
+                                <option value="bear_away">⬇️ Arribada</option>
+                            </select>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="promptRenameSubleg()">
+                            <span>✏️ Renombrar Maniobra</span>
+                            <span class="ribbon-shortcut">✏</span>
+                        </div>
+                        <div class="ribbon-menu-item" onclick="deleteSelectedManeuver()">
+                            <span style="color: #fca5a5;">🗑️ Eliminar Maniobra</span>
+                            <span class="ribbon-shortcut">Supr</span>
+                        </div>
+                    </div>
+                </div>
+
             <!-- BARRA COMPLETA DE TRAMOS Y SUBTRAMOS INTEGRADA -->
             <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; border-left: 1px solid #334155; padding-left: 8px; margin-left: 2px;">
                 <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.4px;">TRAMOS:</span>
