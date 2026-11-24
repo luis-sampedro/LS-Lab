@@ -59,7 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initCadFloatingDrag();
     if (typeof window.resetHudToMapDefault === 'function') window.resetHudToMapDefault();
     if (typeof window.adjustDockedWindowsFill === 'function') window.adjustDockedWindowsFill();
+    if (typeof window.initHudAutoFit === 'function') window.initHudAutoFit();
     if (typeof updateLowSpeedStatusUI === 'function') updateLowSpeedStatusUI();
+    if (typeof switchTab === 'function') switchTab('telemetry');
 });
 
 // CAD VIEWPORT STATE & MANAGEMENT (Rhino / Star-CCM+ Style & Windows 11 Snap)
@@ -439,9 +441,9 @@ window.updateCadDock = function() {
     dock.innerHTML = closedOrMin.map(vp => {
         const labels = {
             map: '🗺️ Mapa Tracker',
-            hud: '📊 Telemetría HUD',
+            hud: 'Telemetría HUD',
             plot: '📈 Gráfica Telemetría',
-            timeline: '🎬 Tramos Clipper'
+            timeline: 'Tramos Clipper'
         };
         const statusText = !cadViewportState.visible[vp] ? 'Cerrado' : 'Minimizado';
         return `
@@ -1225,7 +1227,7 @@ window.applyCustomStartTime = function(timeStr) {
                                 ...s,
                                 id: 'leg_prestart_' + Date.now(),
                                 endIdx: cutIdx,
-                                label: '🚫 Pre-Start',
+                                label: 'Pre-Start',
                                 type: 'hidden',
                                 color: 'rgba(71, 85, 105, 0.4)'
                             });
@@ -1234,7 +1236,7 @@ window.applyCustomStartTime = function(timeStr) {
                                 ...s,
                                 id: 'leg_start_' + Date.now(),
                                 startIdx: cutIdx,
-                                label: '🏁 Race Start'
+                                label: 'Race Start'
                             });
                         } else {
                             newSegs.push(s);
@@ -1242,7 +1244,7 @@ window.applyCustomStartTime = function(timeStr) {
                     });
                     activeSegments = newSegs;
                     // Select the race-start leg
-                    const startLeg = activeSegments.find(s => s.label === '🏁 Race Start');
+                    const startLeg = activeSegments.find(s => s.label === 'Race Start');
                     if (startLeg) selectedSegmentId = startLeg.id;
 
                     recalculateAllLegsTwd();
@@ -1270,8 +1272,8 @@ window.applyTimezoneOffset = function(val) {
     updateReelsInspectorPill();
 };
 
-window.switchTab = function(tabId) {
-    if (!sessionData && tabId !== 'upload') return;
+window.window.switchTab = function(tabId) {
+    if (!sessionData && tabId !== 'upload' && tabId !== 'telemetry') return;
     
     const tabBtn = document.getElementById(`btn-tab-${tabId}`);
     if (tabBtn && tabBtn.classList.contains('disabled')) return;
@@ -1522,6 +1524,13 @@ function setupKeyboardShortcuts() {
 function setupEventListeners() {
     const uploadBtn = document.getElementById('uploadBtn');
     if (uploadBtn) uploadBtn.addEventListener('click', handleUpload);
+
+    const logFileEl = document.getElementById('logFile');
+    if (logFileEl) {
+        logFileEl.addEventListener('change', () => {
+            if (logFileEl.files && logFileEl.files[0]) handleUpload();
+        });
+    }
 
     const playBtn = document.getElementById('playBtn');
     if (playBtn) playBtn.addEventListener('click', togglePlay);
@@ -2187,6 +2196,8 @@ window.refreshChartData = function() {
 
 function loadSessionToVisuals() {
     if (!sessionData || !sessionData.track) return;
+    const emptyPrompt = document.getElementById('telemetry-empty-prompt');
+    if (emptyPrompt) emptyPrompt.style.display = 'none';
     const trackPoints = sessionData.track;
     if (!trackPoints || trackPoints.length === 0) return;
 
@@ -2387,7 +2398,7 @@ window.resetToSingleSessionLeg = function() {
         startIdx: 0,
         endIdx: sessionData.track.length - 1,
         type: 'leg',
-        label: isEs ? '🎬 Sesión Completa' : '🎬 Full Session',
+        label: isEs ? 'Sesión Completa' : 'Full Session',
         color: LEG_PALETTE[0],
         twd: sessionData.calibratedTwd
     }];
@@ -2396,7 +2407,7 @@ window.resetToSingleSessionLeg = function() {
         startIdx: 0,
         endIdx: sessionData.track.length - 1,
         type: 'subleg',
-        label: isEs ? '🔴 Babor / Subtramo 1' : '🔴 Port / Subleg 1',
+        label: isEs ? 'Babor / Subtramo 1' : 'Port / Subleg 1',
         color: '#ef4444',
         mode: 'port'
     }];
@@ -2680,8 +2691,8 @@ window.combineSelectedLegs = function() {
     updateFrame(playbackIndex);
 
     alert(isEs
-        ? `✅ Tramos combinados con éxito en "${mergedLabel}".`
-        : `✅ Legs successfully merged into "${mergedLabel}".`);
+        ? `Tramos combinados con éxito en "${mergedLabel}".`
+        : `Legs successfully merged into "${mergedLabel}".`);
 };
 
 
@@ -2741,8 +2752,8 @@ window.promptDetectLegsInsideRace = function() {
     }
 
     const raceNamePrompt = isEs
-        ? `🏁 Detectar Ceñidas y Popas (UW/DW) dentro de Manga:\n\nTramo objetivo: "${targetRace.label}"\nPuntos: #${targetRace.startIdx} a #${targetRace.endIdx}\n\nIntroduce el esquema deseado (ejemplo: "2 UW / 2 DW", "2 UW 2 DW" o "3 UW / 2 DW"):`
-        : `🏁 Detect Upwind / Downwind (UW/DW) inside Race:\n\nTarget scope: "${targetRace.label}"\nPoints: #${targetRace.startIdx} to #${targetRace.endIdx}\n\nEnter target structure (e.g. "2 UW / 2 DW", "2 UW 2 DW" or "3 UW / 2 DW"):`;
+        ? `Detectar Ceñidas y Popas (UW/DW) dentro de Manga:\n\nTramo objetivo: "${targetRace.label}"\nPuntos: #${targetRace.startIdx} a #${targetRace.endIdx}\n\nIntroduce el esquema deseado (ejemplo: "2 UW / 2 DW", "2 UW 2 DW" o "3 UW / 2 DW"):`
+        : `Detect Upwind / Downwind (UW/DW) inside Race:\n\nTarget scope: "${targetRace.label}"\nPoints: #${targetRace.startIdx} to #${targetRace.endIdx}\n\nEnter target structure (e.g. "2 UW / 2 DW", "2 UW 2 DW" or "3 UW / 2 DW"):`;
 
     const userScheme = prompt(raceNamePrompt, "2 UW / 2 DW");
     if (!userScheme || userScheme.trim() === '') return;
@@ -2848,7 +2859,7 @@ window.promptDetectLegsInsideRace = function() {
                     startIdx: blk.startIdx,
                     endIdx: blk.endIdx,
                     type: 'upwind',
-                    label: isEs ? `⛵ Ceñida ${rNum}-${uCount}` : `⛵ Upwind ${rNum}-${uCount}`,
+                    label: isEs ? `Ceñida ${rNum}-${uCount}` : `Upwind ${rNum}-${uCount}`,
                     color: '#38bdf8'
                 });
             } else {
@@ -2858,7 +2869,7 @@ window.promptDetectLegsInsideRace = function() {
                     startIdx: blk.startIdx,
                     endIdx: blk.endIdx,
                     type: 'downwind',
-                    label: isEs ? `🚀 Popa ${rNum}-${dCount}` : `🚀 Downwind ${rNum}-${dCount}`,
+                    label: isEs ? `Popa ${rNum}-${dCount}` : `Downwind ${rNum}-${dCount}`,
                     color: '#ec4899'
                 });
             }
@@ -2881,7 +2892,7 @@ window.promptDetectLegsInsideRace = function() {
                     startIdx: sIdx,
                     endIdx: eIdx,
                     type: 'upwind',
-                    label: isEs ? `⛵ Ceñida ${rNum}-${uCount}` : `⛵ Upwind ${rNum}-${uCount}`,
+                    label: isEs ? `Ceñida ${rNum}-${uCount}` : `Upwind ${rNum}-${uCount}`,
                     color: '#38bdf8'
                 });
             } else {
@@ -2891,7 +2902,7 @@ window.promptDetectLegsInsideRace = function() {
                     startIdx: sIdx,
                     endIdx: eIdx,
                     type: 'downwind',
-                    label: isEs ? `🚀 Popa ${rNum}-${dCount}` : `🚀 Downwind ${rNum}-${dCount}`,
+                    label: isEs ? `Popa ${rNum}-${dCount}` : `Downwind ${rNum}-${dCount}`,
                     color: '#ec4899'
                 });
             }
@@ -2924,7 +2935,7 @@ window.promptDetectLegsInsideRace = function() {
             const isPort = (stwa >= 0);
             const mode = isPort ? 'port' : 'starboard';
             const color = isPort ? '#ef4444' : '#10b981';
-            const label = isPort ? (isEs ? '🔴 Babor' : '🔴 Port Tack') : (isEs ? '🟢 Estribor' : '🟢 Starboard Tack');
+            const label = isPort ? (isEs ? 'Babor' : 'Port Tack') : (isEs ? 'Estribor' : 'Starboard Tack');
 
             if (!curSub) {
                 curSub = { id: `sub_${mode}_${i}_${Date.now()}`, startIdx: i, endIdx: i, type: 'subleg', label: label, mode: mode, color: color };
@@ -2958,8 +2969,8 @@ window.promptDetectLegsInsideRace = function() {
     updateFrame(playbackIndex);
 
     alert(isEs
-        ? `✅ Detección completada en Manga ${rNum}:\n\n${targetUW} Ceñida(s) y ${targetDW} Popa(s) detectadas.\n${newSublegsCreated.length} subtramos creados (Babor/Estribor).\nLas demás mangas y datos se han mantenido intactos.`
-        : `✅ Detection completed in Race ${rNum}:\n\n${targetUW} Upwind(s) and ${targetDW} Downwind(s) detected.\n${newSublegsCreated.length} sublegs created (Port/Starboard).\nAll other races and legs were preserved.`);
+        ? `Detección completada en Manga ${rNum}:\n\n${targetUW} Ceñida(s) y ${targetDW} Popa(s) detectadas.\n${newSublegsCreated.length} subtramos creados (Babor/Estribor).\nLas demás mangas y datos se han mantenido intactos.`
+        : `Detection completed in Race ${rNum}:\n\n${targetUW} Upwind(s) and ${targetDW} Downwind(s) detected.\n${newSublegsCreated.length} sublegs created (Port/Starboard).\nAll other races and legs were preserved.`);
 };
 
 
@@ -2990,8 +3001,8 @@ window.promptManualRaceStart = function() {
     }
 
     const promptMsg = isEs
-        ? `🏁 Marcar Inicio Manual de Manga:\n\nIntroduce el número de manga y la hora de salida (ejemplo: "15:00", "15:00:00" o "15.00h"):\n\nRango de la sesión actual: ${startClock} – ${endClock}\nHora actual en cursor: ${curClock}\n\nFormato: [Manga] a las [HH:MM:SS]`
-        : `🏁 Manual Race Start Setup:\n\nEnter race number and start clock time (e.g. "15:00", "15:00:00", or "15.00h"):\n\nSession range: ${startClock} – ${endClock}\nCurrent playhead time: ${curClock}\n\nFormat: [Race number] at [HH:MM:SS]`;
+        ? `Marcar Inicio Manual de Manga:\n\nIntroduce el número de manga y la hora de salida (ejemplo: "15:00", "15:00:00" o "15.00h"):\n\nRango de la sesión actual: ${startClock} – ${endClock}\nHora actual en cursor: ${curClock}\n\nFormato: [Manga] a las [HH:MM:SS]`
+        : `Manual Race Start Setup:\n\nEnter race number and start clock time (e.g. "15:00", "15:00:00", or "15.00h"):\n\nSession range: ${startClock} – ${endClock}\nCurrent playhead time: ${curClock}\n\nFormat: [Race number] at [HH:MM:SS]`;
 
     const defaultVal = `${nextRaceNum} @ ${curClock.slice(0, 5)}`;
     const userResp = prompt(promptMsg, defaultVal);
@@ -3069,17 +3080,11 @@ window.promptManualRaceStart = function() {
     let newSegs = [];
     activeSegments.forEach(s => {
         if (bestIdx > s.startIdx && bestIdx < s.endIdx) {
-            // Cut this segment at start time
+            // Cut this segment at start time, keeping prior segment intact (no automatic break)
             if (preStartIdx > s.startIdx) {
-                // Interval before pre-start
                 newSegs.push({
                     ...s,
-                    id: 'leg_break_' + Date.now() + '_pre',
-                    startIdx: s.startIdx,
-                    endIdx: preStartIdx - 1,
-                    type: 'break',
-                    label: isEs ? `☕ Pausa R${raceNum}` : `☕ Break R${raceNum}`,
-                    color: 'rgba(71, 85, 105, 0.65)'
+                    endIdx: preStartIdx - 1
                 });
                 // 5-min Pre-start
                 newSegs.push({
@@ -3088,7 +3093,7 @@ window.promptManualRaceStart = function() {
                     startIdx: preStartIdx,
                     endIdx: bestIdx - 1,
                     type: 'pre_start',
-                    label: isEs ? `⏱️ Pre-Salida ${raceNum} (5 min)` : `⏱️ Pre-Start ${raceNum} (5 min)`,
+                    label: isEs ? `Pre-Salida ${raceNum} (5 min)` : `Pre-Start ${raceNum} (5 min)`,
                     color: 'rgba(245, 158, 11, 0.85)'
                 });
             } else {
@@ -3099,7 +3104,7 @@ window.promptManualRaceStart = function() {
                     startIdx: s.startIdx,
                     endIdx: bestIdx - 1,
                     type: 'pre_start',
-                    label: isEs ? `⏱️ Pre-Salida ${raceNum}` : `⏱️ Pre-Start ${raceNum}`,
+                    label: isEs ? `Pre-Salida ${raceNum}` : `Pre-Start ${raceNum}`,
                     color: 'rgba(245, 158, 11, 0.85)'
                 });
             }
@@ -3112,7 +3117,7 @@ window.promptManualRaceStart = function() {
                 startIdx: bestIdx,
                 endIdx: s.endIdx,
                 type: 'upwind',
-                label: isEs ? `⛵ Ceñida ${raceNum}-1 (Salida ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})` : `⛵ Upwind ${raceNum}-1 (Start ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})`,
+                label: isEs ? `Ceñida ${raceNum}-1 (Salida ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})` : `Upwind ${raceNum}-1 (Start ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})`,
                 color: '#38bdf8'
             });
             selectedSegmentId = newRaceId;
@@ -3130,8 +3135,8 @@ window.promptManualRaceStart = function() {
 
     const actualClock = getLocalGpsClockTimeStr(bestIdx);
     alert(isEs
-        ? `✅ Manga ${raceNum} marcada con éxito!\n\nSalida: ${actualClock} (Punto #${bestIdx})\nPre-salida creada de 5 minutos.\nTWD recalculado para Ceñida ${raceNum}-1.`
-        : `✅ Race ${raceNum} successfully marked!\n\nStart: ${actualClock} (Point #${bestIdx})\n5-minute pre-start created.\nTWD recalculated for Upwind ${raceNum}-1.`);
+        ? `Manga ${raceNum} marcada con éxito!\n\nSalida: ${actualClock} (Punto #${bestIdx})\nPre-salida creada de 5 minutos.\nTWD recalculado para Ceñida ${raceNum}-1.`
+        : `Race ${raceNum} successfully marked!\n\nStart: ${actualClock} (Point #${bestIdx})\n5-minute pre-start created.\nTWD recalculated for Upwind ${raceNum}-1.`);
 };
 
 
@@ -3158,16 +3163,16 @@ window.changeSelectedClipType = function(typeVal) {
     seg.type = typeVal;
     if (typeVal === 'upwind') {
         seg.color = 'rgba(56, 189, 248, 0.5)';
-        if(!seg.label.includes('⛵')) seg.label = `⛵ ${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
+        if(!seg.label.includes('⛵')) seg.label = `${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
     } else if (typeVal === 'downwind') {
         seg.color = 'rgba(236, 72, 153, 0.5)';
-        if(!seg.label.includes('🚀')) seg.label = `🚀 ${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
+        if(!seg.label.includes('🚀')) seg.label = `${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
     } else if (typeVal === 'reach') {
         seg.color = 'rgba(16, 185, 129, 0.5)';
-        if(!seg.label.includes('💨')) seg.label = `💨 ${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
+        if(!seg.label.includes('💨')) seg.label = `${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
     } else if (typeVal === 'hidden') {
         seg.color = 'rgba(100, 116, 139, 0.5)';
-        if(!seg.label.includes('🙈')) seg.label = `🙈 ${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
+        if(!seg.label.includes('🙈')) seg.label = `${seg.label.replace(/^[^a-zA-Z0-9]+/, '')}`;
     }
 
     recalculateAllLegsTwd();
@@ -3368,7 +3373,7 @@ window.resetToSingleSessionSubleg = function() {
         startIdx: 0,
         endIdx: sessionData.track.length - 1,
         type: 'subleg',
-        label: isEs ? '🔴 Babor / Subtramo Completo' : '🔴 Port / Full Subleg',
+        label: isEs ? 'Babor / Subtramo Completo' : 'Port / Full Subleg',
         color: '#ef4444',
         mode: 'port'
     }];
@@ -3547,7 +3552,7 @@ window.deleteSelectedSubleg = function() {
             startIdx: 0,
             endIdx: sessionData.track.length - 1,
             type: 'subleg',
-            label: isEs ? '🔴 Babor / Subtramo 1' : '🔴 Port / Subleg 1',
+            label: isEs ? 'Babor / Subtramo 1' : 'Port / Subleg 1',
             color: '#ef4444',
             mode: 'port'
         }];
@@ -3630,7 +3635,9 @@ function renderSublegRibbon() {
                 window.selectedSublegIds = [seg.id];
                 selectedSublegId = seg.id;
             }
-            playbackIndex = seg.startIdx;
+            if (playbackIndex < seg.startIdx || playbackIndex > seg.endIdx) {
+                playbackIndex = seg.startIdx;
+            }
             updateScrubberPosition();
             if (timeChart) {
                 timeChart.options.scales.x.min = sessionData.elapsed[seg.startIdx];
@@ -3823,26 +3830,26 @@ window.autoDetectLegs = function(silent = false) {
         const isDownwind = absStwa > 105;
 
         if (finalIsAshore[i]) {
-            rawMode[i] = { m: 'ashore', legType: 'break', label: isEs ? '🏠 En Tierra' : '🏠 Ashore', tack: 'none', color: '#475569' };
+            rawMode[i] = { m: 'ashore', legType: 'break', label: isEs ? 'En Tierra' : 'Ashore', tack: 'none', color: '#475569' };
         } else if (sog > capsizeMinSpeed && sog <= capsizeMaxSpeed && heel >= capsizeMinHeel) {
-            rawMode[i] = { m: 'capsize', legType: 'break', label: isEs ? '🏊 Vuelco' : '🏊 Capsized', tack: 'none', color: '#dc2626' };
+            rawMode[i] = { m: 'capsize', legType: 'break', label: isEs ? 'Vuelco' : 'Capsized', tack: 'none', color: '#dc2626' };
         } else if (sog <= 1.8 && !finalIsAshore[i]) {
-            rawMode[i] = { m: 'drift', legType: 'break', label: isEs ? '☕ Parada / Espera' : '☕ Break / Waiting', tack: 'none', color: '#334155' };
+            rawMode[i] = { m: 'drift', legType: 'break', label: isEs ? 'Parada / Espera' : 'Break / Waiting', tack: 'none', color: '#334155' };
         } else if (isFoiler) {
             const fly = sog >= flightSpeedThreshold;
             if (fly) {
-                if (isUpwind)        rawMode[i] = { m: 'upwind_fly', legType: 'upwind', label: `⛵ Upwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#60a5fa' };
-                else if (isDownwind) rawMode[i] = { m: 'downwind_fly', legType: 'downwind', label: `🚀 Downwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#f472b6' };
-                else                 rawMode[i] = { m: 'reach_fly', legType: 'reach', label: `💨 Reach Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#a855f7' : '#c084fc' };
+                if (isUpwind)        rawMode[i] = { m: 'upwind_fly', legType: 'upwind', label: `Upwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#60a5fa' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_fly', legType: 'downwind', label: `Downwind Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#f472b6' };
+                else                 rawMode[i] = { m: 'reach_fly', legType: 'reach', label: `Reach Flying (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#a855f7' : '#c084fc' };
             } else {
-                if (isUpwind)        rawMode[i] = { m: 'upwind_low', legType: 'upwind', label: `⛵ Upwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#0284c7' : '#2563eb' };
-                else if (isDownwind) rawMode[i] = { m: 'downwind_low', legType: 'downwind', label: `🚀 Downwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#be185d' : '#db2777' };
-                else                 rawMode[i] = { m: 'reach_low', legType: 'reach', label: `💨 Reach Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#7e22ce' : '#9333ea' };
+                if (isUpwind)        rawMode[i] = { m: 'upwind_low', legType: 'upwind', label: `Upwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#0284c7' : '#2563eb' };
+                else if (isDownwind) rawMode[i] = { m: 'downwind_low', legType: 'downwind', label: `Downwind Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#be185d' : '#db2777' };
+                else                 rawMode[i] = { m: 'reach_low', legType: 'reach', label: `Reach Low-Ride (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#7e22ce' : '#9333ea' };
             }
         } else {
-            if (isUpwind)        rawMode[i] = { m: 'upwind', legType: 'upwind', label: isEs ? `⛵ Ceñida (${tackIcon} ${isPort?'Babor':'Estribor'})` : `⛵ Upwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#2563eb' };
-            else if (isDownwind) rawMode[i] = { m: 'downwind', legType: 'downwind', label: isEs ? `🚀 Popa (${tackIcon} ${isPort?'Babor':'Estribor'})` : `🚀 Downwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#e11d48' };
-            else                 rawMode[i] = { m: 'reach', legType: 'reach', label: isEs ? `💨 Través (${tackIcon} ${isPort?'Babor':'Estribor'})` : `💨 Reach (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#10b981' : '#059669' };
+            if (isUpwind)        rawMode[i] = { m: 'upwind', legType: 'upwind', label: isEs ? `Ceñida (${tackIcon} ${isPort?'Babor':'Estribor'})` : `Upwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#38bdf8' : '#2563eb' };
+            else if (isDownwind) rawMode[i] = { m: 'downwind', legType: 'downwind', label: isEs ? `Popa (${tackIcon} ${isPort?'Babor':'Estribor'})` : `Downwind (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#ec4899' : '#e11d48' };
+            else                 rawMode[i] = { m: 'reach', legType: 'reach', label: isEs ? `Través (${tackIcon} ${isPort?'Babor':'Estribor'})` : `Reach (${tackIcon} ${tackLabel})`, tack: isPort?'port':'starboard', color: isPort ? '#10b981' : '#059669' };
         }
     }
 
@@ -3966,7 +3973,7 @@ window.autoDetectLegs = function(silent = false) {
                     startIdx: breakStart,
                     endIdx: breakEnd,
                     type: 'break',
-                    label: isEs ? `☕ Pausa / Espera R${rNum} (Borrable)` : `☕ Break between Races (Erasable)`,
+                    label: isEs ? `Pausa / Espera R${rNum} (Borrable)` : `Break between Races (Erasable)`,
                     color: 'rgba(71, 85, 105, 0.65)'
                 });
             }
@@ -3980,7 +3987,7 @@ window.autoDetectLegs = function(silent = false) {
                     startIdx: psStart,
                     endIdx: psEnd,
                     type: 'pre_start',
-                    label: isEs ? `⏱️ Pre-Salida ${rNum}` : `⏱️ Pre-Start ${rNum}`,
+                    label: isEs ? `Pre-Salida ${rNum}` : `Pre-Start ${rNum}`,
                     color: 'rgba(245, 158, 11, 0.75)'
                 });
             }
@@ -3998,7 +4005,7 @@ window.autoDetectLegs = function(silent = false) {
                     startIdx: lg.startIdx,
                     endIdx: lg.endIdx,
                     type: 'upwind',
-                    label: isEs ? `⛵ Ceñida ${rNum}-${upwindCount}` : `⛵ Upwind ${rNum}-${upwindCount}`,
+                    label: isEs ? `Ceñida ${rNum}-${upwindCount}` : `Upwind ${rNum}-${upwindCount}`,
                     color: '#38bdf8'
                 });
             } else if (lg.type === 'downwind') {
@@ -4008,7 +4015,7 @@ window.autoDetectLegs = function(silent = false) {
                     startIdx: lg.startIdx,
                     endIdx: lg.endIdx,
                     type: 'downwind',
-                    label: isEs ? `🚀 Popa ${rNum}-${downwindCount}` : `🚀 Downwind ${rNum}-${downwindCount}`,
+                    label: isEs ? `Popa ${rNum}-${downwindCount}` : `Downwind ${rNum}-${downwindCount}`,
                     color: '#ec4899'
                 });
             } else {
@@ -4017,7 +4024,7 @@ window.autoDetectLegs = function(silent = false) {
                     startIdx: lg.startIdx,
                     endIdx: lg.endIdx,
                     type: 'reach',
-                    label: isEs ? `💨 Través R${rNum}` : `💨 Reach R${rNum}`,
+                    label: isEs ? `Través R${rNum}` : `Reach R${rNum}`,
                     color: '#10b981'
                 });
             }
@@ -4032,7 +4039,7 @@ window.autoDetectLegs = function(silent = false) {
             startIdx: lastSegmentEnd,
             endIdx: n - 1,
             type: 'break',
-            label: isEs ? `🏠 Vuelta a Tierra / Fin Sesión (Borrable)` : `🏠 Return to Port / Post-Session (Erasable)`,
+            label: isEs ? `Vuelta a Tierra / Fin Sesión (Borrable)` : `Return to Port / Post-Session (Erasable)`,
             color: 'rgba(71, 85, 105, 0.65)'
         });
     }
@@ -4096,27 +4103,27 @@ window.autoDetectLegs = function(silent = false) {
 
             if (isPrevUp && isCurUp && prev.tack !== chunk.tack && isTackAngle) {
                 tackCount++;
-                finalSublegs.push({ id: 'sub_tack_' + tackCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🔄 Tack #${tackCount}`, color: '#f59e0b' });
+                finalSublegs.push({ id: 'sub_tack_' + tackCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `Tack #${tackCount}`, color: '#f59e0b' });
             } else if (isPrevDown && isCurDown && prev.tack !== chunk.tack && isTackAngle) {
                 gybeCount++;
-                finalSublegs.push({ id: 'sub_gybe_' + gybeCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🌪️ Gybe #${gybeCount}`, color: '#10b981' });
+                finalSublegs.push({ id: 'sub_gybe_' + gybeCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `Gybe #${gybeCount}`, color: '#10b981' });
             } else if (isPrevUp && isCurDown) {
                 bearAwayCount++;
-                finalSublegs.push({ id: 'sub_bear_' + bearAwayCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `💨 Bear Away #${bearAwayCount}`, color: '#a855f7' });
+                finalSublegs.push({ id: 'sub_bear_' + bearAwayCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `Bear Away #${bearAwayCount}`, color: '#a855f7' });
             } else if (isPrevDown && isCurUp) {
                 roundingCount++;
-                finalSublegs.push({ id: 'sub_round_' + roundingCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `🏁 Mark Rounding #${roundingCount}`, color: '#06b6d4' });
+                finalSublegs.push({ id: 'sub_round_' + roundingCount + '_' + Date.now(), startIdx: mStart, endIdx: mEnd, type: 'maneuver', label: `Mark Rounding #${roundingCount}`, color: '#06b6d4' });
             }
         }
 
-        let subLabel = chunk.tack === 'port' ? (isEs ? '🔴 Babor (Port)' : '🔴 Port Tack') : (chunk.tack === 'starboard' ? (isEs ? '🟢 Estribor (Stbd)' : '🟢 Starboard Tack') : (isEs ? '☕ Espera' : '☕ Break'));
+        let subLabel = chunk.tack === 'port' ? (isEs ? 'Babor (Port)' : 'Port Tack') : (chunk.tack === 'starboard' ? (isEs ? 'Estribor (Stbd)' : 'Starboard Tack') : (isEs ? 'Espera' : 'Break'));
         let subColor = chunk.tack === 'port' ? '#ef4444' : (chunk.tack === 'starboard' ? '#10b981' : '#64748b');
 
         if (chunk.legType === 'upwind') {
-            subLabel = (chunk.tack === 'port' ? '🔴 Port Upwind' : '🟢 Starboard Upwind');
+            subLabel = (chunk.tack === 'port' ? 'Port Upwind' : 'Starboard Upwind');
             subColor = chunk.tack === 'port' ? '#38bdf8' : '#2563eb';
         } else if (chunk.legType === 'downwind') {
-            subLabel = (chunk.tack === 'port' ? '🔴 Port Downwind' : '🟢 Starboard Downwind');
+            subLabel = (chunk.tack === 'port' ? 'Port Downwind' : 'Starboard Downwind');
             subColor = chunk.tack === 'port' ? '#ec4899' : '#e11d48';
         }
 
@@ -4145,8 +4152,8 @@ window.autoDetectLegs = function(silent = false) {
         const raceCount = detectedRaces.length;
         const totalLegs = activeSegments.length;
         alert(isEs
-            ? `⚡ Autodetección Completada: ${raceCount} Regata(s) detectadas con ${totalLegs} tramos (Pre-salidas, Ceñidas, Popas, Pausas) y ${activeSublegs.length} subtramos (Babor/Estribor, ${tackCount} Viradas, ${gybeCount} Trasluchadas).`
-            : `⚡ Auto-Detection Completed: ${raceCount} Race(s) detected with ${totalLegs} legs (Pre-Starts, Upwinds, Downwinds, Breaks) and ${activeSublegs.length} sublegs (Port/Starboard, ${tackCount} Tacks, ${gybeCount} Gybes).`);
+            ? `Autodetección Completada: ${raceCount} Regata(s) detectadas con ${totalLegs} tramos (Pre-salidas, Ceñidas, Popas, Pausas) y ${activeSublegs.length} subtramos (Babor/Estribor, ${tackCount} Viradas, ${gybeCount} Trasluchadas).`
+            : `Auto-Detection Completed: ${raceCount} Race(s) detected with ${totalLegs} legs (Pre-Starts, Upwinds, Downwinds, Breaks) and ${activeSublegs.length} sublegs (Port/Starboard, ${tackCount} Tacks, ${gybeCount} Gybes).`);
     }
 };
 
@@ -4494,12 +4501,15 @@ window.setPlaybackSpeed = function(speed) {
     });
 };
 
+let playbackElapsedTime = 0;
+
 function togglePlay() {
     if (!sessionData || !sessionData.track || sessionData.track.length === 0) return;
     isPlaying = !isPlaying;
     const btn = document.getElementById('playBtn');
     if (isPlaying) {
         btn.innerText = "⏸";
+        playbackElapsedTime = sessionData.elapsed[playbackIndex] || 0;
         lastAnimTime = performance.now();
         animationId = requestAnimationFrame(animate);
     } else {
@@ -4537,28 +4547,31 @@ function animate(now) {
     const dt = Math.max(0, (currentTime - lastAnimTime) / 1000);
     lastAnimTime = currentTime;
 
-    const currentElapsed = sessionData.elapsed[playbackIndex] || 0;
     const maxElapsed = sessionData.elapsed[sessionData.elapsed.length - 1] || sessionData.elapsed.length;
-    const targetElapsed = currentElapsed + (dt * playbackSpeed);
+    playbackElapsedTime += (dt * playbackSpeed);
 
-    if (targetElapsed >= maxElapsed) {
+    if (playbackElapsedTime >= maxElapsed) {
         playbackIndex = 0;
+        playbackElapsedTime = 0;
         togglePlay();
         updateFrame(0);
         updateScrubberPosition();
         return;
     }
 
+    // Find largest index where elapsed[idx] <= playbackElapsedTime
     let low = playbackIndex, high = sessionData.elapsed.length - 1;
     while (low < high) {
-        let mid = Math.floor((low + high) / 2);
-        if (sessionData.elapsed[mid] < targetElapsed) low = mid + 1;
-        else high = mid;
+        let mid = Math.floor((low + high + 1) / 2);
+        if (sessionData.elapsed[mid] <= playbackElapsedTime) low = mid;
+        else high = mid - 1;
     }
     
-    playbackIndex = low;
-    updateFrame(playbackIndex);
-    updateScrubberPosition();
+    if (low !== playbackIndex) {
+        playbackIndex = low;
+        updateFrame(playbackIndex);
+        updateScrubberPosition();
+    }
     animationId = requestAnimationFrame(animate);
 }
 
@@ -4586,7 +4599,7 @@ window.togglePickMarkMode = function() {
         if (isPickingMarkMode) {
             btn.style.background = '#eab308';
             btn.style.color = '#020617';
-            btn.innerText = '🎯 Click Map...';
+            btn.innerText = 'Click Map...';
             if (map) map.getContainer().style.cursor = 'crosshair';
         } else {
             btn.style.background = '#475569';
@@ -4819,6 +4832,25 @@ function updateRacecourseTelemetryDisplay(idx, pos) {
 
 function updateFrame(idx) {
     if (!sessionData || !sessionData.track || idx < 0 || idx >= sessionData.track.length) return;
+
+    // Update Active Leg & Subleg status label + badge
+    const legDetailEl = document.getElementById('lblLegDetailInfo');
+    const legBadgeEl = document.getElementById('vpSelectedLegBadge');
+    if (legDetailEl || legBadgeEl) {
+        const isEs = window.location.href.includes('lang=es');
+        const curLegIdx = (activeSegments || []).findIndex(s => idx >= s.startIdx && idx <= s.endIdx);
+        const curLeg = curLegIdx >= 0 ? activeSegments[curLegIdx] : null;
+        const curSub = (activeSublegs || []).find(s => idx >= s.startIdx && idx <= s.endIdx);
+        if (legDetailEl) {
+            const legTxt = curLeg ? curLeg.label : (isEs ? 'Sin tramo' : 'No leg');
+            const subTxt = curSub ? ` | ${curSub.label}` : '';
+            legDetailEl.innerText = isEs ? `Tramo Activo: ${legTxt}${subTxt}` : `Active Leg: ${legTxt}${subTxt}`;
+        }
+        if (legBadgeEl && activeSegments && activeSegments.length > 0) {
+            const num = curLegIdx >= 0 ? curLegIdx + 1 : 1;
+            legBadgeEl.innerText = isEs ? `Tramo ${num} / ${activeSegments.length}` : `Leg ${num} / ${activeSegments.length}`;
+        }
+    }
 
     const pos = sessionData.track[idx];
     if (pos && boatMarker) {
@@ -5154,7 +5186,7 @@ window.applyPreviewedPolar = function() {
     document.getElementById('polar-preview-card').style.display = 'none';
     const status = document.getElementById('polar-status');
     status.style.display = 'block';
-    status.innerText = `✅ Loaded online polar target curve for ${boatClass.toUpperCase()}! Targets updated in stats.`;
+    status.innerText = `Loaded online polar target curve for ${boatClass.toUpperCase()}! Targets updated in stats.`;
 };
 
 window.loadPolarFile = function() {
@@ -5165,14 +5197,14 @@ window.loadPolarFile = function() {
     status.innerText = "Parsing custom polar file...";
     setTimeout(() => {
         polarTargets = { class: 'custom', upwind_target: 12.0, downwind_target: 16.0 };
-        status.innerText = "✅ Custom polar loaded successfully!";
+        status.innerText = "Custom polar loaded successfully!";
     }, 800);
 };
 
 window.generateSessionPolar = function() {
     const status = document.getElementById('polar-status');
     status.style.display = 'block';
-    status.innerText = "✅ Generated actual polar curve from logged SOG & TWA data!";
+    status.innerText = "Generated actual polar curve from logged SOG & TWA data!";
 };
 
 function renderManeuversTable() {
@@ -5372,7 +5404,9 @@ function renderSegmentRibbon() {
                 selectedSegmentId = seg.id;
             }
 
-            playbackIndex = seg.startIdx;
+            if (playbackIndex < seg.startIdx || playbackIndex > seg.endIdx) {
+                playbackIndex = seg.startIdx;
+            }
             updateScrubberPosition();
             if (timeChart) {
                 timeChart.options.scales.x.min = sessionData.elapsed[seg.startIdx];
@@ -5566,15 +5600,15 @@ window.addFleetBoat = async function(fileInputId = 'fleetBoatFile') {
         fileInput.value = '';
         if (boatNameInput) boatNameInput.value = '';
 
-        if (isEs) alert(`✅ ¡${assignedName} procesado y añadido a la flota!`);
-        else alert(`✅ ${assignedName} successfully processed and added to fleet comparison!`);
+        if (isEs) alert(`¡${assignedName} procesado y añadido a la flota!`);
+        else alert(`${assignedName} successfully processed and added to fleet comparison!`);
 
     } catch (err) {
         console.error("Add Fleet Boat Error:", err);
         alert((isEs ? "Error al procesar barco: " : "Failed to process comparison boat: ") + err.message);
     } finally {
         if (btn) {
-            btn.innerText = isEs ? "🚀 Procesar y Añadir a Flota" : "🚀 Process & Add Boat to Fleet";
+            btn.innerText = isEs ? "Procesar y Añadir a Flota" : "Process & Add Boat to Fleet";
             btn.disabled = false;
         }
     }
@@ -5858,8 +5892,8 @@ window.loadSampleCompareBenchmark = async function(sampleKey) {
         const color = FLEET_PALETTE[fleetBoats.length % FLEET_PALETTE.length];
         
         registerBoatToFleet(data, name, color, data.filename || sampleKey);
-        if (isEs) alert(`✅ Muestra ${name} añadida a la flota!`);
-        else alert(`✅ Benchmark ${name} loaded and added to fleet!`);
+        if (isEs) alert(`Muestra ${name} añadida a la flota!`);
+        else alert(`Benchmark ${name} loaded and added to fleet!`);
     } catch (e) {
         alert("Benchmark load error: " + e.message);
     }
@@ -6601,7 +6635,7 @@ window.generateRaceReportSectionsHtml = function(isEs, themeColor) {
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${themeColor}; padding-bottom: 6px; margin-bottom: 1rem;">
                     <div>
                         <h2 style="margin: 0; font-size: 1.25rem; color: ${themeColor}; font-weight: 800; text-transform: uppercase;">
-                            🏁 ${rTitle} — ${isEs ? 'Análisis de Carrera' : 'Race Performance Analysis'}
+                            ${rTitle} — ${isEs ? 'Análisis de Carrera' : 'Race Performance Analysis'}
                         </h2>
                         <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
                             ${isEs ? 'Duración:' : 'Duration:'} <strong>${rDurMin}m ${rDurSec}s</strong> • ${isEs ? 'Velocidad Media:' : 'Avg Speed:'} <strong>${rAvgSog.toFixed(1)} kn</strong> • ${isEs ? 'Pico:' : 'Max SOG:'} <strong>${rMaxSog.toFixed(1)} kn</strong>
@@ -6672,7 +6706,7 @@ window.generateRaceReportSectionsHtml = function(isEs, themeColor) {
                 <div style="margin-bottom: 1.5rem; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 10px;">
                         <h3 style="margin: 0; font-size: 0.95rem; color: #0f172a; font-weight: 700;">
-                            ⏱️ ${isEs ? 'Estudio Detallado de Pre-Salida (Pre-Start Analysis)' : 'Detailed Pre-Start & Starting Line Study'}
+                            ${isEs ? 'Estudio Detallado de Pre-Salida (Pre-Start Analysis)' : 'Detailed Pre-Start & Starting Line Study'}
                         </h3>
                         <span style="font-size: 0.72rem; color: #64748b;">Line Bias: <strong>${biasStr}</strong></span>
                     </div>
@@ -6704,7 +6738,7 @@ window.generateRaceReportSectionsHtml = function(isEs, themeColor) {
                             ${preStartMap5mUrl ? `<img src="${preStartMap5mUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="5 Min Pre-Start">` : ''}
                         </div>
                         <div style="background: #0f172a; padding: 6px; border-radius: 4px;">
-                            <div style="font-size: 0.72rem; color: #10b981; font-weight: bold; margin-bottom: 4px;">🎯 1-Min Final Approach (Line Ingress)</div>
+                            <div style="font-size: 0.72rem; color: #10b981; font-weight: bold; margin-bottom: 4px;">1-Min Final Approach (Line Ingress)</div>
                             ${preStartMap1mUrl ? `<img src="${preStartMap1mUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="1 Min Pre-Start">` : ''}
                         </div>
                     </div>
@@ -6726,7 +6760,7 @@ window.generateRaceReportSectionsHtml = function(isEs, themeColor) {
             sectionsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.8rem; font-weight: 700;">
-                        🚩 ${isEs ? 'Desglose de Tramos y Rendimiento VMC hacia Balizas / Puertas' : 'Legs Breakdown & VMC Analysis to Marks / Gates'}
+                        ${isEs ? 'Desglose de Tramos y Rendimiento VMC hacia Balizas / Puertas' : 'Legs Breakdown & VMC Analysis to Marks / Gates'}
                     </h3>
                     <div style="display: flex; flex-direction: column; gap: 14px;">
             `;
@@ -6890,7 +6924,7 @@ window.buildReportPreview = function() {
                     <h1 style="font-size: 1.4rem; color: ${themeColor}; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
                         ${title}
                     </h1>
-                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">PRO v4.2</span>
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">v4.5</span>
                 </div>
                 <div style="font-size: 0.82rem; color: #475569; margin-top: 3px;">
                     <strong>${boatName}</strong> (${sailNumber}) • Class: <strong>${boatClass}</strong> • Venue: ${venue} • Date: ${dateStr}
@@ -6969,7 +7003,7 @@ window.buildReportPreview = function() {
                 </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px;">
-                        <div style="font-weight: 700; color: #0284c7; font-size: 0.85rem; margin-bottom: 6px;">⛵ ${isEs ? 'Modo Ceñida (Upwind)' : 'Upwind Performance'}</div>
+                        <div style="font-weight: 700; color: #0284c7; font-size: 0.85rem; margin-bottom: 6px;">${isEs ? 'Modo Ceñida (Upwind)' : 'Upwind Performance'}</div>
                         <table style="width: 100%; font-size: 0.78rem;">
                             <tr><td style="color:#64748b;">Average SOG:</td><td style="font-weight:bold; text-align:right;">${upSog}</td></tr>
                             <tr><td style="color:#64748b;">Upwind VMG:</td><td style="font-weight:bold; color:#059669; text-align:right;">${upVmg}</td></tr>
@@ -6977,7 +7011,7 @@ window.buildReportPreview = function() {
                         </table>
                     </div>
                     <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 6px; padding: 10px;">
-                        <div style="font-weight: 700; color: #db2777; font-size: 0.85rem; margin-bottom: 6px;">🚀 ${isEs ? 'Modo Empopada (Downwind)' : 'Downwind Performance'}</div>
+                        <div style="font-weight: 700; color: #db2777; font-size: 0.85rem; margin-bottom: 6px;">${isEs ? 'Modo Empopada (Downwind)' : 'Downwind Performance'}</div>
                         <table style="width: 100%; font-size: 0.78rem;">
                             <tr><td style="color:#64748b;">Average SOG:</td><td style="font-weight:bold; text-align:right;">${downSog}</td></tr>
                             <tr><td style="color:#64748b;">Downwind VMG:</td><td style="font-weight:bold; color:#059669; text-align:right;">${downVmg}</td></tr>
@@ -7178,7 +7212,7 @@ window.buildReportPreview = function() {
                         <span style="color: #64748b;">LS Data Lab Stamp:</span><br>
                         <div style="border: 2px dashed ${themeColor}; border-radius: 4px; padding: 6px; text-align: center; color: ${themeColor}; font-weight: 800; font-size: 0.72rem; margin-top: 4px;">
                             ✓ VERIFIED TELEMETRY<br>
-                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.2</span>
+                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.5</span>
                         </div>
                     </div>
                 </div>
@@ -7203,22 +7237,46 @@ window.buildReportPreview = function() {
 
 function toggleVariable(id) {
     if (!timeChart || !timeChart.data || !timeChart.data.datasets) return;
-    const btn = document.getElementById('btn-chart-' + id);
-    const dataset = timeChart.data.datasets.find(ds => ds.id === id);
-    if (dataset) {
-        dataset.hidden = !dataset.hidden;
-        if (btn) {
-            if (dataset.hidden) btn.classList.add('inactive');
-            else btn.classList.remove('inactive');
-        }
+    const targetId = (id === 'hdt') ? 'hdg' : id;
+    const btn = document.getElementById('btn-chart-' + targetId) || document.getElementById('btn-chart-' + id);
+    const dsIndex = timeChart.data.datasets.findIndex(ds => ds.id === targetId);
+    if (dsIndex === -1) return;
+
+    const dataset = timeChart.data.datasets[dsIndex];
+    const currentlyVisible = (typeof timeChart.isDatasetVisible === 'function')
+        ? timeChart.isDatasetVisible(dsIndex)
+        : !dataset.hidden;
+    const newVisible = !currentlyVisible;
+
+    if (typeof timeChart.setDatasetVisibility === 'function') {
+        timeChart.setDatasetVisibility(dsIndex, newVisible);
     }
+    dataset.hidden = !newVisible;
+
+    if (btn) {
+        if (!newVisible) btn.classList.add('inactive');
+        else btn.classList.remove('inactive');
+    }
+
     if (timeChart.options && timeChart.options.scales && timeChart.options.scales.y1) {
-        const needsY1 = timeChart.data.datasets.some(ds => ds.yAxisID === 'y1' && !ds.hidden);
+        const needsY1 = timeChart.data.datasets.some((ds, idx) => ds.yAxisID === 'y1' && (typeof timeChart.isDatasetVisible === 'function' ? timeChart.isDatasetVisible(idx) : !ds.hidden));
         timeChart.options.scales.y1.display = needsY1;
     }
     timeChart.update();
     if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
+    if (typeof syncPlotMenuCheckboxes === 'function') syncPlotMenuCheckboxes();
 }
+
+window.syncPlotMenuCheckboxes = function() {
+    if (!timeChart || !timeChart.data || !timeChart.data.datasets) return;
+    timeChart.data.datasets.forEach((ds, idx) => {
+        const el = document.getElementById('chk-plot-' + ds.id);
+        if (!el) return;
+        const vis = (typeof timeChart.isDatasetVisible === 'function') ? timeChart.isDatasetVisible(idx) : !ds.hidden;
+        el.textContent = vis ? '[✓]' : '[ ]';
+        el.style.color = vis ? '#38bdf8' : '#64748b';
+    });
+};
 window.toggleVariable = toggleVariable;
 
 function chartZoom(delta) {
@@ -7346,15 +7404,15 @@ window.saveProjectToCloud = async function() {
             const timeStr = resData.timestamp || new Date().toLocaleTimeString();
             const classLabel = resData.boat_class ? ` [${resData.boat_class.toUpperCase()}]` : '';
             toast.innerText = isEs 
-                ? `✅ ¡Proyecto Guardado en tu Perfil${classLabel}! (${timeStr})` 
-                : `✅ Project Saved to Profile${classLabel}! (${timeStr})`;
+                ? `¡Proyecto Guardado en tu Perfil${classLabel}! (${timeStr})` 
+                : `Project Saved to Profile${classLabel}! (${timeStr})`;
             toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }
     } catch (e) {
         console.error(e);
         if (toast) {
-            toast.innerText = isEs ? `✅ Guardado Localmente en LS PRO!` : `✅ Saved Locally to LS PRO!`;
+            toast.innerText = isEs ? `Guardado Localmente en LS PRO!` : `Saved Locally to LS PRO!`;
             toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }
@@ -7425,7 +7483,7 @@ window.promptCustomSublegSplit = function() {
         startIdx: s.startIdx,
         endIdx: s.endIdx,
         type: 'subleg',
-        label: `📊 ${s.tag}`,
+        label: `${s.tag}`,
         mode: vName,
         color: s.color
     }));
@@ -7433,8 +7491,8 @@ window.promptCustomSublegSplit = function() {
     if (activeSublegs.length > 0) selectedSublegId = activeSublegs[0].id;
     renderSublegRibbon();
     alert(isEs 
-        ? `✅ Creados ${activeSublegs.length} subtramos basados en ${vName} (umbral: ${threshVal}).` 
-        : `✅ Created ${activeSublegs.length} sublegs based on ${vName} (threshold: ${threshVal}).`);
+        ? `Creados ${activeSublegs.length} subtramos basados en ${vName} (umbral: ${threshVal}).` 
+        : `Created ${activeSublegs.length} sublegs based on ${vName} (threshold: ${threshVal}).`);
 };
 
 // Erase All Non-Important Break / Transit Data across all races
@@ -7467,7 +7525,7 @@ window.eraseAllBreakData = function() {
     updateScrubberPosition();
     if (typeof setupMap === 'function') setupMap();
     updateFrame(playbackIndex);
-    alert(isEs ? `✅ Se han borrado ${breakSegments.length} tramos de pausa.` : `✅ Deleted ${breakSegments.length} break segments.`);
+    alert(isEs ? `Se han borrado ${breakSegments.length} tramos de pausa.` : `Deleted ${breakSegments.length} break segments.`);
 };
 
 
@@ -7491,7 +7549,7 @@ window.createManeuverAtPlayhead = function() {
     const sIdx = Math.max(0, playbackIndex - halfDur);
     const eIdx = Math.min(n - 1, playbackIndex + halfDur);
     const id = 'maneuver_' + Date.now();
-    const label = isEs ? '🔄 Maniobra' : '🔄 Maneuver';
+    const label = isEs ? 'Maniobra' : 'Maneuver';
 
     activeSublegs.push({
         id: id,
@@ -7595,16 +7653,16 @@ window.changeSelectedManeuverType = function(typeVal) {
     if (!seg) return;
     seg.mode = typeVal;
     if (typeVal === 'tack') {
-        seg.label = '🔄 Tack';
+        seg.label = 'Tack';
         seg.color = '#f59e0b';
     } else if (typeVal === 'gybe') {
-        seg.label = '🌪️ Gybe';
+        seg.label = 'Gybe';
         seg.color = '#ec4899';
     } else if (typeVal === 'rounding') {
-        seg.label = '🚩 Mark Rounding';
+        seg.label = 'Mark Rounding';
         seg.color = '#a855f7';
     } else if (typeVal === 'bear_away') {
-        seg.label = '⬇️ Bear Away';
+        seg.label = 'Bear Away';
         seg.color = '#38bdf8';
     }
     renderSublegRibbon();
@@ -7785,8 +7843,8 @@ window.calibrateWindFromUpwindTacks = function(silent = false) {
 
     if (!silent) {
         alert(isEs
-            ? `💨 Viento calibrado desde ceñida (>5 min con viradas): ${bestWindowTwd}°\nLa serie TWD se ha actualizado para toda la sesión.`
-            : `💨 Wind calibrated from upwind (>5 min with tacks): ${bestWindowTwd}°\nTWD series updated across the session.`);
+            ? `Viento calibrado desde ceñida (>5 min con viradas): ${bestWindowTwd}°\nLa serie TWD se ha actualizado para toda la sesión.`
+            : `Wind calibrated from upwind (>5 min with tacks): ${bestWindowTwd}°\nTWD series updated across the session.`);
     }
     return bestWindowTwd;
 };
@@ -7806,4 +7864,227 @@ window.promptManualTwd = function() {
     if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
     if (typeof refreshChartData === 'function') refreshChartData();
     if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+};
+
+// ==========================================
+// ACTIVE LEG & SUBLEG INLINE EDIT DROPDOWNS
+// ==========================================
+window.calculateTwdForActiveLeg = function() {
+    if (!sessionData || !activeSegments || activeSegments.length === 0) return;
+    const isEs = window.location.href.includes('lang=es');
+    const seg = getSelectedOrActiveClip();
+    if (!seg) {
+        alert(isEs ? "Selecciona un tramo primero." : "Please select a leg first.");
+        return;
+    }
+    const newTwd = detectTwdFromTrackSegment(seg, seg.twd || sessionData.calibratedTwd);
+    seg.twd = newTwd;
+    if (sessionData.metrics && sessionData.metrics.twd) {
+        const hdgs = sessionData.metrics.hdt || sessionData.metrics.cog || [];
+        for (let i = seg.startIdx; i <= seg.endIdx; i++) {
+            sessionData.metrics.twd[i] = newTwd;
+            let diff = (hdgs[i] || 0) - newTwd;
+            while (diff > 180) diff -= 360;
+            while (diff < -180) diff += 360;
+            if (sessionData.metrics.twa) sessionData.metrics.twa[i] = diff;
+        }
+    }
+    renderSegmentRibbon();
+    if (typeof refreshChartData === 'function') refreshChartData();
+    if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+    alert(isEs ? `TWD calculado para "${seg.label}": ${newTwd}°` : `TWD calculated for "${seg.label}": ${newTwd}°`);
+};
+
+window.handleActiveLegAction = function(sel) {
+    const val = sel.value;
+    sel.value = '';
+    if (!val) return;
+    if (val === 'twd') window.calculateTwdForActiveLeg();
+    else if (val === 'split') window.splitClipAtScrubber();
+    else if (val === 'rename') window.promptRenameClip();
+    else if (val === 'delete') window.deleteSelectedClip();
+    else if (val === 'erase') window.eraseSelectedLegData();
+    else if (val.startsWith('type:')) window.changeSelectedClipType(val.split(':')[1]);
+};
+
+window.handleActiveSublegAction = function(sel) {
+    const val = sel.value;
+    sel.value = '';
+    if (!val) return;
+    if (val === 'split') window.splitSublegAtScrubber();
+    else if (val === 'rename') window.promptRenameSubleg();
+    else if (val === 'delete') window.deleteSelectedSubleg();
+    else if (val === 'erase') window.eraseSelectedSublegData();
+    else if (val.startsWith('mode:')) window.changeSelectedSublegType(val.split(':')[1]);
+};
+
+// ==========================================
+// FLOATING NEW PLOT WINDOW GENERATOR
+// ==========================================
+let floatingPlotCounter = 0;
+
+window.createFloatingPlotWindow = function(defaultVar = 'sog') {
+    if (!sessionData || !sessionData.metrics || !sessionData.elapsed) {
+        alert("Please load a telemetry session first.");
+        return;
+    }
+    const isEs = window.location.href.includes('lang=es');
+    floatingPlotCounter++;
+    const winId = 'floating-plot-win-' + floatingPlotCounter;
+    const canvasId = 'floating-plot-canvas-' + floatingPlotCounter;
+
+    const availableVars = Object.keys(sessionData.metrics).filter(k => Array.isArray(sessionData.metrics[k]) && sessionData.metrics[k].length > 0);
+    if (!availableVars.includes(defaultVar) && availableVars.length > 0) {
+        defaultVar = availableVars[0];
+    }
+
+    const win = document.createElement('div');
+    win.id = winId;
+    win.style.cssText = `
+        position: fixed;
+        top: ${90 + (floatingPlotCounter % 5) * 28}px;
+        left: ${120 + (floatingPlotCounter % 5) * 28}px;
+        width: 480px;
+        height: 260px;
+        min-width: 280px;
+        min-height: 180px;
+        background: #0f172a;
+        border: 1px solid #38bdf8;
+        border-radius: 8px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        resize: both;
+        overflow: hidden;
+    `;
+
+    const optionsHtml = availableVars.map(v => `<option value="${v}" ${v === defaultVar ? 'selected' : ''}>${v.toUpperCase()}</option>`).join('');
+
+    win.innerHTML = `
+        <div class="floating-plot-header" style="height: 30px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; cursor: grab; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.74rem; font-weight: 700; color: #e2e8f0;">${isEs ? 'Gráfica Flotante' : 'Floating Plot'} #${floatingPlotCounter}</span>
+                <select class="floating-plot-var-select" style="background: #0f172a; color: #38bdf8; border: 1px solid #475569; border-radius: 4px; font-size: 0.7rem; padding: 1px 4px; cursor: pointer;">
+                    ${optionsHtml}
+                </select>
+            </div>
+            <button type="button" onclick="document.getElementById('${winId}').remove()" style="background: transparent; border: none; color: #94a3b8; font-size: 0.85rem; cursor: pointer; padding: 0 4px;">✕</button>
+        </div>
+        <div style="flex: 1; padding: 8px; position: relative; min-height: 0;">
+            <canvas id="${canvasId}"></canvas>
+        </div>
+    `;
+
+    document.body.appendChild(win);
+
+    // Make draggable by header
+    const header = win.querySelector('.floating-plot-header');
+    let isDragging = false, offsetX = 0, offsetY = 0;
+    header.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        offsetX = e.clientX - win.offsetLeft;
+        offsetY = e.clientY - win.offsetTop;
+        header.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        win.style.left = Math.max(0, e.clientX - offsetX) + 'px';
+        win.style.top = Math.max(0, e.clientY - offsetY) + 'px';
+    });
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        header.style.cursor = 'grab';
+    });
+
+    // Build Chart.js instance
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const buildData = (varKey) => {
+        const vals = sessionData.metrics[varKey] || [];
+        return sessionData.elapsed.map((t, i) => ({ x: t, y: vals[i] !== undefined ? vals[i] : null }));
+    };
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: defaultVar.toUpperCase(),
+                data: buildData(defaultVar),
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+                x: {
+                    type: 'linear',
+                    ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => typeof formatTimecode === 'function' ? formatTimecode(v) : v },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                y: {
+                    ticks: { color: '#94a3b8', font: { size: 10 } },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                }
+            },
+            plugins: {
+                legend: { display: true, labels: { color: '#e2e8f0', font: { size: 11 } } }
+            }
+        }
+    });
+
+    const selectEl = win.querySelector('.floating-plot-var-select');
+    selectEl.addEventListener('change', (e) => {
+        const newVar = e.target.value;
+        chart.data.datasets[0].label = newVar.toUpperCase();
+        chart.data.datasets[0].data = buildData(newVar);
+        chart.update();
+    });
+};
+
+// ==========================================
+// HUD AUTO-FIT TO CONTAINER (ZERO SCROLLBARS)
+// ==========================================
+window.fitHudToWindow = function() {
+    const hudBody = document.querySelector('.hud-window-body');
+    const hudWin = document.getElementById('vp-hud-window');
+    if (!hudBody || !hudWin) return;
+
+    const titlebar = hudWin.querySelector('.cad-viewport-titlebar');
+    const titleH = titlebar ? titlebar.offsetHeight : 28;
+    const availW = hudWin.clientWidth - 12;
+    const availH = hudWin.clientHeight - titleH - 8;
+    if (availW <= 10 || availH <= 10) return;
+
+    // Reset zoom to measure natural content size
+    hudBody.style.zoom = '1';
+    const naturalH = hudBody.scrollHeight;
+    const naturalW = hudBody.scrollWidth;
+
+    if (naturalH > 0 && naturalW > 0) {
+        const scaleH = availH / naturalH;
+        const scaleW = availW / naturalW;
+        const scale = Math.max(0.4, Math.min(1.15, Math.min(scaleH, scaleW)));
+        hudBody.style.zoom = scale.toFixed(3);
+    }
+};
+
+window.initHudAutoFit = function() {
+    const hudWin = document.getElementById('vp-hud-window');
+    if (!hudWin) return;
+    if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            requestAnimationFrame(window.fitHudToWindow);
+        });
+        ro.observe(hudWin);
+    }
+    window.addEventListener('resize', () => requestAnimationFrame(window.fitHudToWindow));
+    setTimeout(window.fitHudToWindow, 120);
 };

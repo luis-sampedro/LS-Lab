@@ -7,7 +7,11 @@
     <!-- 1. TOP APPLICATION OPTIONS & MENUBAR (~34px height) -->
     <div class="desktop-menubar" style="height: 34px; min-height: 34px; background: #080d19; border-bottom: 1px solid #1e293b;">
         <div class="desktop-menu-left">
-            <!-- FILE MENU -->
+            <div style="display: flex; align-items: center; gap: 6px; padding-right: 10px; margin-right: 6px; border-right: 1px solid #1e293b;">
+                <span style="font-weight: 800; font-size: 0.82rem; color: #38bdf8; letter-spacing: -0.2px;">LS Data Lab</span>
+                <span style="font-size: 0.62rem; color: #64748b; font-weight: 600;">v4.5</span>
+            </div>
+                        <!-- FILE MENU -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
                 <span>File</span>
                 <div class="desktop-dropdown" id="dropdown-file">
@@ -27,7 +31,7 @@
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="saveProjectToCloud()">
-                        <span>💾 Save Project to Cloud</span>
+                        <span>Save Project to Cloud <span style="background:#f59e0b; color:#0f172a; font-size:0.6rem; font-weight:800; padding:1px 4px; border-radius:3px; margin-left:4px;">PRO</span></span>
                         <span class="shortcut">Ctrl+S</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
@@ -53,11 +57,11 @@
                 <span>Edit</span>
                 <div class="desktop-dropdown" id="dropdown-edit">
                     <div class="desktop-dropdown-item" onclick="undoLastAction()">
-                        <span>↩️ Undo Last Action</span>
+                        <span>Undo</span>
                         <span class="shortcut">Ctrl+Z</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="redoLastAction()">
-                        <span>↪️ Redo Action</span>
+                        <span>Redo</span>
                         <span class="shortcut">Ctrl+Y</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
@@ -128,26 +132,26 @@
                 <div class="desktop-dropdown" id="dropdown-legs">
                     <div class="desktop-dropdown-header">Main Legs</div>
                     <div class="desktop-dropdown-item" onclick="promptManualRaceStart()">
-                        <span style="color: #38bdf8; font-weight: bold;">⏱️ Mark Race Start at Time...</span>
+                        <span>Mark Race Start by Time...</span>
                         <span class="shortcut">Clock</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="promptDetectLegsInsideRace()">
-                        <span style="color: #a855f7; font-weight: bold;">🎯 Detect UW / DW inside Race...</span>
+                        <span>Detect Upwind / Downwind in Race...</span>
                         <span class="shortcut">Scope</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="combineSelectedLegs()">
-                        <span style="color: #10b981; font-weight: bold;">🔗 Combine 2+ Selected Legs</span>
+                        <span>Combine Selected Legs</span>
                         <span class="shortcut">Merge</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="splitSegmentAtPlayhead()"><span>🏁 Split Segment at Playhead</span></div>
-                    <div class="desktop-dropdown-item" onclick="splitClipAtScrubber()"><span>✂️ Split Leg Clip at Scrubber</span></div>
-                    <div class="desktop-dropdown-item" onclick="promptRenameClip()"><span>✏️ Rename Selected Leg</span></div>
-                    <div class="desktop-dropdown-item" onclick="deleteSelectedClip()"><span style="color: #fca5a5;">🗑️ Delete Leg Label</span></div>
-                    <div class="desktop-dropdown-item" onclick="eraseSelectedLegData()"><span style="color: #ef4444;">💥 Erase Leg Data (GPS)</span></div>
-                    <div class="desktop-dropdown-item" onclick="eraseAllBreakData()"><span style="color: #f87171;">☕ Erase All Break Data</span></div>
+                    <div class="desktop-dropdown-item" onclick="splitSegmentAtPlayhead()"><span>Split Segment at Playhead</span></div>
+                    <div class="desktop-dropdown-item" onclick="splitClipAtScrubber()"><span>Split Leg at Scrubber</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameClip()"><span>Rename Leg</span></div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedClip()"><span style="color: #fca5a5;">Delete Leg Label</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseSelectedLegData()"><span style="color: #ef4444;">Erase Leg Data</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseAllBreakData()"><span style="color: #f87171;">Erase Break Data</span></div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionLeg()"><span>🔄 Reset to 1 Full Session Leg</span></div>
+                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionLeg()"><span>Reset to Single Leg</span></div>
                 </div>
             </div>
 
@@ -157,16 +161,16 @@
                 <div class="desktop-dropdown" id="dropdown-sublegs">
                     <div class="desktop-dropdown-header">Sublegs &amp; Tacks</div>
                     <div class="desktop-dropdown-item" onclick="splitSublegAtScrubber()">
-                        <span style="color: #10b981; font-weight: bold;">✂️ Split Subleg at Scrubber</span>
+                        <span>Split Subleg at Scrubber</span>
                         <span class="shortcut">✂</span>
                     </div>
-                    <div class="desktop-dropdown-item" onclick="promptRenameSubleg()"><span>✏️ Rename Selected Subleg</span></div>
-                    <div class="desktop-dropdown-item" onclick="promptCustomSublegSplit()"><span>📊 Split by Custom Metric...</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameSubleg()"><span>Rename Subleg</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptCustomSublegSplit()"><span>Split by Metric...</span></div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="deleteSelectedSubleg()"><span style="color: #fca5a5;">🗑️ Delete Subleg Label</span></div>
-                    <div class="desktop-dropdown-item" onclick="eraseSelectedSublegData()"><span style="color: #ef4444;">💥 Erase Subleg Data</span></div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedSubleg()"><span style="color: #fca5a5;">Delete Subleg Label</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseSelectedSublegData()"><span style="color: #ef4444;">Erase Subleg Data</span></div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionSubleg()"><span>🔄 Reset to 1 Full Subleg</span></div>
+                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionSubleg()"><span>Reset to Single Subleg</span></div>
                 </div>
             </div>
 
@@ -176,33 +180,33 @@
                 <div class="desktop-dropdown" id="dropdown-maneuver">
                     <div class="desktop-dropdown-header">Maneuver Editor</div>
                     <div class="desktop-dropdown-item" onclick="createManeuverAtPlayhead()">
-                        <span style="color: #10b981; font-weight: bold;">➕ New Maneuver at Playhead</span>
+                        <span>New Maneuver at Playhead</span>
                         <span class="shortcut">New</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="moveSelectedManeuver()">
-                        <span>↔️ Move Maneuver to Playhead</span>
+                        <span>Move Maneuver to Playhead</span>
                         <span class="shortcut">Move</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setManeuverTime()">
-                        <span>⏱️ Set Exact Clock Time...</span>
+                        <span>Set Time...</span>
                         <span class="shortcut">Time</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="setManeuverDuration()">
-                        <span>⏳ Set Duration (sec)...</span>
+                        <span>Set Duration (s)...</span>
                         <span class="shortcut">Dur</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-header">Maneuver Type</div>
-                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('tack')"><span>🔄 Tack</span></div>
-                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('gybe')"><span>🌪️ Gybe</span></div>
-                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('rounding')"><span>🚩 Mark Rounding</span></div>
-                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('bear_away')"><span>⬇️ Bear Away</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('tack')"><span>Tack</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('gybe')"><span>Gybe</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('rounding')"><span>Mark Rounding</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('bear_away')"><span>Bear Away</span></div>
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="promptRenameSubleg()">
-                        <span>✏️ Rename Maneuver</span>
+                        <span>Rename Maneuver</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="deleteSelectedManeuver()">
-                        <span style="color: #fca5a5;">🗑️ Delete Maneuver</span>
+                        <span style="color: #fca5a5;">Delete Maneuver</span>
                         <span class="shortcut">Del</span>
                     </div>
                 </div>
@@ -212,38 +216,40 @@
             <div class="desktop-menu-item" id="menu-plots" onclick="toggleDesktopMenu('plots', event)">
                 <span>Plots</span>
                 <div class="desktop-dropdown" id="dropdown-plots">
-                    <div class="desktop-dropdown-header">Toggle Telemetry Channels</div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('sog')"><span>🚤 SOG (Speed Over Ground)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('cog')"><span>🧭 COG (Course Over Ground)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('hdt')"><span>🧭 HDT (Heading)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('heel')"><span>📐 Heel Angle</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('pitch')"><span>📐 Pitch Angle</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('rot')"><span>🔄 ROT (Rate of Turn)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('vmg')"><span>⚡ VMG (Velocity Made Good)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('vmc')"><span>🎯 VMC (Velocity Made Course)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('twa')"><span>💨 TWA (True Wind Angle)</span></div>
-                    <div class="desktop-dropdown-item" onclick="toggleVariable('twd')"><span>💨 TWD (True Wind Dir)</span></div>
-                    <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-header">Chart Zoom</div>
-                    <div class="desktop-dropdown-item" onclick="chartZoom(1)"><span>🔍+ Zoom In</span></div>
-                    <div class="desktop-dropdown-item" onclick="chartZoom(-1)"><span>🔍- Zoom Out</span></div>
-                    <div class="desktop-dropdown-item" onclick="if(typeof resetChartZoom==='function') resetChartZoom()"><span>🔄 Reset Chart Zoom</span></div>
-                </div>
-            </div>
+          <div class="desktop-dropdown-item" onclick="createFloatingPlotWindow('sog')"><span style="color: #38bdf8; font-weight: bold;">New Floating Plot Window</span></div>
+          <div class="desktop-dropdown-divider"></div>
+          <div class="desktop-dropdown-header">Toggle Telemetry Channels</div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('sog')"><span><span id="chk-plot-sog" style="font-family:monospace; margin-right:6px; color:#38bdf8;">[✓]</span>SOG (Speed Over Ground)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('cog')"><span><span id="chk-plot-cog" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>COG (Course Over Ground)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('hdt')"><span><span id="chk-plot-hdg" style="font-family:monospace; margin-right:6px; color:#38bdf8;">[✓]</span>HDT (Heading)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('heel')"><span><span id="chk-plot-heel" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>Heel Angle</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('pitch')"><span><span id="chk-plot-pitch" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>Pitch Angle</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('rot')"><span><span id="chk-plot-rot" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>ROT (Rate of Turn)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('vmg')"><span><span id="chk-plot-vmg" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>VMG (Velocity Made Good)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('vmc')"><span><span id="chk-plot-vmc" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>VMC (Velocity Made Course)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('twa')"><span><span id="chk-plot-twa" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>TWA (True Wind Angle)</span></div>
+          <div class="desktop-dropdown-item" onclick="toggleVariable('twd')"><span><span id="chk-plot-twd" style="font-family:monospace; margin-right:6px; color:#64748b;">[ ]</span>TWD (True Wind Dir)</span></div>
+          <div class="desktop-dropdown-divider"></div>
+          <div class="desktop-dropdown-header">Chart Zoom</div>
+          <div class="desktop-dropdown-item" onclick="chartZoom(1)"><span>Zoom In</span></div>
+          <div class="desktop-dropdown-item" onclick="chartZoom(-1)"><span>Zoom Out</span></div>
+          <div class="desktop-dropdown-item" onclick="if(typeof resetChartZoom==='function') resetChartZoom()"><span>Reset Chart Zoom</span></div>
+        </div>
+      </div>
 
-            <!-- WIND MENU -->
+      <!-- WIND MENU -->
             <div class="desktop-menu-item" id="menu-wind" onclick="toggleDesktopMenu('wind', event)">
-                <span>💨 Wind</span>
+                <span>Wind</span>
                 <div class="desktop-dropdown" id="dropdown-wind">
                     <div class="desktop-dropdown-header">Wind Calibration</div>
                     <div class="desktop-dropdown-item" onclick="calibrateWindFromUpwindTacks(false)">
-                        <span style="color: #38bdf8; font-weight: bold;">⚡ Calibrate from Upwind (&gt;5m + Tacks)</span>
+                        <span>Calibrate from Upwind (&gt;5m + Tacks)</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="promptManualTwd()">
-                        <span>🧭 Set Manual TWD...</span>
+                        <span>Set Manual TWD...</span>
                     </div>
                     <div class="desktop-dropdown-item" onclick="if(typeof recalculateAllLegsTwd==='function'){recalculateAllLegsTwd();renderSegmentRibbon();updateFrame(playbackIndex);}">
-                        <span>🔄 Recalculate TWD per Leg</span>
+                        <span>Recalculate TWD per Leg</span>
                     </div>
                 </div>
             </div>
@@ -259,7 +265,7 @@
                         <span>⛵ Open LS Sail Scan Studio</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab PRO v4.2\nAntigravity Telemetry Engine\nMulti-Boat Fleet Comparison &amp; Overleaf PDF Report')">
+                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab v4.5\nAntigravity Telemetry Engine\nMulti-Boat Fleet Comparison &amp; Overleaf PDF Report')">
                         <span>ℹ️ About LS Data Lab PRO</span>
                     </div>
                 </div>
@@ -267,47 +273,35 @@
         </div>
 
         <!-- RIGHT TOOLBAR: Clean and minimal save button -->
-        <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" onclick="saveProjectToCloud()" class="quick-tool-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: 1px solid #38bdf8; color: white; padding: 3px 10px; border-radius: 4px; font-size: 0.73rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
-                <span>💾</span> Save Project <span style="font-size: 0.58rem; background: #f59e0b; color: #0f172a; padding: 1px 4px; border-radius: 4px; font-weight: 800;">PRO</span>
-            </button>
-        </div>
+        <div class="desktop-menu-right" style="display: flex; align-items: center; gap: 6px;"><nav class="desktop-steps-nav">
+                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn" style="display:none;" onclick="switchTab('upload')">
+                    <span class="step-label">1. Ingest &amp; Calibrate</span>
+                </button>
+                <button type="button" id="btn-tab-telemetry" class="step-tab-btn tab-btn active" onclick="switchTab('telemetry')">
+                    <span class="step-label">1. Telemetry</span>
+                </button>
+                <button type="button" id="btn-tab-performance" class="step-tab-btn tab-btn disabled" onclick="switchTab('performance')" disabled>
+                    <span class="step-label">2. Legs &amp; Polars</span>
+                </button>
+                <button type="button" id="btn-tab-maneuvers" class="step-tab-btn tab-btn disabled" onclick="switchTab('maneuvers')" disabled>
+                    <span class="step-label">3. Maneuvers</span>
+                </button>
+                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn disabled" onclick="switchTab('compare')" disabled>
+                    <span class="step-label">4. Compare</span>
+                </button>
+                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn disabled" onclick="switchTab('report')" disabled>
+                    <span class="step-label">5. PDF Report</span>
+                </button>
+            </nav></div>
     </div>
 
     <!-- 2. APPLICATION STEP NAVIGATION BAR (~38px height) -->
-    <div class="desktop-steps-bar" style="height: 38px; min-height: 38px; background: #0c1222; border-bottom: 1px solid #1e293b;">
+    <div class="desktop-steps-bar" style="display: none !important;" style="height: 38px; min-height: 38px; background: #0c1222; border-bottom: 1px solid #1e293b;">
         <div class="desktop-steps-left">
             <div class="desktop-steps-brand">
-                <span style="font-size: 1.15rem;">📈</span>
                 <span class="desktop-brand-name">LS Data Lab</span>
-                <span class="desktop-brand-badge">PRO v4.2</span>
-            </div>
-            <nav class="desktop-steps-nav">
-                <button type="button" id="btn-tab-upload" class="step-tab-btn tab-btn active" onclick="switchTab('upload')">
-                    <span class="step-num">1</span>
-                    <span class="step-label">1. Ingest &amp; Calibrate</span>
-                </button>
-                <button type="button" id="btn-tab-telemetry" class="step-tab-btn tab-btn disabled" onclick="switchTab('telemetry')" disabled>
-                    <span class="step-num">2</span>
-                    <span class="step-label">2. Telemetry Scrubber</span>
-                </button>
-                <button type="button" id="btn-tab-performance" class="step-tab-btn tab-btn disabled" onclick="switchTab('performance')" disabled>
-                    <span class="step-num">3</span>
-                    <span class="step-label">3. Legs &amp; Polars</span>
-                </button>
-                <button type="button" id="btn-tab-maneuvers" class="step-tab-btn tab-btn disabled" onclick="switchTab('maneuvers')" disabled>
-                    <span class="step-num">4</span>
-                    <span class="step-label">4. Maneuvers Log</span>
-                </button>
-                <button type="button" id="btn-tab-compare" class="step-tab-btn tab-btn disabled" onclick="switchTab('compare')" disabled>
-                    <span class="step-num">5</span>
-                    <span class="step-label">5. Session Compare</span>
-                </button>
-                <button type="button" id="btn-tab-report" class="step-tab-btn tab-btn disabled" onclick="switchTab('report')" disabled>
-                    <span class="step-num">6</span>
-                    <span class="step-label">6. Industry Report PDF</span>
-                </button>
-            </nav>
+                </div>
+            
         </div>
         <div class="desktop-steps-right" style="display: flex; align-items: center; gap: 8px;">
             <div id="active-profile-pill" class="steps-profile-pill" style="display: none; padding: 2px 8px; font-size: 0.72rem;">
@@ -320,7 +314,7 @@
     </div>
 
     <!-- 3. DYNAMIC CONTEXTUAL OPTIONS RIBBON BAR (Changes depending on active step) -->
-    <div id="contextualRibbon" class="desktop-ribbon-bar">
+    <div id="contextualRibbon" class="desktop-ribbon-bar" style="display: none;">
         <!-- Ribbon for Step 1: Upload & Calibrate -->
         <div class="ribbon-tab-content active" id="ribbon-tab-upload">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -366,7 +360,7 @@
                             <span class="ribbon-shortcut">Click</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="splitClipAtScrubber()">
-                            <span>✂️ Split Leg Clip at Scrubber</span>
+                            <span>Split Leg at Scrubber</span>
                             <span class="ribbon-shortcut">✂</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="promptRenameClip()">
@@ -376,13 +370,13 @@
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #cbd5e1;">Leg Type:</span>
                             <select id="clipTypeSelector" onchange="changeSelectedClipType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="upwind">⛵ Upwind (UW)</option>
-                                <option value="downwind">🚀 Downwind (DW)</option>
-                                <option value="reach">💨 Reach</option>
-                                <option value="pre_start">⏱️ Pre-Start</option>
-                                <option value="break">☕ Break / Non-Important (Erasable)</option>
-                                <option value="race">🏁 Full Race</option>
-                                <option value="hidden">🙈 Hidden</option>
+                                <option value="upwind">Upwind (UW)</option>
+                                <option value="downwind">Downwind (DW)</option>
+                                <option value="reach">Reach</option>
+                                <option value="pre_start">Pre-Start</option>
+                                <option value="break">Break / Non-Important (Erasable)</option>
+                                <option value="race">Full Race</option>
+                                <option value="hidden">Hidden</option>
                             </select>
                         </div>
                         <div class="ribbon-menu-item" onclick="deleteSelectedClip()">
@@ -417,19 +411,19 @@
                             <span class="ribbon-shortcut">✂</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="promptRenameSubleg()">
-                            <span>✏️ Rename Selected Subleg</span>
+                            <span>Rename Subleg</span>
                             <span class="ribbon-shortcut">✏</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #cbd5e1;">Subleg Mode:</span>
                             <select id="sublegTypeSelector" onchange="changeSelectedSublegType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="port">🔴 Port Tack (Babor)</option>
-                                <option value="starboard">🟢 Starboard Tack (Estribor)</option>
-                                <option value="upwind">⛵ Upwind Leg</option>
-                                <option value="downwind">🚀 Downwind Leg</option>
-                                <option value="reach">💨 Reaching</option>
-                                <option value="pre_start">⏱️ Pre-Start</option>
-                                <option value="break">☕ Break / Transit</option>
+                                <option value="port">Port Tack (Babor)</option>
+                                <option value="starboard">Starboard Tack (Estribor)</option>
+                                <option value="upwind">Upwind Leg</option>
+                                <option value="downwind">Downwind Leg</option>
+                                <option value="reach">Reaching</option>
+                                <option value="pre_start">Pre-Start</option>
+                                <option value="break">Break / Transit</option>
                             </select>
                         </div>
                         <div class="ribbon-menu-item" onclick="promptCustomSublegSplit()">
@@ -441,19 +435,19 @@
                             <select id="sublegMultiSelector" onchange="selectSublegsByName(this.value)" style="background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold;">
                                 <option value="">🔍 Select Sublegs...</option>
                                 <option value="all">Select All Sublegs</option>
-                                <option value="port">🔴 Select All Port Tack</option>
-                                <option value="starboard">🟢 Select All Starboard Tack</option>
-                                <option value="upwind">⛵ Select All Upwind</option>
-                                <option value="downwind">🚀 Select All Downwind</option>
-                                <option value="pre_start">⏱️ Select All Pre-Starts</option>
-                                <option value="break">☕ Select All Breaks / Transit</option>
-                                <option value="reach">💨 Select All Reach</option>
-                                <option value="fly">🛩️ Select All Flying</option>
-                                <option value="low">🌊 Select All Low-Ride</option>
-                                <option value="tack">🔄 Select All Tacks</option>
-                                <option value="gybe">🌪️ Select All Gybes</option>
-                                <option value="ashore">🏠 Select All Ashore</option>
-                                <option value="capsize">🏊 Select All Capsized</option>
+                                <option value="port">Select All Port Tack</option>
+                                <option value="starboard">Select All Starboard Tack</option>
+                                <option value="upwind">Select All Upwind</option>
+                                <option value="downwind">Select All Downwind</option>
+                                <option value="pre_start">Select All Pre-Starts</option>
+                                <option value="break">Select All Breaks / Transit</option>
+                                <option value="reach">Select All Reach</option>
+                                <option value="fly">Select All Flying</option>
+                                <option value="low">Select All Low-Ride</option>
+                                <option value="tack">Select All Tacks</option>
+                                <option value="gybe">Select All Gybes</option>
+                                <option value="ashore">Select All Ashore</option>
+                                <option value="capsize">Select All Capsized</option>
                                 <option value="deselect">❌ Deselect All</option>
                             </select>
                         </div>
@@ -477,7 +471,7 @@
 
                 <!-- Desplegable 2: Plots & Datasets -->
                 <div class="ribbon-dropdown-wrapper">
-                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleRibbonDropdown('plots', event)">
+                    <button type="button" class="ribbon-dropdown-btn" onclick="toggleDesktopMenu('plots', event)">
                         <span>📈</span> <strong id="lblRibbonPlotsTitle">Plots &amp; Datasets</strong> <span>▾</span>
                     </button>
                     <div class="ribbon-dropdown-menu" id="dropdown-ribbon-plots" style="min-width: 340px;">
@@ -730,36 +724,36 @@
                     <div class="ribbon-dropdown-menu" id="dropdown-ribbon-maneuver" style="min-width: 240px;">
                         <div class="ribbon-menu-section-header">🔄 MANEUVER EDITOR</div>
                         <div class="ribbon-menu-item" onclick="createManeuverAtPlayhead()">
-                            <span style="color: #10b981; font-weight: bold;">➕ New Maneuver at Playhead</span>
+                            <span>New Maneuver at Playhead</span>
                             <span class="ribbon-shortcut">New</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="moveSelectedManeuver()">
-                            <span>↔️ Move Maneuver to Playhead</span>
+                            <span>Move Maneuver to Playhead</span>
                             <span class="ribbon-shortcut">Move</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="setManeuverTime()">
-                            <span>⏱️ Set Exact Clock Time...</span>
+                            <span>Set Time...</span>
                             <span class="ribbon-shortcut">Time</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="setManeuverDuration()">
-                            <span>⏳ Set Duration (sec)...</span>
+                            <span>Set Duration (s)...</span>
                             <span class="ribbon-shortcut">Dur</span>
                         </div>
                         <div class="ribbon-menu-item-row" style="padding: 5px 14px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="font-size: 0.74rem; color: #cbd5e1;">Type:</span>
                             <select onchange="changeSelectedManeuverType(this.value)" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 3px 6px; border-radius: 4px; font-size: 0.72rem;">
-                                <option value="tack">🔄 Tack</option>
-                                <option value="gybe">🌪️ Gybe</option>
+                                <option value="tack">Tack</option>
+                                <option value="gybe">Gybe</option>
                                 <option value="rounding">🚩 Mark Rounding</option>
                                 <option value="bear_away">⬇️ Bear Away</option>
                             </select>
                         </div>
                         <div class="ribbon-menu-item" onclick="promptRenameSubleg()">
-                            <span>✏️ Rename Maneuver</span>
+                            <span>Rename Maneuver</span>
                             <span class="ribbon-shortcut">✏</span>
                         </div>
                         <div class="ribbon-menu-item" onclick="deleteSelectedManeuver()">
-                            <span style="color: #fca5a5;">🗑️ Delete Maneuver</span>
+                            <span style="color: #fca5a5;">Delete Maneuver</span>
                             <span class="ribbon-shortcut">Del</span>
                         </div>
                     </div>
@@ -775,13 +769,13 @@
                 <button type="button" onclick="splitClipAtScrubber()" class="ribbon-action-btn" title="Split Leg Clip at Scrubber" style="padding: 3px 6px; font-size: 0.72rem;">✂️</button>
                 <button type="button" onclick="promptRenameClip()" class="ribbon-action-btn" title="Rename Selected Leg" style="padding: 3px 6px; font-size: 0.72rem;">✏️</button>
                 <select onchange="changeSelectedClipType(this.value)" title="Leg Type" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; height: 24px;">
-                    <option value="upwind">⛵ UW</option>
-                    <option value="downwind">🚀 DW</option>
-                    <option value="reach">💨 Reach</option>
-                    <option value="pre_start">⏱️ Pre</option>
-                    <option value="break">☕ Break</option>
-                    <option value="race">🏁 Race</option>
-                    <option value="hidden">🙈 Hide</option>
+                    <option value="upwind">UW</option>
+                    <option value="downwind">DW</option>
+                    <option value="reach">Reach</option>
+                    <option value="pre_start">Pre</option>
+                    <option value="break">Break</option>
+                    <option value="race">Race</option>
+                    <option value="hidden">Hide</option>
                 </select>
                 <button type="button" onclick="deleteSelectedClip()" class="ribbon-action-btn" title="Delete Leg Label" style="padding: 3px 6px; font-size: 0.72rem; color: #fca5a5;">🗑️</button>
                 <button type="button" onclick="eraseSelectedLegData()" class="ribbon-action-btn" title="Erase Leg Data (Wipe GPS)" style="padding: 3px 6px; font-size: 0.72rem; border-color: #b91c1c; color: #f87171;">💥</button>
@@ -794,13 +788,13 @@
                 <button type="button" onclick="splitSublegAtScrubber()" class="ribbon-action-btn" title="Split Subleg at Scrubber" style="padding: 3px 6px; font-size: 0.72rem; border-color: #059669; color: #34d399;">✂️</button>
                 <button type="button" onclick="promptRenameSubleg()" class="ribbon-action-btn" title="Rename Selected Subleg" style="padding: 3px 6px; font-size: 0.72rem;">✏️</button>
                 <select onchange="changeSelectedSublegType(this.value)" title="Subleg Mode" style="background: #1e293b; color: white; border: 1px solid #475569; padding: 2px 4px; border-radius: 4px; font-size: 0.7rem; height: 24px;">
-                    <option value="port">🔴 Port</option>
-                    <option value="starboard">🟢 Stbd</option>
-                    <option value="upwind">⛵ UW</option>
-                    <option value="downwind">🚀 DW</option>
-                    <option value="reach">💨 Reach</option>
-                    <option value="pre_start">⏱️ Pre</option>
-                    <option value="break">☕ Break</option>
+                    <option value="port">Port</option>
+                    <option value="starboard">Stbd</option>
+                    <option value="upwind">UW</option>
+                    <option value="downwind">DW</option>
+                    <option value="reach">Reach</option>
+                    <option value="pre_start">Pre</option>
+                    <option value="break">Break</option>
                 </select>
                 <button type="button" onclick="promptCustomSublegSplit()" class="ribbon-action-btn" title="Split Sublegs by Custom Metric (TWA, Heel, SOG)" style="padding: 3px 6px; font-size: 0.72rem;">📊</button>
                 <button type="button" onclick="deleteSelectedSubleg()" class="ribbon-action-btn" title="Delete Subleg Label" style="padding: 3px 6px; font-size: 0.72rem; color: #fca5a5;">🗑️</button>
@@ -888,7 +882,7 @@
         <div class="wizard-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
         
         <!-- PANEL 1: Upload & Wind Verification -->
-        <div id="panel-upload" class="wizard-panel active" style="padding: 2rem; max-width: 900px; margin: 0 auto; width: 100%; overflow-y: auto; flex-direction: column;">
+        <div id="panel-upload" class="wizard-panel" style="display: none !important;">
             <h2 style="color: #f8fafc; font-size: 1.5rem; margin-bottom: 0.5rem;">Step 1: Upload Session Log & Verify Wind</h2>
             <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">Upload Vakaros <code>.vkx</code> binary, Sailmon, CSV, or GPX files to process sailing telemetry.</p>
 
@@ -1012,14 +1006,13 @@
         </div>
 
         <!-- PANEL 2: TELEMETRY SCRUBBER & CAD VIEWPORT SYSTEM -->
-        <div id="panel-telemetry" class="wizard-panel" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow: hidden; position: relative;">
+        <div id="panel-telemetry" class="wizard-panel active" style="flex: 1; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow: hidden; position: relative;">
             <div id="shared-visualizer" class="cad-viewport-container">
                 
                 <!-- LEFT VIEWPORT: Tracker Map (50% default width) -->
                 <div id="vp-map-window" class="cad-viewport-window" style="flex: 0 0 50%; width: 50%; min-width: 180px;">
                     <div class="cad-viewport-titlebar">
                         <div class="cad-titlebar-left">
-                            <span>🗺️</span>
                             <span class="cad-title-text">TRACKER MAP</span>
                             <span class="cad-size-badge" id="badge-vp-map">50%</span>
                         </div>
@@ -1083,7 +1076,6 @@
                     <div id="vp-hud-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
                         <div class="cad-viewport-titlebar">
                             <div class="cad-titlebar-left">
-                                <span>📊</span>
                                 <span class="cad-title-text">LIVE TELEMETRY HUD</span>
                                 <span class="cad-size-badge" id="badge-vp-hud">33%</span>
                             </div>
@@ -1186,17 +1178,17 @@
                                     <!-- Controls for adding marks -->
                                     <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap;">
                                         <select id="raceMarkTypeSelect" style="flex: 1; min-width: 100px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px;">
-                                            <option value="windward">⛵ Windward Mark (W)</option>
-                                            <option value="windward1">⛵ Windward 1 (W1)</option>
-                                            <option value="windward2">⛵ Windward 2 (W2)</option>
-                                            <option value="offset">💨 Offset Mark (Off)</option>
-                                            <option value="leeward">🚀 Leeward Mark (L)</option>
-                                            <option value="gate1">🚪 Downwind Gate 1 (Port - G1)</option>
-                                            <option value="gate2">🚪 Downwind Gate 2 (Stbd - G2)</option>
-                                            <option value="rc">🏁 RC Boat (Start Line)</option>
-                                            <option value="pin">📍 Pin End (Start Line)</option>
-                                            <option value="finish1">🏁 Finish Pin (F1)</option>
-                                            <option value="finish2">🏁 Finish Boat (F2)</option>
+                                            <option value="windward">Windward Mark (W)</option>
+                                            <option value="windward1">Windward 1 (W1)</option>
+                                            <option value="windward2">Windward 2 (W2)</option>
+                                            <option value="offset">Offset Mark (Off)</option>
+                                            <option value="leeward">Leeward Mark (L)</option>
+                                            <option value="gate1">Downwind Gate 1 (Port - G1)</option>
+                                            <option value="gate2">Downwind Gate 2 (Stbd - G2)</option>
+                                            <option value="rc">RC Boat (Start Line)</option>
+                                            <option value="pin">Pin End (Start Line)</option>
+                                            <option value="finish1">Finish Pin (F1)</option>
+                                            <option value="finish2">Finish Boat (F2)</option>
                                         </select>
                                         <button onclick="placeMarkAtBoat()" title="Place selected mark at boat current position" style="background: #3b82f6; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 At Boat</button>
                                         <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Click on map to place mark" style="background: #475569; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Map</button>
@@ -1244,13 +1236,12 @@
                     <div id="vp-plot-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
                         <div class="cad-viewport-titlebar">
                             <div class="cad-titlebar-left">
-                                <span>📈</span>
                                 <span class="cad-title-text">TELEMETRY PLOT</span>
                                 <span class="cad-size-badge" id="badge-vp-plot">33%</span>
                                 <span id="activeVarsPill" class="cad-vars-pill">SOG, HDG</span>
                             </div>
                             <div class="cad-titlebar-right">
-                                <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('plots', event)" title="Select Datasets &amp; Zoom">⚙️ Datasets</button>
+                                <button type="button" class="cad-btn-quick" onclick="toggleDesktopMenu('plots', event)" title="Select Datasets &amp; Zoom">Datasets</button>
                                 <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-plot" onclick="toggleFloatingViewport('plot')" title="Picture-in-Picture / Floating Mode">🗗</button>
                                 <button type="button" class="cad-btn-win" onclick="minimizeViewport('plot')" title="Minimize Window">_</button>
                                 <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-plot" onclick="openSnapFlyout('plot', event)" onmouseenter="openSnapFlyout('plot', event)" title="Windows Snap Layouts / Maximize">🗖</button>
@@ -1272,13 +1263,12 @@
                     <div id="vp-timeline-window" class="cad-viewport-window" style="flex: 1; min-height: 80px;">
                         <div class="cad-viewport-titlebar">
                             <div class="cad-titlebar-left">
-                                <span>🎬</span>
                                 <span class="cad-title-text">LEGS &amp; TIMELINE CLIPPER</span>
                                 <span class="cad-size-badge" id="badge-vp-timeline">33%</span>
                                 <span id="vpSelectedLegBadge" class="cad-leg-badge">Leg 1 / 1</span>
                             </div>
                             <div class="cad-titlebar-right">
-                                <button type="button" class="cad-btn-quick" onclick="toggleRibbonDropdown('legs', event)" title="Clipper Tools">✂️ Tools</button>
+                                <button type="button" class="cad-btn-quick" onclick="toggleDesktopMenu('legs', event)" title="Clipper Tools">Tools</button>
                                 <button type="button" class="cad-btn-win cad-btn-pip" id="btn-pip-timeline" onclick="toggleFloatingViewport('timeline')" title="Picture-in-Picture / Floating Mode">🗗</button>
                                 <button type="button" class="cad-btn-win" onclick="minimizeViewport('timeline')" title="Minimize Window">_</button>
                                 <button type="button" class="cad-btn-win cad-btn-snap" id="btn-max-timeline" onclick="openSnapFlyout('timeline', event)" onmouseenter="openSnapFlyout('timeline', event)" title="Windows Snap Layouts / Maximize">🗖</button>
@@ -1300,11 +1290,36 @@
 
                             <!-- Clean Compact Timeline Statusbar -->
                             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                     <span id="lblLegDetailInfo" style="color: #cbd5e1; font-weight: 500;">Active Leg: Leg 1 (Upwind)</span>
+                                    <select onchange="handleActiveLegAction(this)" style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px; padding: 2px 6px; font-size: 0.7rem; cursor: pointer;">
+                                        <option value="">Edit Leg...</option>
+                                        <option value="twd">Find TWD for this Leg</option>
+                                        <option value="split">Split Leg at Cursor</option>
+                                        <option value="rename">Rename Leg</option>
+                                        <option value="type:upwind">Type: Upwind</option>
+                                        <option value="type:downwind">Type: Downwind</option>
+                                        <option value="type:reach">Type: Reach</option>
+                                        <option value="type:pre_start">Type: Pre-Start</option>
+                                        <option value="type:break">Type: Break</option>
+                                        <option value="delete">Delete Leg Label</option>
+                                        <option value="erase">Erase Leg Data</option>
+                                    </select>
+                                    <select onchange="handleActiveSublegAction(this)" style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px; padding: 2px 6px; font-size: 0.7rem; cursor: pointer;">
+                                        <option value="">Edit Subleg...</option>
+                                        <option value="split">Split Subleg at Cursor</option>
+                                        <option value="rename">Rename Subleg</option>
+                                        <option value="mode:port">Mode: Port</option>
+                                        <option value="mode:starboard">Mode: Starboard</option>
+                                        <option value="mode:upwind">Mode: Upwind</option>
+                                        <option value="mode:downwind">Mode: Downwind</option>
+                                        <option value="delete">Delete Subleg Label</option>
+                                        <option value="erase">Erase Subleg Data</option>
+                                    </select>
                                 </div>
                                 
-                                <div style="position: relative; display: inline-block;">
+                                <!-- [COMMENTED OUT FOR NOW - READY FOR REDEPLOY]
+<div style="position: relative; display: inline-block;">
                                     <button onclick="document.getElementById('filterPopover').style.display = document.getElementById('filterPopover').style.display==='flex'?'none':'flex'" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 2px 7px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Data filters">
                                         🔧 <span id="activeSailingBadge" style="font-size: 0.68rem;">Filters</span>
                                     </button>
@@ -1338,6 +1353,7 @@
                                         </div>
                                     </div>
                                 </div>
+-->
                             </div>
                         </div>
                     </div>
@@ -1658,7 +1674,7 @@
                             <label style="display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 4px;">Track Color</label>
                             <select id="fleetBoatColor" style="width: 100%; background: #0f172a; border: 1px solid #475569; padding: 7px 8px; border-radius: 5px; color: white; font-size: 0.78rem;">
                                 <option value="#f97316" selected>🟠 Orange (#f97316)</option>
-                                <option value="#10b981">🟢 Emerald (#10b981)</option>
+                                <option value="#10b981">Emerald (#10b981)</option>
                                 <option value="#a855f7">🟣 Purple (#a855f7)</option>
                                 <option value="#ec4899">🌸 Pink (#ec4899)</option>
                                 <option value="#eab308">🟡 Yellow (#eab308)</option>
@@ -2460,6 +2476,7 @@ main#top {
     color: #f8fafc;
 }
 .cad-size-badge {
+    display: none !important;
     font-size: 0.6rem;
     color: #38bdf8;
     background: rgba(56, 189, 248, 0.12);
@@ -2808,14 +2825,15 @@ main#top {
 .hud-window-body {
     container-type: inline-size;
     container-name: hudcontainer;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 6px 10px;
+    overflow: hidden !important;
+    padding: 4px 8px;
     background: #0b1120;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    height: 100%;
+    justify-content: space-between;
+    gap: 3px;
+    flex: 1;
+    min-height: 0;
     width: 100%;
     box-sizing: border-box;
 }
