@@ -3683,6 +3683,7 @@ window.autoDetectLegs = function(silent = false) {
     const hdgs = m.hdg || m.cog || [];
     const n = sogs.length;
     if (n < 10) return;
+    if (typeof window.calibrateWindFromUpwindTacks === 'function') window.calibrateWindFromUpwindTacks(true);
 
     const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
 
@@ -7725,3 +7726,84 @@ document.addEventListener('keydown', function(e) {
         };
     }
 });
+
+// ==========================================
+// SMART UPWIND-TACK WIND CALIBRATION (>5 MIN)
+// ==========================================
+window.calibrateWindFromUpwindTacks = function(silent = false) {
+    if (!sessionData || !sessionData.metrics || !sessionData.track) return null;
+    const isEs = window.location.href.includes('lang=es');
+    const hdgs = sessionData.metrics.hdt || sessionData.metrics.cog || [];
+    const sogs = sessionData.metrics.sog || [];
+    const n = Math.min(hdgs.length, sogs.length);
+    if (n < 60) return null;
+
+    const angDiff = (a, b) => {
+        let d = Math.abs(a - b) % 360;
+        return d > 180 ? 360 - d : d;
+    };
+
+    const WIN = Math.min(300, Math.floor(n * 0.5));
+    const STEP = 60;
+    let bestWindowTwd = null;
+    let bestScore = -1;
+
+    for (let start = 0; start <= n - WIN; start += STEP) {
+        const end = start + WIN - 1;
+        let samples = [];
+        for (let i = start; i <= end; i++) {
+            if ((sogs[i] || 0) > 2.5 && hdgs[i] !== undefined) {
+                samples.push(hdgs[i]);
+            }
+        }
+        if (samples.length < Math.min(120, WIN * 0.4)) continue;
+
+        samples.sort((a, b) => a - b);
+        const h1 = samples[Math.floor(samples.length * 0.25)];
+        const h2 = samples[Math.floor(samples.length * 0.75)];
+        const tackSpread = angDiff(h1, h2);
+
+        if (tackSpread >= 60 && tackSpread <= 125) {
+            const bisector = getShortestArcBisector(h1, h2);
+            const score = (125 - Math.abs(90 - tackSpread)) + (samples.length / 10);
+            if (score > bestScore) {
+                bestScore = score;
+                bestWindowTwd = Math.round(bisector);
+            }
+        }
+    }
+
+    if (bestWindowTwd === null) {
+        bestWindowTwd = Math.round(estimateTwdFromTrack());
+    }
+
+    sessionData.calibratedTwd = bestWindowTwd;
+    if (typeof onWindCalibrated === 'function') onWindCalibrated(bestWindowTwd, false);
+    if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
+    if (typeof refreshChartData === 'function') refreshChartData();
+    if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+
+    if (!silent) {
+        alert(isEs
+            ? `💨 Viento calibrado desde ceñida (>5 min con viradas): ${bestWindowTwd}°\nLa serie TWD se ha actualizado para toda la sesión.`
+            : `💨 Wind calibrated from upwind (>5 min with tacks): ${bestWindowTwd}°\nTWD series updated across the session.`);
+    }
+    return bestWindowTwd;
+};
+
+window.promptManualTwd = function() {
+    if (!sessionData) return;
+    const isEs = window.location.href.includes('lang=es');
+    const cur = Math.round(sessionData.calibratedTwd || 215);
+    const val = parseFloat(prompt(
+        isEs ? "Introduce la Dirección Real del Viento (TWD en grados 0-360):" : "Enter True Wind Direction (TWD in degrees 0-360):",
+        String(cur)
+    ));
+    if (isNaN(val)) return;
+    const twd = ((Math.round(val) % 360) + 360) % 360;
+    sessionData.calibratedTwd = twd;
+    if (typeof onWindCalibrated === 'function') onWindCalibrated(twd, false);
+    if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
+    if (typeof refreshChartData === 'function') refreshChartData();
+    if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+};
