@@ -52,6 +52,15 @@
             <div class="desktop-menu-item" id="menu-edit" onclick="toggleDesktopMenu('edit', event)">
                 <span>Edit</span>
                 <div class="desktop-dropdown" id="dropdown-edit">
+                    <div class="desktop-dropdown-item" onclick="undoLastAction()">
+                        <span>↩️ Undo Last Action</span>
+                        <span class="shortcut">Ctrl+Z</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="redoLastAction()">
+                        <span>↪️ Redo Action</span>
+                        <span class="shortcut">Ctrl+Y</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="switchTab('upload')">
                         <span>⚙️ Recalibrate Wind Direction...</span>
                     </div>
@@ -109,6 +118,92 @@
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="clearFleetComparison()">
                         <span>🗑️ Clear All Comparison Boats</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEGS MENU -->
+            <div class="desktop-menu-item" id="menu-legs" onclick="toggleDesktopMenu('legs', event)">
+                <span>Legs</span>
+                <div class="desktop-dropdown" id="dropdown-legs">
+                    <div class="desktop-dropdown-header">Main Legs</div>
+                    <div class="desktop-dropdown-item" onclick="promptManualRaceStart()">
+                        <span style="color: #38bdf8; font-weight: bold;">⏱️ Mark Race Start at Time...</span>
+                        <span class="shortcut">Clock</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="promptDetectLegsInsideRace()">
+                        <span style="color: #a855f7; font-weight: bold;">🎯 Detect UW / DW inside Race...</span>
+                        <span class="shortcut">Scope</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="combineSelectedLegs()">
+                        <span style="color: #10b981; font-weight: bold;">🔗 Combine 2+ Selected Legs</span>
+                        <span class="shortcut">Merge</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="splitSegmentAtPlayhead()"><span>🏁 Split Segment at Playhead</span></div>
+                    <div class="desktop-dropdown-item" onclick="splitClipAtScrubber()"><span>✂️ Split Leg Clip at Scrubber</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameClip()"><span>✏️ Rename Selected Leg</span></div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedClip()"><span style="color: #fca5a5;">🗑️ Delete Leg Label</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseSelectedLegData()"><span style="color: #ef4444;">💥 Erase Leg Data (GPS)</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseAllBreakData()"><span style="color: #f87171;">☕ Erase All Break Data</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionLeg()"><span>🔄 Reset to 1 Full Session Leg</span></div>
+                </div>
+            </div>
+
+            <!-- SUBLEGS MENU -->
+            <div class="desktop-menu-item" id="menu-sublegs" onclick="toggleDesktopMenu('sublegs', event)">
+                <span>Sublegs</span>
+                <div class="desktop-dropdown" id="dropdown-sublegs">
+                    <div class="desktop-dropdown-header">Sublegs &amp; Tacks</div>
+                    <div class="desktop-dropdown-item" onclick="splitSublegAtScrubber()">
+                        <span style="color: #10b981; font-weight: bold;">✂️ Split Subleg at Scrubber</span>
+                        <span class="shortcut">✂</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameSubleg()"><span>✏️ Rename Selected Subleg</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptCustomSublegSplit()"><span>📊 Split by Custom Metric...</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedSubleg()"><span style="color: #fca5a5;">🗑️ Delete Subleg Label</span></div>
+                    <div class="desktop-dropdown-item" onclick="eraseSelectedSublegData()"><span style="color: #ef4444;">💥 Erase Subleg Data</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="resetToSingleSessionSubleg()"><span>🔄 Reset to 1 Full Subleg</span></div>
+                </div>
+            </div>
+
+            <!-- MANEUVER MENU -->
+            <div class="desktop-menu-item" id="menu-maneuver" onclick="toggleDesktopMenu('maneuver', event)">
+                <span>Maneuver</span>
+                <div class="desktop-dropdown" id="dropdown-maneuver">
+                    <div class="desktop-dropdown-header">Maneuver Editor</div>
+                    <div class="desktop-dropdown-item" onclick="createManeuverAtPlayhead()">
+                        <span style="color: #10b981; font-weight: bold;">➕ New Maneuver at Playhead</span>
+                        <span class="shortcut">New</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="moveSelectedManeuver()">
+                        <span>↔️ Move Maneuver to Playhead</span>
+                        <span class="shortcut">Move</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setManeuverTime()">
+                        <span>⏱️ Set Exact Clock Time...</span>
+                        <span class="shortcut">Time</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setManeuverDuration()">
+                        <span>⏳ Set Duration (sec)...</span>
+                        <span class="shortcut">Dur</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Maneuver Type</div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('tack')"><span>🔄 Tack</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('gybe')"><span>🌪️ Gybe</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('rounding')"><span>🚩 Mark Rounding</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('bear_away')"><span>⬇️ Bear Away</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameSubleg()">
+                        <span>✏️ Rename Maneuver</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedManeuver()">
+                        <span style="color: #fca5a5;">🗑️ Delete Maneuver</span>
+                        <span class="shortcut">Del</span>
                     </div>
                 </div>
             </div>
