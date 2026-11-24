@@ -208,6 +208,29 @@
                 </div>
             </div>
 
+            <!-- GRAFICA MENU -->
+            <div class="desktop-menu-item" id="menu-plots" onclick="toggleDesktopMenu('plots', event)">
+                <span>Gráfica</span>
+                <div class="desktop-dropdown" id="dropdown-plots">
+                    <div class="desktop-dropdown-header">Canales de Telemetría</div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('sog')"><span>🚤 SOG (Velocidad)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('cog')"><span>🧭 COG (Rumbo)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('hdt')"><span>🧭 HDT (Proa)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('heel')"><span>📐 Escora (Heel)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('pitch')"><span>📐 Cabeceo (Pitch)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('rot')"><span>🔄 ROT (Velocidad Giro)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('vmg')"><span>⚡ VMG</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('vmc')"><span>🎯 VMC</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('twa')"><span>💨 TWA (Ángulo Viento)</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleVariable('twd')"><span>💨 TWD (Dir. Viento)</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Zoom de Gráfica</div>
+                    <div class="desktop-dropdown-item" onclick="chartZoom(1)"><span>🔍+ Acercar Zoom</span></div>
+                    <div class="desktop-dropdown-item" onclick="chartZoom(-1)"><span>🔍- Alejar Zoom</span></div>
+                    <div class="desktop-dropdown-item" onclick="if(typeof resetChartZoom==='function') resetChartZoom()"><span>🔄 Restablecer Zoom</span></div>
+                </div>
+            </div>
+
             <!-- AYUDA MENU -->
             <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
                 <span>Ayuda</span>
