@@ -7201,19 +7201,21 @@ window.buildReportPreview = function() {
 };
 
 function toggleVariable(id) {
-    if (!timeChart) return;
+    if (!timeChart || !timeChart.data || !timeChart.data.datasets) return;
     const btn = document.getElementById('btn-chart-' + id);
-    if (!btn) return;
     const dataset = timeChart.data.datasets.find(ds => ds.id === id);
     if (dataset) {
         dataset.hidden = !dataset.hidden;
-        if (dataset.hidden) btn.classList.add('inactive');
-        else btn.classList.remove('inactive');
+        if (btn) {
+            if (dataset.hidden) btn.classList.add('inactive');
+            else btn.classList.remove('inactive');
+        }
     }
-    const needsY1 = timeChart.data.datasets.some(ds => ds.yAxisID === 'y1' && !ds.hidden);
-    timeChart.options.scales.y1.display = needsY1;
+    if (timeChart.options && timeChart.options.scales && timeChart.options.scales.y1) {
+        const needsY1 = timeChart.data.datasets.some(ds => ds.yAxisID === 'y1' && !ds.hidden);
+        timeChart.options.scales.y1.display = needsY1;
+    }
     timeChart.update();
-    if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
     if (typeof updateActiveVarsPill === 'function') updateActiveVarsPill();
 }
 window.toggleVariable = toggleVariable;
