@@ -1882,7 +1882,15 @@ function onWindCalibrated(twd, autoSwitchTab = false) {
     if (document.getElementById('lbl-active-wind')) document.getElementById('lbl-active-wind').innerText = `TWD: ${sessionData.calibratedTwd}°`;
     
     enableWizardTabs();
-    loadSessionToVisuals();
+    if (!activeSegments || activeSegments.length === 0) {
+        loadSessionToVisuals();
+    } else {
+        if (typeof recalculateAllLegsTwd === 'function') recalculateAllLegsTwd();
+        if (typeof renderSegmentRibbon === 'function') renderSegmentRibbon();
+        if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+        if (typeof refreshChartData === 'function') refreshChartData();
+        if (typeof updateFrame === 'function') updateFrame(playbackIndex);
+    }
     if (typeof initPrimaryFleetBoat === 'function') initPrimaryFleetBoat();
     
     if (autoSwitchTab) {
@@ -6921,7 +6929,7 @@ window.buildReportPreview = function() {
                     <h1 style="font-size: 1.4rem; color: ${themeColor}; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
                         ${title}
                     </h1>
-                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">v4.6</span>
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">v4.6.1</span>
                 </div>
                 <div style="font-size: 0.82rem; color: #475569; margin-top: 3px;">
                     <strong>${boatName}</strong> (${sailNumber}) • Class: <strong>${boatClass}</strong> • Venue: ${venue} • Date: ${dateStr}
@@ -7209,7 +7217,7 @@ window.buildReportPreview = function() {
                         <span style="color: #64748b;">LS Data Lab Stamp:</span><br>
                         <div style="border: 2px dashed ${themeColor}; border-radius: 4px; padding: 6px; text-align: center; color: ${themeColor}; font-weight: 800; font-size: 0.72rem; margin-top: 4px;">
                             ✓ VERIFIED TELEMETRY<br>
-                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.6</span>
+                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.6.1</span>
                         </div>
                     </div>
                 </div>
