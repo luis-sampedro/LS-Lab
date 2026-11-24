@@ -52,6 +52,15 @@
             <div class="desktop-menu-item" id="menu-edit" onclick="toggleDesktopMenu('edit', event)">
                 <span>Edición</span>
                 <div class="desktop-dropdown" id="dropdown-edit">
+                    <div class="desktop-dropdown-item" onclick="undoLastAction()">
+                        <span>↩️ Deshacer Última Acción</span>
+                        <span class="shortcut">Ctrl+Z</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="redoLastAction()">
+                        <span>↪️ Rehacer Acción</span>
+                        <span class="shortcut">Ctrl+Y</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="switchTab('upload')">
                         <span>⚙️ Recalibrar Dirección de Viento...</span>
                     </div>
@@ -109,6 +118,44 @@
                     <div class="desktop-dropdown-divider"></div>
                     <div class="desktop-dropdown-item" onclick="clearFleetComparison()">
                         <span>🗑️ Limpiar Barcos de Comparación</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MANEUVER MENU -->
+            <div class="desktop-menu-item" id="menu-maneuver" onclick="toggleDesktopMenu('maneuver', event)">
+                <span>Maniobra</span>
+                <div class="desktop-dropdown" id="dropdown-maneuver">
+                    <div class="desktop-dropdown-header">Editor de Maniobras</div>
+                    <div class="desktop-dropdown-item" onclick="createManeuverAtPlayhead()">
+                        <span style="color: #10b981; font-weight: bold;">➕ Nueva Maniobra en Cursor</span>
+                        <span class="shortcut">Nueva</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="moveSelectedManeuver()">
+                        <span>↔️ Mover Maniobra al Cursor</span>
+                        <span class="shortcut">Mover</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setManeuverTime()">
+                        <span>⏱️ Fijar Hora Exacta...</span>
+                        <span class="shortcut">Hora</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="setManeuverDuration()">
+                        <span>⏳ Fijar Duración (seg)...</span>
+                        <span class="shortcut">Dur</span>
+                    </div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Tipo de Maniobra</div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('tack')"><span>🔄 Virada (Tack)</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('gybe')"><span>🌪️ Trasluchada (Gybe)</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('rounding')"><span>🚩 Paso de Boya</span></div>
+                    <div class="desktop-dropdown-item" onclick="changeSelectedManeuverType('bear_away')"><span>⬇️ Arribada</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-item" onclick="promptRenameSubleg()">
+                        <span>✏️ Renombrar Maniobra</span>
+                    </div>
+                    <div class="desktop-dropdown-item" onclick="deleteSelectedManeuver()">
+                        <span style="color: #fca5a5;">🗑️ Eliminar Maniobra</span>
+                        <span class="shortcut">Supr</span>
                     </div>
                 </div>
             </div>
