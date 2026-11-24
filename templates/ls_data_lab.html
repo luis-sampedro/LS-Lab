@@ -9,7 +9,7 @@
         <div class="desktop-menu-left">
             <div style="display: flex; align-items: center; gap: 6px; padding-right: 10px; margin-right: 6px; border-right: 1px solid #1e293b;">
                 <span style="font-weight: 800; font-size: 0.82rem; color: #38bdf8; letter-spacing: -0.2px;">LS Data Lab</span>
-                <span style="font-size: 0.62rem; color: #64748b; font-weight: 600;">v4.5</span>
+                <span style="font-size: 0.62rem; color: #64748b; font-weight: 600;">v4.6</span>
             </div>
                         <!-- FILE MENU -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
@@ -254,6 +254,22 @@
                 </div>
             </div>
 
+            <!-- AUTO-DETECT MENU -->
+            <div class="desktop-menu-item" id="menu-autodetect" onclick="toggleDesktopMenu('autodetect', event)">
+                <span>Auto-Detect</span>
+                <div class="desktop-dropdown" id="dropdown-autodetect">
+                    <div class="desktop-dropdown-header">Segmentation</div>
+                    <div class="desktop-dropdown-item" onclick="autoDetectLegs(false)"><span>Run Full Auto-Detect</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptDetectLegsInsideRace()"><span>Detect UW / DW inside Race...</span></div>
+                    <div class="desktop-dropdown-item" onclick="calibrateWindFromUpwindTacks(false)"><span>Calibrate Wind from Upwind (&gt;5m)</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Configuration &amp; Filters</div>
+                    <div class="desktop-dropdown-item" onclick="toggleAutoDetectPopover()"><span>Auto-Detect Settings...</span></div>
+                    <div class="desktop-dropdown-item" onclick="const cb=document.getElementById('autoFoilerActive'); if(cb){cb.checked=!cb.checked; toggleFoilerMode(cb.checked);}"><span>Toggle Foiler Mode</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleLowSpeedFilter()"><span>Toggle Low-Speed Filter</span></div>
+                </div>
+            </div>
+
             <!-- HELP MENU -->
             <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
                 <span>Help</span>
@@ -265,7 +281,7 @@
                         <span>⛵ Open LS Sail Scan Studio</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab v4.5\nAntigravity Telemetry Engine\nMulti-Boat Fleet Comparison &amp; Overleaf PDF Report')">
+                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab v4.6\nAntigravity Telemetry Engine\nMulti-Boat Fleet Comparison &amp; Overleaf PDF Report')">
                         <span>ℹ️ About LS Data Lab PRO</span>
                     </div>
                 </div>

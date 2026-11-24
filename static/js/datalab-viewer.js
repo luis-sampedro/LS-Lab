@@ -2003,8 +2003,9 @@ window.renderTrackOnMap = function() {
             const eIdx = Math.min(trackLen - 1, seg.endIdx);
             if (sIdx > eIdx) return;
 
-            // Connect legs seamlessly by including adjacent point
-            const sliceEnd = Math.min(trackLen, eIdx + 2);
+            // Connect legs seamlessly only if there is no erased time gap
+            const hasGapAfter = (eIdx + 1 < trackLen) && sessionData.elapsed && ((sessionData.elapsed[eIdx + 1] - sessionData.elapsed[eIdx]) > 10);
+            const sliceEnd = hasGapAfter ? (eIdx + 1) : Math.min(trackLen, eIdx + 2);
             const legPts = track.slice(sIdx, sliceEnd);
             if (legPts.length === 0) return;
 
@@ -4389,12 +4390,8 @@ function deleteDataRange(startIdx, endIdx) {
         sessionData.time.splice(startIdx, numItems);
     }
 
-    // 4. Adjust elapsed times
-    const timeToSubtract = (sessionData.elapsed[endIdx] || 0) - (sessionData.elapsed[startIdx] || 0);
+    // 4. Splice elapsed times WITHOUT shifting future timestamps (preserves real GMT clock & leaves timeline gaps)
     sessionData.elapsed.splice(startIdx, numItems);
-    for (let i = startIdx; i < sessionData.elapsed.length; i++) {
-        sessionData.elapsed[i] = Math.max(0, sessionData.elapsed[i] - timeToSubtract);
-    }
 
     // 5. Update activeSegments
     let newSegments = [];
@@ -6924,7 +6921,7 @@ window.buildReportPreview = function() {
                     <h1 style="font-size: 1.4rem; color: ${themeColor}; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">
                         ${title}
                     </h1>
-                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">v4.5</span>
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">v4.6</span>
                 </div>
                 <div style="font-size: 0.82rem; color: #475569; margin-top: 3px;">
                     <strong>${boatName}</strong> (${sailNumber}) • Class: <strong>${boatClass}</strong> • Venue: ${venue} • Date: ${dateStr}
@@ -7212,7 +7209,7 @@ window.buildReportPreview = function() {
                         <span style="color: #64748b;">LS Data Lab Stamp:</span><br>
                         <div style="border: 2px dashed ${themeColor}; border-radius: 4px; padding: 6px; text-align: center; color: ${themeColor}; font-weight: 800; font-size: 0.72rem; margin-top: 4px;">
                             ✓ VERIFIED TELEMETRY<br>
-                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.5</span>
+                            <span style="font-size: 0.62rem; font-weight: normal; color: #64748b;">PRO ENGINE v4.6</span>
                         </div>
                     </div>
                 </div>

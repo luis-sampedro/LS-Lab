@@ -9,7 +9,7 @@
         <div class="desktop-menu-left">
             <div style="display: flex; align-items: center; gap: 6px; padding-right: 10px; margin-right: 6px; border-right: 1px solid #1e293b;">
                 <span style="font-weight: 800; font-size: 0.82rem; color: #38bdf8; letter-spacing: -0.2px;">LS Data Lab</span>
-                <span style="font-size: 0.62rem; color: #64748b; font-weight: 600;">v4.5</span>
+                <span style="font-size: 0.62rem; color: #64748b; font-weight: 600;">v4.6</span>
             </div>
                         <!-- ARCHIVO MENU -->
             <div class="desktop-menu-item" id="menu-file" onclick="toggleDesktopMenu('file', event)">
@@ -254,6 +254,22 @@
                 </div>
             </div>
 
+            <!-- AUTODETECTAR MENU -->
+            <div class="desktop-menu-item" id="menu-autodetect" onclick="toggleDesktopMenu('autodetect', event)">
+                <span>Autodetectar</span>
+                <div class="desktop-dropdown" id="dropdown-autodetect">
+                    <div class="desktop-dropdown-header">Segmentación</div>
+                    <div class="desktop-dropdown-item" onclick="autoDetectLegs(false)"><span>Ejecutar Autodetección Completa</span></div>
+                    <div class="desktop-dropdown-item" onclick="promptDetectLegsInsideRace()"><span>Detectar Ceñidas / Popas en Manga...</span></div>
+                    <div class="desktop-dropdown-item" onclick="calibrateWindFromUpwindTacks(false)"><span>Calibrar Viento desde Ceñida (&gt;5m)</span></div>
+                    <div class="desktop-dropdown-divider"></div>
+                    <div class="desktop-dropdown-header">Configuración y Filtros</div>
+                    <div class="desktop-dropdown-item" onclick="toggleAutoDetectPopover()"><span>Ajustes de Autodetección...</span></div>
+                    <div class="desktop-dropdown-item" onclick="const cb=document.getElementById('autoFoilerActive'); if(cb){cb.checked=!cb.checked; toggleFoilerMode(cb.checked);}"><span>Activar/Desactivar Modo Foiler</span></div>
+                    <div class="desktop-dropdown-item" onclick="toggleLowSpeedFilter()"><span>Filtro de Baja Velocidad</span></div>
+                </div>
+            </div>
+
             <!-- AYUDA MENU -->
             <div class="desktop-menu-item" id="menu-help" onclick="toggleDesktopMenu('help', event)">
                 <span>Ayuda</span>
@@ -265,7 +281,7 @@
                         <span>⛵ Abrir LS Sail Scan Studio</span>
                     </div>
                     <div class="desktop-dropdown-divider"></div>
-                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab v4.5\nMotor de Telemetría Antigravity\nComparación Multi-Barco e Informe PDF Overleaf')">
+                    <div class="desktop-dropdown-item" onclick="alert('LS Data Lab v4.6\nMotor de Telemetría Antigravity\nComparación Multi-Barco e Informe PDF Overleaf')">
                         <span>ℹ️ Acerca de LS Data Lab PRO</span>
                     </div>
                 </div>
