@@ -1288,7 +1288,9 @@ window.switchTab = function(tabId) {
     // Update Contextual Ribbon Bar
     document.querySelectorAll('.ribbon-tab-content').forEach(el => el.style.display = 'none');
     const activeRibbon = document.getElementById(`ribbon-tab-${tabId}`);
-    if (activeRibbon) activeRibbon.style.display = 'flex';
+    const ribbonBar = document.getElementById('contextualRibbon');
+    if (ribbonBar) ribbonBar.style.display = (tabId === 'telemetry') ? 'none' : 'flex';
+    if (activeRibbon && tabId !== 'telemetry') activeRibbon.style.display = 'flex';
 
     const visualizer = document.getElementById('shared-visualizer');
     const visualizerTabs = ['telemetry', 'performance', 'maneuvers', 'compare'];
