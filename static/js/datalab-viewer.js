@@ -2564,6 +2564,180 @@ window.splitClipAtScrubber = function() {
     }
 };
 
+// MANUAL RACE START BY CLOCK TIME (e.g. "Race 1 start at 15:00h")
+
+window.promptManualRaceStart = function() {
+    if (!sessionData || !sessionData.track || sessionData.track.length === 0) {
+        alert("Please load a telemetry session first.");
+        return;
+    }
+
+    const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+
+    // Suggest default time based on current playhead position or session start
+    const curClock = getLocalGpsClockTimeStr(playbackIndex);
+    const startClock = getLocalGpsClockTimeStr(0);
+    const endClock = getLocalGpsClockTimeStr(sessionData.track.length - 1);
+
+    // Determine default race number
+    let nextRaceNum = 1;
+    if (activeSegments && activeSegments.length > 0) {
+        activeSegments.forEach(s => {
+            const lbl = (s.label || '').toLowerCase();
+            const m = lbl.match(/race\s*(\d+)|manga\s*(\d+)/);
+            if (m) {
+                const num = parseInt(m[1] || m[2], 10);
+                if (num >= nextRaceNum) nextRaceNum = num + 1;
+            }
+        });
+    }
+
+    const promptMsg = isEs
+        ? `🏁 Marcar Inicio Manual de Manga:\n\nIntroduce el número de manga y la hora de salida (ejemplo: "15:00", "15:00:00" o "15.00h"):\n\nRango de la sesión actual: ${startClock} – ${endClock}\nHora actual en cursor: ${curClock}\n\nFormato: [Manga] a las [HH:MM:SS]`
+        : `🏁 Manual Race Start Setup:\n\nEnter race number and start clock time (e.g. "15:00", "15:00:00", or "15.00h"):\n\nSession range: ${startClock} – ${endClock}\nCurrent playhead time: ${curClock}\n\nFormat: [Race number] at [HH:MM:SS]`;
+
+    const defaultVal = `${nextRaceNum} @ ${curClock.slice(0, 5)}`;
+    const userResp = prompt(promptMsg, defaultVal);
+    if (!userResp || userResp.trim() === '') return;
+
+    // Parse input
+    const clean = userResp.trim().toLowerCase().replace(/h$/, '').replace('hrs', '').replace('h', '');
+    let raceNum = nextRaceNum;
+    let timePart = clean;
+
+    if (clean.includes('@') || clean.includes('at') || clean.includes('a las')) {
+        const parts = clean.split(/@|at|a las/);
+        const rPart = parts[0].replace(/[^0-9]/g, '');
+        if (rPart) raceNum = parseInt(rPart, 10);
+        timePart = parts[1].trim();
+    } else if (clean.includes('race') || clean.includes('manga')) {
+        const m = clean.match(/(?:race|manga)\s*(\d+)\s*(?:start|inicio)?\s*(?:at|a las|@)?\s*([0-9:.]+)/);
+        if (m) {
+            raceNum = parseInt(m[1], 10);
+            timePart = m[2];
+        }
+    }
+
+    // Convert dots to colons if user entered "15.00"
+    timePart = timePart.replace(/\./g, ':');
+    const timeTokens = timePart.split(':').map(t => parseInt(t.trim(), 10)).filter(n => !isNaN(n));
+    if (timeTokens.length < 2) {
+        alert(isEs ? "Formato de hora no válido. Usa por ejemplo 15:00 o 15:00:00" : "Invalid time format. Please use e.g. 15:00 or 15:00:00");
+        return;
+    }
+
+    const targetH = timeTokens[0];
+    const targetM = timeTokens[1];
+    const targetS = timeTokens[2] || 0;
+    const targetSecondsOfDay = targetH * 3600 + targetM * 60 + targetS;
+
+    // Find the closest point in session matching this clock time
+    const n = sessionData.track.length;
+    let bestIdx = -1;
+    let minDiffSec = Infinity;
+
+    for (let i = 0; i < n; i++) {
+        const cStr = getLocalGpsClockTimeStr(i);
+        const [ch, cm, cs] = cStr.split(':').map(v => parseInt(v, 10));
+        if (isNaN(ch) || isNaN(cm)) continue;
+        const curSecondsOfDay = ch * 3600 + cm * 60 + (cs || 0);
+        
+        let diff = Math.abs(curSecondsOfDay - targetSecondsOfDay);
+        // Handle midnight wrap if needed
+        if (diff > 43200) diff = 86400 - diff;
+
+        if (diff < minDiffSec) {
+            minDiffSec = diff;
+            bestIdx = i;
+        }
+    }
+
+    if (bestIdx < 0 || minDiffSec > 3600) {
+        alert(isEs 
+            ? `La hora indicada (${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')}) está fuera del rango de la sesión (${startClock} – ${endClock}).`
+            : `The specified time (${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')}) is outside the session time range (${startClock} – ${endClock}).`);
+        return;
+    }
+
+    // Move playhead to this exact index
+    playbackIndex = bestIdx;
+    updateFrame(playbackIndex);
+    updateScrubberPosition();
+
+    // 1. Create Pre-Start interval (e.g. 5 minutes before start or beginning of segment)
+    const preStartDurationPoints = 5 * 60; // 5 min
+    const preStartIdx = Math.max(0, bestIdx - preStartDurationPoints);
+
+    // Split segments around pre-start and race start
+    let newSegs = [];
+    activeSegments.forEach(s => {
+        if (bestIdx > s.startIdx && bestIdx < s.endIdx) {
+            // Cut this segment at start time
+            if (preStartIdx > s.startIdx) {
+                // Interval before pre-start
+                newSegs.push({
+                    ...s,
+                    id: 'leg_break_' + Date.now() + '_pre',
+                    startIdx: s.startIdx,
+                    endIdx: preStartIdx - 1,
+                    type: 'break',
+                    label: isEs ? `☕ Pausa R${raceNum}` : `☕ Break R${raceNum}`,
+                    color: 'rgba(71, 85, 105, 0.65)'
+                });
+                // 5-min Pre-start
+                newSegs.push({
+                    ...s,
+                    id: 'leg_pre_' + Date.now() + '_' + raceNum,
+                    startIdx: preStartIdx,
+                    endIdx: bestIdx - 1,
+                    type: 'pre_start',
+                    label: isEs ? `⏱️ Pre-Salida ${raceNum} (5 min)` : `⏱️ Pre-Start ${raceNum} (5 min)`,
+                    color: 'rgba(245, 158, 11, 0.85)'
+                });
+            } else {
+                // Short pre-start up to startIdx
+                newSegs.push({
+                    ...s,
+                    id: 'leg_pre_' + Date.now() + '_' + raceNum,
+                    startIdx: s.startIdx,
+                    endIdx: bestIdx - 1,
+                    type: 'pre_start',
+                    label: isEs ? `⏱️ Pre-Salida ${raceNum}` : `⏱️ Pre-Start ${raceNum}`,
+                    color: 'rgba(245, 158, 11, 0.85)'
+                });
+            }
+
+            // The Race / Upwind 1
+            const newRaceId = 'leg_race_' + Date.now() + '_' + raceNum;
+            newSegs.push({
+                ...s,
+                id: newRaceId,
+                startIdx: bestIdx,
+                endIdx: s.endIdx,
+                type: 'upwind',
+                label: isEs ? `⛵ Ceñida ${raceNum}-1 (Salida ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})` : `⛵ Upwind ${raceNum}-1 (Start ${targetH.toString().padStart(2, '0')}:${targetM.toString().padStart(2, '0')})`,
+                color: '#38bdf8'
+            });
+            selectedSegmentId = newRaceId;
+        } else {
+            newSegs.push(s);
+        }
+    });
+
+    activeSegments = newSegs;
+
+    // Recalculate TWD per leg
+    recalculateAllLegsTwd();
+    renderSegmentRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+
+    const actualClock = getLocalGpsClockTimeStr(bestIdx);
+    alert(isEs
+        ? `✅ Manga ${raceNum} marcada con éxito!\n\nSalida: ${actualClock} (Punto #${bestIdx})\nPre-salida creada de 5 minutos.\nTWD recalculado para Ceñida ${raceNum}-1.`
+        : `✅ Race ${raceNum} successfully marked!\n\nStart: ${actualClock} (Point #${bestIdx})\n5-minute pre-start created.\nTWD recalculated for Upwind ${raceNum}-1.`);
+};
+
+
 window.promptRenameClip = function() {
     const seg = getSelectedOrActiveClip();
     if (!seg) return;
