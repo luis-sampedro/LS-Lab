@@ -2566,6 +2566,401 @@ window.splitClipAtScrubber = function() {
 
 // MANUAL RACE START BY CLOCK TIME (e.g. "Race 1 start at 15:00h")
 
+// COMBINE / MERGE MULTIPLE LEGS INTO 1 LEG
+// Allows user to Shift+Click or choose legs to merge back together
+
+window.selectedLegIds = [];
+
+window.toggleLegSelection = function(segId, isShift = false) {
+    if (!segId) return;
+    if (isShift) {
+        if (window.selectedLegIds.includes(segId)) {
+            window.selectedLegIds = window.selectedLegIds.filter(id => id !== segId);
+        } else {
+            window.selectedLegIds.push(segId);
+        }
+        selectedSegmentId = window.selectedLegIds[window.selectedLegIds.length - 1] || null;
+    } else {
+        window.selectedLegIds = [segId];
+        selectedSegmentId = segId;
+    }
+};
+
+window.combineSelectedLegs = function() {
+    const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+
+    if (!activeSegments || activeSegments.length < 2) {
+        alert(isEs ? "No hay suficientes tramos para combinar." : "Not enough legs to combine.");
+        return;
+    }
+
+    let targetIds = [...(window.selectedLegIds || [])];
+
+    // If user hasn't shift-selected 2 legs, prompt them to pick 2 adjacent legs or combine with next
+    if (targetIds.length < 2) {
+        const curSeg = activeSegments.find(s => s.id === selectedSegmentId) ||
+                       activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx);
+        
+        if (!curSeg) {
+            alert(isEs ? "Selecciona al menos 2 tramos con Shift+Click en la barra de tramos para combinarlos." : "Select at least 2 legs using Shift+Click on the legs ribbon to combine them.");
+            return;
+        }
+
+        const curIdx = activeSegments.indexOf(curSeg);
+        const nextSeg = activeSegments[curIdx + 1];
+
+        if (!nextSeg) {
+            alert(isEs ? "Selecciona 2 tramos consecutivos para unirlos en uno solo." : "Please select 2 consecutive legs to merge into one.");
+            return;
+        }
+
+        const confirmMsg = isEs
+            ? `¿Deseas combinar "${curSeg.label}" y "${nextSeg.label}" en un único tramo continuo?`
+            : `Do you want to combine "${curSeg.label}" and "${nextSeg.label}" into a single continuous leg?`;
+
+        if (confirm(confirmMsg)) {
+            targetIds = [curSeg.id, nextSeg.id];
+        } else {
+            return;
+        }
+    }
+
+    // Get the segments to merge
+    const segsToMerge = activeSegments.filter(s => targetIds.includes(s.id));
+    if (segsToMerge.length < 2) return;
+
+    // Sort by startIdx
+    segsToMerge.sort((a, b) => a.startIdx - b.startIdx);
+
+    const firstSeg = segsToMerge[0];
+    const lastSeg = segsToMerge[segsToMerge.length - 1];
+
+    const mergedStart = firstSeg.startIdx;
+    const mergedEnd = lastSeg.endIdx;
+    const mergedLabel = firstSeg.label.replace(/ \([AB]\)$/, '').replace(/ [0-9\-]+$/, '') || 'Combined Leg';
+    const mergedType = firstSeg.type || 'upwind';
+    const mergedColor = firstSeg.color || '#38bdf8';
+
+    const mergedId = 'leg_combined_' + Date.now();
+
+    const newActiveSegments = [];
+    let mergedInserted = false;
+
+    activeSegments.forEach(s => {
+        if (targetIds.includes(s.id)) {
+            if (!mergedInserted) {
+                newActiveSegments.push({
+                    id: mergedId,
+                    startIdx: mergedStart,
+                    endIdx: mergedEnd,
+                    type: mergedType,
+                    label: mergedLabel,
+                    color: mergedColor,
+                    twd: firstSeg.twd
+                });
+                mergedInserted = true;
+            }
+        } else {
+            // Keep other segment if it doesn't overlap
+            if (s.endIdx < mergedStart || s.startIdx > mergedEnd) {
+                newActiveSegments.push(s);
+            }
+        }
+    });
+
+    activeSegments = newActiveSegments;
+    selectedSegmentId = mergedId;
+    window.selectedLegIds = [mergedId];
+
+    recalculateAllLegsTwd();
+    renderSegmentRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+    updateFrame(playbackIndex);
+
+    alert(isEs
+        ? `✅ Tramos combinados con éxito en "${mergedLabel}".`
+        : `✅ Legs successfully merged into "${mergedLabel}".`);
+};
+
+
+// DETECT UPWIND / DOWNWIND INSIDE A SPECIFIC RACE (SCOPED DETECTION)
+// e.g. "Inside Race 1 - input 2 UW / 2 DW -> Detect -> Then create sublegs"
+// Does NOT override other existing races or legs outside the selected scope!
+
+window.promptDetectLegsInsideRace = function() {
+    if (!sessionData || !sessionData.track || sessionData.track.length === 0) {
+        alert("Please load a telemetry session first.");
+        return;
+    }
+
+    const isEs = window.location.pathname.includes('-es') || document.documentElement.lang === 'es';
+
+    // 1. Identify existing races or target race
+    // Collect all candidate race intervals from activeSegments
+    let availableRaces = [];
+    activeSegments.forEach((s, idx) => {
+        const lbl = (s.label || '').toLowerCase();
+        const type = (s.type || '').toLowerCase();
+        if (type === 'race' || lbl.includes('race') || lbl.includes('manga')) {
+            availableRaces.push({
+                index: availableRaces.length + 1,
+                id: s.id,
+                label: s.label,
+                startIdx: s.startIdx,
+                endIdx: s.endIdx
+            });
+        }
+    });
+
+    let targetRace = null;
+
+    if (availableRaces.length > 0) {
+        // If playhead is inside one of the races, default to it
+        targetRace = availableRaces.find(r => playbackIndex >= r.startIdx && playbackIndex <= r.endIdx) || availableRaces[0];
+    } else {
+        // Use currently selected leg or active segment under playhead
+        const curSeg = activeSegments.find(s => s.id === selectedSegmentId) ||
+                       activeSegments.find(s => playbackIndex >= s.startIdx && playbackIndex <= s.endIdx) ||
+                       activeSegments[0];
+        if (curSeg) {
+            targetRace = {
+                index: 1,
+                id: curSeg.id,
+                label: curSeg.label,
+                startIdx: curSeg.startIdx,
+                endIdx: curSeg.endIdx
+            };
+        }
+    }
+
+    if (!targetRace) {
+        alert(isEs ? "No se ha encontrado ninguna manga o tramo activo." : "No active race or leg segment found.");
+        return;
+    }
+
+    const raceNamePrompt = isEs
+        ? `🏁 Detectar Ceñidas y Popas (UW/DW) dentro de Manga:\n\nTramo objetivo: "${targetRace.label}"\nPuntos: #${targetRace.startIdx} a #${targetRace.endIdx}\n\nIntroduce el esquema deseado (ejemplo: "2 UW / 2 DW", "2 UW 2 DW" o "3 UW / 2 DW"):`
+        : `🏁 Detect Upwind / Downwind (UW/DW) inside Race:\n\nTarget scope: "${targetRace.label}"\nPoints: #${targetRace.startIdx} to #${targetRace.endIdx}\n\nEnter target structure (e.g. "2 UW / 2 DW", "2 UW 2 DW" or "3 UW / 2 DW"):`;
+
+    const userScheme = prompt(raceNamePrompt, "2 UW / 2 DW");
+    if (!userScheme || userScheme.trim() === '') return;
+
+    // Parse counts of UW and DW
+    let targetUW = 2;
+    let targetDW = 2;
+
+    const mUW = userScheme.match(/(\d+)\s*(?:uw|upwind|ceñida)/i);
+    const mDW = userScheme.match(/(\d+)\s*(?:dw|downwind|popa)/i);
+    if (mUW) targetUW = parseInt(mUW[1], 10);
+    if (mDW) targetDW = parseInt(mDW[1], 10);
+
+    const raceStart = targetRace.startIdx;
+    const raceEnd = targetRace.endIdx;
+    const raceLen = raceEnd - raceStart + 1;
+
+    if (raceLen < 30) {
+        alert(isEs ? "El tramo seleccionado es demasiado corto." : "Selected segment is too short.");
+        return;
+    }
+
+    // 2. Perform smooth TWA & trajectory analysis within the race boundary
+    const m = sessionData.metrics;
+    const sogs = m.sog || [];
+    const twas = m.twa || [];
+    const hdgs = m.hdt || m.cog || [];
+
+    // Rolling smooth TWA inside this race
+    const TWA_WIN = 20;
+    const smoothTwa = new Float32Array(raceLen);
+    for (let i = 0; i < raceLen; i++) {
+        const globalIdx = raceStart + i;
+        const lo = Math.max(0, globalIdx - TWA_WIN);
+        const hi = Math.min(sogs.length - 1, globalIdx + TWA_WIN);
+        let sx = 0, sy = 0;
+        for (let j = lo; j <= hi; j++) {
+            const r = (twas[j] || 0) * Math.PI / 180;
+            sx += Math.cos(r); sy += Math.sin(r);
+        }
+        smoothTwa[i] = Math.atan2(sy, sx) * 180 / Math.PI;
+    }
+
+    // Identify transitions (tack / mark roundings)
+    let chunks = [];
+    let curChunk = null;
+    for (let i = 0; i < raceLen; i++) {
+        const absTwa = Math.abs(smoothTwa[i]);
+        const isUpwind = absTwa < 90;
+        const type = isUpwind ? 'upwind' : 'downwind';
+
+        if (!curChunk) {
+            curChunk = { type: type, startIdx: raceStart + i, endIdx: raceStart + i };
+        } else if (curChunk.type === type) {
+            curChunk.endIdx = raceStart + i;
+        } else {
+            chunks.push(curChunk);
+            curChunk = { type: type, startIdx: raceStart + i, endIdx: raceStart + i };
+        }
+    }
+    if (curChunk) chunks.push(curChunk);
+
+    // Merge tiny micro-chunks (less than 25 seconds) into neighboring dominant chunk
+    let mergedChunks = [];
+    for (let c = 0; c < chunks.length; c++) {
+        const ch = chunks[c];
+        const dur = ch.endIdx - ch.startIdx + 1;
+        if (dur < 25 && mergedChunks.length > 0) {
+            mergedChunks[mergedChunks.length - 1].endIdx = ch.endIdx;
+        } else {
+            mergedChunks.push({ ...ch });
+        }
+    }
+
+    // Merge consecutive chunks with same type
+    let finalLegBlocks = [];
+    for (const ch of mergedChunks) {
+        if (finalLegBlocks.length > 0 && finalLegBlocks[finalLegBlocks.length - 1].type === ch.type) {
+            finalLegBlocks[finalLegBlocks.length - 1].endIdx = ch.endIdx;
+        } else {
+            finalLegBlocks.push({ ...ch });
+        }
+    }
+
+    // Enforce targetUW and targetDW alternating structure if user gave exact count
+    // Alternating sequence starting with Upwind: UW1, DW1, UW2, DW2...
+    let totalTargetLegs = targetUW + targetDW;
+    let newLegsForRace = [];
+
+    let rNumMatch = (targetRace.label || '').match(/(\d+)/);
+    let rNum = rNumMatch ? rNumMatch[1] : '1';
+
+    if (finalLegBlocks.length >= totalTargetLegs) {
+        // We have enough detected blocks, map them directly
+        let uCount = 0;
+        let dCount = 0;
+        finalLegBlocks.slice(0, totalTargetLegs).forEach((blk, idx) => {
+            const isUW = (blk.type === 'upwind' || (idx % 2 === 0));
+            if (isUW) {
+                uCount++;
+                newLegsForRace.push({
+                    id: `leg_uw_${rNum}_${uCount}_${Date.now()}_${idx}`,
+                    startIdx: blk.startIdx,
+                    endIdx: blk.endIdx,
+                    type: 'upwind',
+                    label: isEs ? `⛵ Ceñida ${rNum}-${uCount}` : `⛵ Upwind ${rNum}-${uCount}`,
+                    color: '#38bdf8'
+                });
+            } else {
+                dCount++;
+                newLegsForRace.push({
+                    id: `leg_dw_${rNum}_${dCount}_${Date.now()}_${idx}`,
+                    startIdx: blk.startIdx,
+                    endIdx: blk.endIdx,
+                    type: 'downwind',
+                    label: isEs ? `🚀 Popa ${rNum}-${dCount}` : `🚀 Downwind ${rNum}-${dCount}`,
+                    color: '#ec4899'
+                });
+            }
+        });
+    } else {
+        // Distribute the race duration proportionally among targetUW and targetDW
+        const legDuration = Math.floor(raceLen / totalTargetLegs);
+        let uCount = 0;
+        let dCount = 0;
+
+        for (let k = 0; k < totalTargetLegs; k++) {
+            const sIdx = raceStart + k * legDuration;
+            const eIdx = (k === totalTargetLegs - 1) ? raceEnd : (raceStart + (k + 1) * legDuration - 1);
+            const isUW = (k % 2 === 0);
+
+            if (isUW) {
+                uCount++;
+                newLegsForRace.push({
+                    id: `leg_uw_${rNum}_${uCount}_${Date.now()}_${k}`,
+                    startIdx: sIdx,
+                    endIdx: eIdx,
+                    type: 'upwind',
+                    label: isEs ? `⛵ Ceñida ${rNum}-${uCount}` : `⛵ Upwind ${rNum}-${uCount}`,
+                    color: '#38bdf8'
+                });
+            } else {
+                dCount++;
+                newLegsForRace.push({
+                    id: `leg_dw_${rNum}_${dCount}_${Date.now()}_${k}`,
+                    startIdx: sIdx,
+                    endIdx: eIdx,
+                    type: 'downwind',
+                    label: isEs ? `🚀 Popa ${rNum}-${dCount}` : `🚀 Downwind ${rNum}-${dCount}`,
+                    color: '#ec4899'
+                });
+            }
+        }
+    }
+
+    // 3. REPLACE ONLY THE TARGET RACE IN activeSegments (PRESERVES ALL OTHER RACES AND LEGS!)
+    let updatedActiveSegments = [];
+    activeSegments.forEach(s => {
+        if (s.id === targetRace.id) {
+            // Insert the newly detected legs inside this race
+            newLegsForRace.forEach(nLeg => updatedActiveSegments.push(nLeg));
+        } else {
+            // Keep unchanged!
+            updatedActiveSegments.push(s);
+        }
+    });
+
+    activeSegments = updatedActiveSegments;
+    if (newLegsForRace.length > 0) {
+        selectedSegmentId = newLegsForRace[0].id;
+    }
+
+    // 4. NOW CREATE SUBLEGS (TACKS: PORT & STARBOARD) SPECIFICALLY FOR THESE NEW LEGS
+    let newSublegsCreated = [];
+    newLegsForRace.forEach(leg => {
+        let curSub = null;
+        for (let i = leg.startIdx; i <= leg.endIdx; i++) {
+            const stwa = (twas[i] !== undefined) ? twas[i] : 0;
+            const isPort = (stwa >= 0);
+            const mode = isPort ? 'port' : 'starboard';
+            const color = isPort ? '#ef4444' : '#10b981';
+            const label = isPort ? (isEs ? '🔴 Babor' : '🔴 Port Tack') : (isEs ? '🟢 Estribor' : '🟢 Starboard Tack');
+
+            if (!curSub) {
+                curSub = { id: `sub_${mode}_${i}_${Date.now()}`, startIdx: i, endIdx: i, type: 'subleg', label: label, mode: mode, color: color };
+            } else if (curSub.mode === mode) {
+                curSub.endIdx = i;
+            } else {
+                // Minimum duration for subleg
+                if (curSub.endIdx - curSub.startIdx >= 8) {
+                    newSublegsCreated.push(curSub);
+                }
+                curSub = { id: `sub_${mode}_${i}_${Date.now()}`, startIdx: i, endIdx: i, type: 'subleg', label: label, mode: mode, color: color };
+            }
+        }
+        if (curSub) newSublegsCreated.push(curSub);
+    });
+
+    // Replace sublegs within target race bounds while preserving other sublegs
+    let preservedSublegs = activeSublegs.filter(s => s.endIdx < raceStart || s.startIdx > raceEnd);
+    activeSublegs = [...preservedSublegs, ...newSublegsCreated];
+    activeSublegs.sort((a, b) => a.startIdx - b.startIdx);
+
+    if (activeSublegs.length > 0) {
+        selectedSublegId = activeSublegs[0].id;
+    }
+
+    // 5. Recalculate TWD per leg & update UI
+    recalculateAllLegsTwd();
+    renderSegmentRibbon();
+    renderSublegRibbon();
+    if (typeof renderTrackOnMap === 'function') renderTrackOnMap();
+    updateFrame(playbackIndex);
+
+    alert(isEs
+        ? `✅ Detección completada en Manga ${rNum}:\n\n${targetUW} Ceñida(s) y ${targetDW} Popa(s) detectadas.\n${newSublegsCreated.length} subtramos creados (Babor/Estribor).\nLas demás mangas y datos se han mantenido intactos.`
+        : `✅ Detection completed in Race ${rNum}:\n\n${targetUW} Upwind(s) and ${targetDW} Downwind(s) detected.\n${newSublegsCreated.length} sublegs created (Port/Starboard).\nAll other races and legs were preserved.`);
+};
+
+
 window.promptManualRaceStart = function() {
     if (!sessionData || !sessionData.track || sessionData.track.length === 0) {
         alert("Please load a telemetry session first.");
@@ -4936,7 +5331,7 @@ function renderSegmentRibbon() {
         div.style.height = '100%';
         div.style.backgroundColor = seg.color;
         
-        const isSelected = (selectedSegmentId === seg.id);
+        const isSelected = (selectedSegmentId === seg.id || (window.selectedLegIds && window.selectedLegIds.includes(seg.id)));
         if (isSelected) {
             div.style.border = '2px solid #f59e0b';
             div.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.9)';
@@ -4961,7 +5356,19 @@ function renderSegmentRibbon() {
         
         div.onclick = (e) => {
             e.stopPropagation();
-            selectedSegmentId = seg.id;
+            if (e.shiftKey) {
+                if (!window.selectedLegIds) window.selectedLegIds = [];
+                if (window.selectedLegIds.includes(seg.id)) {
+                    window.selectedLegIds = window.selectedLegIds.filter(id => id !== seg.id);
+                } else {
+                    window.selectedLegIds.push(seg.id);
+                }
+                selectedSegmentId = window.selectedLegIds[window.selectedLegIds.length - 1] || null;
+            } else {
+                window.selectedLegIds = [seg.id];
+                selectedSegmentId = seg.id;
+            }
+
             playbackIndex = seg.startIdx;
             updateScrubberPosition();
             if (timeChart) {
