@@ -2206,15 +2206,17 @@ function loadSessionToVisuals() {
     }
 }
 
-// SMART PER-LEG INDEPENDENT TWD SOLVER
-function calculateLegIndependentTwd(seg, prevTwd = null) {
+// SMART PER-RACE & PER-UPWIND TWD SOLVER
+// Re-detect TWD independently on each race / upwind leg, and propagate last upwind TWD to downwind legs
+
+function detectTwdFromTrackSegment(seg, refTwd = null) {
     if (!sessionData || !sessionData.metrics || seg.startIdx >= seg.endIdx) {
-        return sessionData ? sessionData.calibratedTwd : 215;
+        return refTwd || (sessionData ? sessionData.calibratedTwd : 215);
     }
-    
+
     const hdgs = sessionData.metrics.hdt || sessionData.metrics.cog || [];
     const sogs = sessionData.metrics.sog || [];
-    
+
     let legHdgs = [];
     for (let i = seg.startIdx; i <= seg.endIdx; i++) {
         if (sogs[i] > 2.0 && hdgs[i] !== undefined) {
@@ -2222,10 +2224,11 @@ function calculateLegIndependentTwd(seg, prevTwd = null) {
         }
     }
 
-    if (legHdgs.length < 5) {
-        return prevTwd || (forecastTwd > 0 ? forecastTwd : sessionData.calibratedTwd);
+    if (legHdgs.length < 6) {
+        return refTwd || (forecastTwd > 0 ? forecastTwd : (sessionData ? sessionData.calibratedTwd : 215));
     }
 
+    // Split headings into clusters (tacks) via circular distribution
     legHdgs.sort((a, b) => a - b);
     let h1 = legHdgs[Math.floor(legHdgs.length * 0.25)];
     let h2 = legHdgs[Math.floor(legHdgs.length * 0.75)];
@@ -2233,32 +2236,106 @@ function calculateLegIndependentTwd(seg, prevTwd = null) {
     let candidateUpwindTwd = getShortestArcBisector(h1, h2);
     let candidateDownwindTwd = (candidateUpwindTwd + 180) % 360;
 
-    let refTwd = forecastTwd > 0 ? forecastTwd : (prevTwd || sessionData.calibratedTwd || 215);
+    let baseline = refTwd || (forecastTwd > 0 ? forecastTwd : (sessionData.calibratedTwd || 215));
 
     function angleDiff(a, b) {
         let d = Math.abs(a - b) % 360;
         return d > 180 ? 360 - d : d;
     }
 
-    let diffUp = angleDiff(candidateUpwindTwd, refTwd);
-    let diffDown = angleDiff(candidateDownwindTwd, refTwd);
+    let diffUp = angleDiff(candidateUpwindTwd, baseline);
+    let diffDown = angleDiff(candidateDownwindTwd, baseline);
 
     let bestTwd = diffUp <= diffDown ? candidateUpwindTwd : candidateDownwindTwd;
     return Math.round(bestTwd);
 }
 
+function calculateLegIndependentTwd(seg, prevTwd = null) {
+    return detectTwdFromTrackSegment(seg, prevTwd);
+}
+
 function recalculateAllLegsTwd() {
-    if (!sessionData || activeSegments.length === 0) return;
-    let runningTwd = null;
-    activeSegments.forEach(seg => {
-        if (seg.type !== 'hidden') {
-            seg.twd = calculateLegIndependentTwd(seg, runningTwd);
-            runningTwd = seg.twd;
+    if (!sessionData || !activeSegments || activeSegments.length === 0) return;
+
+    let baselineTwd = sessionData.calibratedTwd || (forecastTwd > 0 ? forecastTwd : 215);
+    let lastUpwindTwd = baselineTwd;
+    let currentRaceTwd = baselineTwd;
+
+    // First pass: Check if start line (RC -> Pin) or windward mark gives an anchor for Race 1
+    if (raceMarks['rc'] && raceMarks['pin']) {
+        const lineBrg = calculateBearing(raceMarks['rc'][0], raceMarks['rc'][1], raceMarks['pin'][0], raceMarks['pin'][1]);
+        const startLinePerp = (lineBrg + 90) % 360;
+        baselineTwd = startLinePerp;
+        lastUpwindTwd = baselineTwd;
+    } else if (raceMarks['windward'] && raceMarks['rc']) {
+        baselineTwd = calculateBearing(raceMarks['rc'][0], raceMarks['rc'][1], raceMarks['windward'][0], raceMarks['windward'][1]);
+        lastUpwindTwd = baselineTwd;
+    }
+
+    // Iterate through active segments sequentially
+    activeSegments.forEach((seg, idx) => {
+        if (seg.type === 'hidden') {
+            seg.twd = lastUpwindTwd;
+            return;
+        }
+
+        const segType = (seg.type || '').toLowerCase();
+        const label = (seg.label || '').toLowerCase();
+
+        const isUpwind = (segType === 'upwind' || label.includes('upwind') || label.includes('ceñida') || label.includes('uw'));
+        const isDownwind = (segType === 'downwind' || label.includes('downwind') || label.includes('popa') || label.includes('dw'));
+        const isPreStart = (segType === 'pre_start' || label.includes('pre-start') || label.includes('pre-salida'));
+        const isRace = (segType === 'race' || label.startsWith('race') || label.startsWith('manga'));
+
+        if (isUpwind) {
+            // DETECT TWD AGAIN FOR EACH UPWIND LEG
+            const detectedUpwindTwd = detectTwdFromTrackSegment(seg, lastUpwindTwd);
+            seg.twd = detectedUpwindTwd;
+            lastUpwindTwd = detectedUpwindTwd;
+            currentRaceTwd = detectedUpwindTwd;
+        } else if (isDownwind) {
+            // FOR DOWNWIND: USE TWD FROM LAST UPWIND LEG
+            seg.twd = lastUpwindTwd;
+        } else if (isPreStart) {
+            // Pre-start: use current race / baseline TWD
+            seg.twd = currentRaceTwd || baselineTwd;
+        } else if (isRace) {
+            // Entire race block: detect overall TWD from race data
+            const detectedRaceTwd = detectTwdFromTrackSegment(seg, baselineTwd);
+            seg.twd = detectedRaceTwd;
+            currentRaceTwd = detectedRaceTwd;
+            lastUpwindTwd = detectedRaceTwd;
         } else {
-            seg.twd = runningTwd || sessionData.calibratedTwd;
+            // Break, reach, or other: maintain last known valid upwind TWD
+            seg.twd = lastUpwindTwd;
         }
     });
+
+    // Update global session TWD and TWA series according to local leg TWDs for optimal analytics
+    if (sessionData && sessionData.metrics) {
+        const count = sessionData.track ? sessionData.track.length : 0;
+        const hdgs = sessionData.metrics.hdt || sessionData.metrics.cog || [];
+        
+        if (!sessionData.metrics.twd || sessionData.metrics.twd.length !== count) {
+            sessionData.metrics.twd = new Array(count).fill(sessionData.calibratedTwd || 215);
+        }
+        if (!sessionData.metrics.twa || sessionData.metrics.twa.length !== count) {
+            sessionData.metrics.twa = new Array(count).fill(0);
+        }
+
+        activeSegments.forEach(seg => {
+            const legTwd = seg.twd || sessionData.calibratedTwd || 215;
+            for (let i = Math.max(0, seg.startIdx); i <= Math.min(count - 1, seg.endIdx); i++) {
+                sessionData.metrics.twd[i] = legTwd;
+                let diff = (hdgs[i] || 0) - legTwd;
+                while (diff > 180) diff -= 360;
+                while (diff < -180) diff += 360;
+                sessionData.metrics.twa[i] = diff;
+            }
+        });
+    }
 }
+
 
 // AUTOZOOM & AUTOFIT MAP & CHART TO REMAINING LEGS
 function autoFitVisualsToRemainingClips() {
