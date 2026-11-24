@@ -494,7 +494,13 @@
                                     <span style="font-size: 0.65rem; color: #64748b;">°</span>
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 6px; margin-bottom: 2px;">
+                                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #cbd5e1; cursor: pointer; width: 100%;">
+                                    <input type="checkbox" id="autoFoilerActive" onchange="toggleFoilerMode(this.checked)" style="accent-color: #a855f7;">
+                                    <span>🦅 Enable Foiling Flight Legs</span>
+                                </label>
+                            </div>
+                            <div id="rowAutoFlightSpeed" style="display: flex; justify-content: space-between; align-items: center; opacity: 0.6;">
                                 <span>🛩️ Flight Speed (Foiler):</span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <input type="number" id="autoFlightSpeed" value="10.0" min="4" max="25" step="0.5" style="width: 50px; background: #020617; color: #a855f7; border: 1px solid #475569; font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; text-align: center;">
@@ -616,14 +622,20 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                     <div id="newBoatInputs" style="display: contents;">
-                        <input type="text" id="newBoatName" placeholder="New Boat Name (e.g. ESP-56 Moth)" style="display:none; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: #f8fafc;">
-                        <select id="newBoatType" style="display:none; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: #f8fafc;">
+                        <input type="text" id="newBoatName" placeholder="New Boat Name (e.g. ESP-49er Winner)" style="display:none; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: #f8fafc;">
+                        <select id="newBoatType" onchange="if(typeof handleNewBoatTypeChange==='function') handleNewBoatTypeChange(this.value);" style="display:none; background: #0f172a; border: 1px solid #475569; padding: 8px; border-radius: 6px; color: #f8fafc;">
+                            <option value="49er" selected>49er (Skiff / Displacement)</option>
+                            <option value="49erfx">49erFX (Skiff / Displacement)</option>
+                            <option value="29er">29er (Skiff / Displacement)</option>
+                            <option value="ilca7">ILCA 7 / Laser (Displacement)</option>
+                            <option value="ilca6">ILCA 6 / Radial (Displacement)</option>
+                            <option value="j70">J/70 (One Design Monohull)</option>
+                            <option value="tp52">TP52 (Grand Prix Monohull)</option>
+                            <option value="dinghy_disp">Other Displacement Dinghy</option>
+                            <option value="keelboat">Other Keelboat / Yacht</option>
                             <option value="moth">Moth (Foiling / Flying)</option>
                             <option value="waszp">Waszp (Foiling / Flying)</option>
-                            <option value="tp52">TP52</option>
-                            <option value="j70">J/70</option>
-                            <option value="dinghy">Other Foiling / Flying Boat</option>
-                            <option value="dinghy">Other Displacement Boat</option>
+                            <option value="foiler">Other Foiling Boat</option>
                         </select>
                     </div>
                     <div>
@@ -635,6 +647,22 @@
                             <option value="gpx">Generic GPX</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Foiler Manual Mode Selection (Default: OFF / Non-Foiling) -->
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="chkIsFoilerBoat" onchange="toggleFoilerMode(this.checked)" style="width: 17px; height: 17px; accent-color: #a855f7; cursor: pointer;">
+                        <div>
+                            <label for="chkIsFoilerBoat" style="font-size: 0.85rem; font-weight: 600; color: #f8fafc; cursor: pointer; display: block; margin-bottom: 2px;">
+                                🦅 Foiling Boat Configuration <span id="foilerBadgeStatus" style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-left: 6px;">(Default: Non-Foiling / Displacement)</span>
+                            </label>
+                            <span style="font-size: 0.72rem; color: #64748b;">Check this ONLY if your boat is a foiler (Moth, Waszp, etc.) to enable flight telemetry, foiler filters and flying polar analysis.</span>
+                        </div>
+                    </div>
+                    <span id="foilerPillIndicator" style="font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; background: rgba(148, 163, 184, 0.15); border: 1px solid #475569; color: #94a3b8; font-weight: 600;">
+                        Displacement Boat
+                    </span>
                 </div>
 
                 <button id="uploadBtn" onclick="handleUpload()" style="width: 100%; background: #0284c7; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
@@ -1005,7 +1033,7 @@
                                                 <span style="font-size: 0.7rem; color: #64748b;">kn</span>
                                             </div>
                                             <label style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; margin-left: 22px;">
-                                                <input type="checkbox" id="actAsHiddenLeg" checked onchange="updateNonSailingFilter()" style="accent-color: #f59e0b;">
+                                                <input type="checkbox" id="actAsHiddenLeg" onchange="updateNonSailingFilter()" style="accent-color: #f59e0b;">
                                                 <span>Mark as hidden leg on ribbon</span>
                                             </label>
                                         </div>

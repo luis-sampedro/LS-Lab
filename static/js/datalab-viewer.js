@@ -1350,10 +1350,71 @@ function handleBoatSelectChange() {
             const sel = document.getElementById('boatSelect');
             const name = sel.options[sel.selectedIndex].text;
             localStorage.setItem('lastSelectedBoatName', name);
+            
+            // Check if selected boat is a foiler class
+            const lowerName = name.toLowerCase();
+            const isFoil = lowerName.includes('moth') || lowerName.includes('waszp') || lowerName.includes('foiler') || lowerName.includes('foil');
+            toggleFoilerMode(isFoil);
         }
     }
 }
 window.handleBoatSelectChange = handleBoatSelectChange;
+
+window.handleNewBoatTypeChange = function(typeValue) {
+    const isFoiler = (typeValue === 'moth' || typeValue === 'waszp' || typeValue === 'foiler');
+    toggleFoilerMode(isFoiler);
+};
+
+window.toggleFoilerMode = function(isFoiler) {
+    const isEs = document.documentElement.lang === 'es' || window.location.href.includes('lang=es');
+    
+    // Sync checkboxes
+    const chk1 = document.getElementById('chkIsFoilerBoat');
+    const chk2 = document.getElementById('autoFoilerActive');
+    if (chk1) chk1.checked = isFoiler;
+    if (chk2) chk2.checked = isFoiler;
+
+    // Update status indicators in Step 1
+    const badge = document.getElementById('foilerBadgeStatus');
+    const pill = document.getElementById('foilerPillIndicator');
+    if (badge) {
+        badge.textContent = isFoiler 
+            ? (isEs ? '(Modo Volador Activo)' : '(Foiling Mode Active)')
+            : (isEs ? '(Predeterminado: Desplazamiento / No-Foiler)' : '(Default: Non-Foiling / Displacement)');
+        badge.style.color = isFoiler ? '#c084fc' : '#94a3b8';
+    }
+    if (pill) {
+        if (isFoiler) {
+            pill.textContent = isEs ? '🦅 Barco Volador' : '🦅 Foiling Boat';
+            pill.style.background = 'rgba(168, 85, 247, 0.2)';
+            pill.style.borderColor = '#a855f7';
+            pill.style.color = '#c084fc';
+        } else {
+            pill.textContent = isEs ? 'Barco Desplazamiento' : 'Displacement Boat';
+            pill.style.background = 'rgba(148, 163, 184, 0.15)';
+            pill.style.borderColor = '#475569';
+            pill.style.color = '#94a3b8';
+        }
+    }
+
+    // Auto-detect popover flight speed row opacity
+    const rowFlight = document.getElementById('rowAutoFlightSpeed');
+    if (rowFlight) {
+        rowFlight.style.opacity = isFoiler ? '1' : '0.4';
+    }
+
+    // Show/hide flight analytics card in tab 3 (Legs & Polars)
+    const flightCard = document.getElementById('flight-analytics-card');
+    if (flightCard) {
+        flightCard.style.display = isFoiler ? 'block' : 'none';
+    }
+
+    // Report checkbox for flight stats
+    const repIncFlight = document.getElementById('rep-inc-flight');
+    if (repIncFlight) {
+        repIncFlight.checked = isFoiler;
+    }
+};
 
 async function loadBoats(token) {
     if (!token) return;
@@ -1367,11 +1428,15 @@ async function loadBoats(token) {
             const opt = document.createElement('option');
             opt.value = b.id;
             opt.textContent = b.name;
+            opt.dataset.type = b.type || '';
             sel.appendChild(opt);
         });
 
         const lastBid = localStorage.getItem('lastSelectedBoatId');
-        if (lastBid) sel.value = lastBid;
+        if (lastBid) {
+            sel.value = lastBid;
+            handleBoatSelectChange();
+        }
     } catch (e) { console.error("Error loading boats", e); }
 }
 
@@ -2921,10 +2986,9 @@ window.autoDetectLegs = function(silent = false) {
     const n = sogs.length;
     if (n < 10) return;
 
-    // Boat Profile
-    const boatTypeSelect = document.getElementById('newBoatType');
-    const boatType = boatTypeSelect ? boatTypeSelect.value : 'moth';
-    const isFoiler = (boatType === 'moth' || boatType === 'waszp' || boatType === 'dinghy' || boatType === '');
+    // Boat Profile & Foiler Detection (Default: NON-FOILING unless user explicitly checked)
+    const foilerCheckbox = document.getElementById('chkIsFoilerBoat') || document.getElementById('autoFoilerActive');
+    const isFoiler = foilerCheckbox ? foilerCheckbox.checked : false;
 
     // Configurable thresholds — read from UI (with sensible defaults)
     const ashoreMaxSpeed   = parseFloat(document.getElementById('autoAshoreSpeed')?.value      || 1.5);
@@ -4093,6 +4157,14 @@ function calculateLegStats() {
 
 function calculateFlightStats() {
     if (!sessionData || !sessionData.metrics.sog) return;
+    
+    // Check if user has explicitly enabled foiler mode
+    const isFoiler = document.getElementById('chkIsFoilerBoat')?.checked || document.getElementById('autoFoilerActive')?.checked || false;
+    const flightCard = document.getElementById('flight-analytics-card');
+    if (flightCard) {
+        flightCard.style.display = isFoiler ? 'block' : 'none';
+    }
+    if (!isFoiler) return;
     
     const thresholdInput = document.getElementById('nonSailingSpeedThreshold');
     const threshold = parseFloat(thresholdInput ? thresholdInput.value : 1.0) || 1.0;
@@ -5528,27 +5600,83 @@ window.saveProjectToCloud = async function() {
     const toast = document.getElementById('save-project-toast');
 
     try {
+        // Detect selected boat class and boat name for tagged profile storage
+        const boatSelect = document.getElementById('boatSelect');
+        const newBoatNameInput = document.getElementById('newBoatName');
+        const newBoatTypeSelect = document.getElementById('newBoatType');
+        const chkFoiler = document.getElementById('chkIsFoilerBoat');
+
+        let boatClass = '49er';
+        let boatName = '49er';
+        let boatId = '';
+
+        if (boatSelect && boatSelect.value === '_new_') {
+            boatClass = newBoatTypeSelect?.value || '49er';
+            boatName = newBoatNameInput?.value || boatClass.toUpperCase();
+        } else if (boatSelect && boatSelect.value) {
+            boatId = boatSelect.value;
+            const opt = boatSelect.options[boatSelect.selectedIndex];
+            boatName = opt ? opt.textContent : 'Boat';
+            boatClass = opt?.dataset?.type || newBoatTypeSelect?.value || '49er';
+        } else {
+            boatClass = newBoatTypeSelect?.value || '49er';
+            boatName = newBoatNameInput?.value || sessionData.filename || '49er';
+        }
+
+        const isFoiler = chkFoiler ? chkFoiler.checked : false;
+
+        // Calculate summary metrics for polar comparison (Upwind/Downwind VMG, SOG, TWS)
+        let avgSog = 0, upwindVmg = 0, downwindVmg = 0, upwindSog = 0, downwindSog = 0;
+        if (sessionData.metrics && sessionData.metrics.sog && sessionData.metrics.sog.length > 0) {
+            const sogs = sessionData.metrics.sog;
+            avgSog = +(sogs.reduce((a, b) => a + b, 0) / sogs.length).toFixed(2);
+        }
+
         const payload = {
             filename: sessionData.filename || 'Untitled_Sailing_Project',
+            boat_id: boatId,
+            boat_class: boatClass,
+            boat_name: boatName,
+            is_foiler: isFoiler,
             calibratedTwd: sessionData.calibratedTwd,
             track_count: sessionData.track ? sessionData.track.length : 0,
             activeSegments: activeSegments,
             activeSublegs: activeSublegs,
+            metrics_summary: {
+                avg_sog: avgSog,
+                twd: sessionData.calibratedTwd,
+                duration_sec: sessionData.elapsed ? sessionData.elapsed[sessionData.elapsed.length - 1] : 0
+            },
             savedAt: new Date().toISOString()
         };
 
         localStorage.setItem(`lspro_project_${payload.filename}`, JSON.stringify(payload));
 
+        // Get user auth token if logged in
+        let authHeaders = { 'Content-Type': 'application/json' };
+        try {
+            const firebase = window.firebaseApp;
+            if (firebase && firebase.auth && firebase.auth.currentUser) {
+                const token = await firebase.auth.currentUser.getIdToken();
+                if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+            }
+        } catch (tokenErr) {
+            console.warn("Could not retrieve auth token for cloud save:", tokenErr);
+        }
+
         const res = await fetch('/data-lab/save-project', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(payload)
         });
         const resData = await res.json();
 
         if (toast) {
             const timeStr = resData.timestamp || new Date().toLocaleTimeString();
-            toast.innerText = isEs ? `✅ ¡Proyecto Guardado en la Nube! (${timeStr})` : `✅ Project Saved to Cloud! (${timeStr})`;
+            const classLabel = resData.boat_class ? ` [${resData.boat_class.toUpperCase()}]` : '';
+            toast.innerText = isEs 
+                ? `✅ ¡Proyecto Guardado en tu Perfil${classLabel}! (${timeStr})` 
+                : `✅ Project Saved to Profile${classLabel}! (${timeStr})`;
             toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }

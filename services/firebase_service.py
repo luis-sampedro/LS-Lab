@@ -468,3 +468,60 @@ def get_user_names(uids_list):
     except Exception as e:
         print(f"Error getting user names: {e}")
         return {}
+
+
+def save_datalab_session(uid, session_data):
+    """Saves a Data Lab session tagged by boat class to user profile."""
+    if not db: return None
+    try:
+        sessions_ref = db.collection('users').document(uid).collection('datalab_sessions')
+        session_data['created_at'] = firestore.SERVER_TIMESTAMP
+        session_data = sanitize_for_firestore(session_data)
+        
+        _, doc_ref = sessions_ref.add(session_data)
+        return doc_ref.id
+    except Exception as e:
+        print(f"Error saving datalab session: {e}")
+        raise e
+
+
+def get_user_datalab_sessions(uid, boat_class=None):
+    """Fetches saved Data Lab sessions for a user, optionally filtered by boat class."""
+    if not db: return []
+    try:
+        sessions_ref = db.collection('users').document(uid).collection('datalab_sessions')
+        if boat_class and boat_class != 'all':
+            query = sessions_ref.where('boat_class', '==', boat_class)
+            docs = query.stream()
+        else:
+            docs = sessions_ref.order_by('created_at', direction=firestore.Query.DESCENDING).stream()
+        
+        result = []
+        for d in docs:
+            item = d.to_dict()
+            item['id'] = d.id
+            if 'created_at' in item and hasattr(item['created_at'], 'isoformat'):
+                item['created_at'] = item['created_at'].isoformat()
+            result.append(item)
+        return result
+    except Exception as e:
+        print(f"Error getting datalab sessions: {e}")
+        return []
+
+
+def get_datalab_session(uid, session_id):
+    """Fetches a single Data Lab session by ID."""
+    if not db: return None
+    try:
+        doc = db.collection('users').document(uid).collection('datalab_sessions').document(session_id).get()
+        if doc.exists:
+            item = doc.to_dict()
+            item['id'] = doc.id
+            if 'created_at' in item and hasattr(item['created_at'], 'isoformat'):
+                item['created_at'] = item['created_at'].isoformat()
+            return item
+        return None
+    except Exception as e:
+        print(f"Error getting datalab session: {e}")
+        return None
+

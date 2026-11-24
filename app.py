@@ -1203,14 +1203,62 @@ def data_lab_save_project():
     try:
         data = request.get_json() or {}
         filename = data.get('filename', 'Session_Project')
-        # In production, save project JSON state to Firestore / GCP Storage
+        boat_class = data.get('boat_class', '49er')
+        boat_name = data.get('boat_name', '49er')
+        is_foiler = bool(data.get('is_foiler', False))
+        
+        # Check authentication header for user profile binding
+        auth_header = request.headers.get('Authorization')
+        saved_session_id = None
+        user_uid = None
+        
+        if auth_header:
+            token = auth_header.replace('Bearer ', '').strip()
+            user = verify_token(token)
+            if user:
+                user_uid = user.get('uid')
+                from services.firebase_service import save_datalab_session
+                session_doc = {
+                    'filename': filename,
+                    'boat_class': boat_class,
+                    'boat_name': boat_name,
+                    'is_foiler': is_foiler,
+                    'calibratedTwd': data.get('calibratedTwd'),
+                    'track_count': data.get('track_count', 0),
+                    'activeSegments': data.get('activeSegments', []),
+                    'activeSublegs': data.get('activeSublegs', []),
+                    'metrics_summary': data.get('metrics_summary', {}),
+                    'savedAt': data.get('savedAt') or datetime.now().isoformat()
+                }
+                saved_session_id = save_datalab_session(user_uid, session_doc)
+
         return jsonify({
             'success': True,
-            'message': f'Project "{filename}" saved successfully to LS PRO Cloud!',
+            'message': f'Project "{filename}" ({boat_class}) saved successfully to LS PRO Cloud!',
+            'session_id': saved_session_id,
+            'boat_class': boat_class,
             'timestamp': datetime.now().strftime('%H:%M:%S')
         })
     except Exception as e:
+        print(f"Error saving data-lab project: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/data-lab/sessions', methods=['GET'])
+def data_lab_list_sessions():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'No authentication token provided'}), 401
+    
+    token = auth_header.replace('Bearer ', '').strip()
+    user = verify_token(token)
+    if not user:
+        return jsonify({'error': 'Invalid authentication token'}), 401
+    
+    boat_class = request.args.get('boat_class')
+    from services.firebase_service import get_user_datalab_sessions
+    sessions = get_user_datalab_sessions(user['uid'], boat_class=boat_class)
+    return jsonify(sessions)
+
 
 @app.route('/data-lab/load-sample/<sample_name>', methods=['GET'])
 def data_lab_load_sample(sample_name):
