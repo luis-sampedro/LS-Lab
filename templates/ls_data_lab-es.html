@@ -954,16 +954,17 @@
                                     <!-- Controls for adding marks -->
                                     <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap;">
                                         <select id="raceMarkTypeSelect" style="flex: 1; min-width: 100px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px;">
-                                            <option value="windward">Windward (W)</option>
-                                            <option value="offset">Offset</option>
-                                            <option value="offset2">Offset 2</option>
-                                            <option value="leeward">Leeward (L)</option>
-                                            <option value="gate1">Gate 1</option>
-                                            <option value="gate2">Gate 2</option>
-                                            <option value="pin">Pin</option>
-                                            <option value="finish1">Finish 1</option>
-                                            <option value="finish2">Finish 2</option>
-                                            <option value="rc">Race Committee (RC)</option>
+                                            <option value="windward">⛵ Baliza de Barlovento (W)</option>
+                                            <option value="windward1">⛵ Barlovento 1 (W1)</option>
+                                            <option value="windward2">⛵ Barlovento 2 (W2)</option>
+                                            <option value="offset">💨 Baliza de Desmarque (Off)</option>
+                                            <option value="leeward">🚀 Baliza de Sotavento (L)</option>
+                                            <option value="gate1">🚪 Puerta Sotavento 1 (Babor - G1)</option>
+                                            <option value="gate2">🚪 Puerta Sotavento 2 (Estribor - G2)</option>
+                                            <option value="rc">🏁 Barco Comité (Línea Salida)</option>
+                                            <option value="pin">📍 Boyarín Salida / Visor (Pin)</option>
+                                            <option value="finish1">🏁 Boyarín Llegada (F1)</option>
+                                            <option value="finish2">🏁 Barco Llegada (F2)</option>
                                         </select>
                                         <button onclick="placeMarkAtBoat()" title="Colocar boya en posición actual del barco" style="background: #3b82f6; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 En Barco</button>
                                         <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Clic en el mapa para colocar boya" style="background: #475569; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Mapa</button>
@@ -1555,7 +1556,8 @@
                         <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">1. Módulos Incluidos en el PDF</h4>
                         <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-summary" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 1. Resumen Ejecutivo y KPIs</label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 2. Análisis de Tramos (Ceñida/Empopada)</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-races" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 🏁 Mangas con Mapas de Velocidad y Estudio Pre-Salida (SOG, DTL, Bias)</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 2. Rendimiento Ceñida/Popa y VMC a Balizas y Puertas de Sotavento</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-flight" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 3. Estadísticas de Vuelo y Foiling</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-fleet" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">👥</span> 4. Matriz Comparativa de Flota Multi-Barco</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-maneuvers" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 5. Registro y Eficiencia en Maniobras</label>

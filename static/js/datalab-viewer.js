@@ -3922,25 +3922,17 @@ function setRaceMark(type, lat, lng) {
         map.removeLayer(raceMarkMarkers[type]);
     }
 
-    const markLabels = {
-        windward: 'W',
-        offset: 'Off',
-        offset2: 'Off2',
-        leeward: 'L',
-        gate1: 'G1',
-        gate2: 'G2',
-        pin: 'Pin',
-        finish1: 'F1',
-        finish2: 'F2',
-        rc: 'RC'
+    const markConfig = (window.RACE_MARK_CONFIG && window.RACE_MARK_CONFIG[type]) ? window.RACE_MARK_CONFIG[type] : {
+        label: type.toUpperCase(),
+        color: (type === 'rc' || type === 'pin') ? '#38bdf8' : (type.includes('windward') ? '#f59e0b' : '#ec4899')
     };
 
-    const label = markLabels[type] || type.toUpperCase();
-    const color = (type === 'rc' || type === 'pin') ? '#38bdf8' : (type === 'windward' ? '#f59e0b' : '#ec4899');
+    const label = markConfig.label;
+    const color = markConfig.color;
 
     const icon = L.divIcon({
         className: 'custom-race-mark-icon',
-        html: `<div style="background: ${color}; color: #020617; font-weight: bold; font-size: 0.75rem; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${label}</div>`,
+        html: `<div style="background: ${color}; color: #020617; font-weight: bold; font-size: 0.72rem; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5);">${label}</div>`,
         iconSize: [24, 24],
         iconAnchor: [12, 12]
     });
@@ -3958,10 +3950,17 @@ function setRaceMark(type, lat, lng) {
     redrawRacecourseOverlays();
 }
 
+let downwindGatePolyline = null;
+
 function redrawRacecourseOverlays() {
     if (startLinePolyline && map) {
         map.removeLayer(startLinePolyline);
         startLinePolyline = null;
+    }
+
+    if (downwindGatePolyline && map) {
+        map.removeLayer(downwindGatePolyline);
+        downwindGatePolyline = null;
     }
 
     if (raceMarks['rc'] && raceMarks['pin'] && map) {
@@ -3972,10 +3971,19 @@ function redrawRacecourseOverlays() {
         }).addTo(map);
     }
 
+    if (raceMarks['gate1'] && raceMarks['gate2'] && map) {
+        downwindGatePolyline = L.polyline([raceMarks['gate1'], raceMarks['gate2']], {
+            color: '#a855f7',
+            weight: 3,
+            dashArray: '4, 4'
+        }).addTo(map);
+    }
+
     if (typeof updateFrame === 'function' && sessionData) {
         updateFrame(playbackIndex);
     }
 }
+
 
 function calculateBearing(lat1, lon1, lat2, lon2) {
     const φ1 = lat1 * Math.PI / 180;
@@ -5340,6 +5348,776 @@ window.downloadReportHtml = function() {
     URL.revokeObjectURL(url);
 };
 
+// Comprehensive Race, Mark, Gate, VMC, Pre-Start Analysis & Report Generator
+
+// Extended Mark labels and types
+window.RACE_MARK_CONFIG = {
+    windward: { label: 'W', name: 'Windward Mark', color: '#f59e0b', type: 'upwind' },
+    windward1: { label: 'W1', name: 'Windward Mark 1', color: '#f59e0b', type: 'upwind' },
+    windward2: { label: 'W2', name: 'Windward Mark 2', color: '#d97706', type: 'upwind' },
+    offset: { label: 'Off', name: 'Offset Mark', color: '#fbbf24', type: 'reach' },
+    leeward: { label: 'L', name: 'Leeward Mark', color: '#ec4899', type: 'downwind' },
+    gate1: { label: 'G1 (P)', name: 'Leeward Gate Port', color: '#a855f7', type: 'gate' },
+    gate2: { label: 'G2 (S)', name: 'Leeward Gate Stbd', color: '#c084fc', type: 'gate' },
+    rc: { label: 'RC', name: 'Race Committee', color: '#38bdf8', type: 'start' },
+    pin: { label: 'Pin', name: 'Pin End', color: '#38bdf8', type: 'start' },
+    finish1: { label: 'F1', name: 'Finish Pin', color: '#10b981', type: 'finish' },
+    finish2: { label: 'F2', name: 'Finish Boat', color: '#10b981', type: 'finish' }
+};
+
+// Start Line & Distance to Line (DTL) geometry
+window.calculateDistanceToLine = function(boatLat, boatLon) {
+    if (!raceMarks['rc'] || !raceMarks['pin']) return null;
+    const rc = raceMarks['rc'];
+    const pin = raceMarks['pin'];
+    
+    // Project boat coordinates onto line segment (rc -> pin)
+    // Convert lat/lon degrees to meters approximately relative to RC
+    const latM = 111320;
+    const lonM = 111320 * Math.cos(rc[0] * Math.PI / 180);
+
+    const bx = (boatLon - rc[1]) * lonM;
+    const by = (boatLat - rc[0]) * latM;
+    const px = (pin[1] - rc[1]) * lonM;
+    const py = (pin[0] - rc[0]) * latM;
+
+    const lineLenSq = px * px + py * py;
+    if (lineLenSq === 0) return null;
+
+    // t is projection factor along the line (0 at RC, 1 at Pin)
+    const t = Math.max(0, Math.min(1, (bx * px + by * py) / lineLenSq));
+    const projX = t * px;
+    const projY = t * py;
+
+    // Perpendicular vector from line to boat
+    const dx = bx - projX;
+    const dy = by - projY;
+    const distMeters = Math.sqrt(dx * dx + dy * dy);
+
+    // Determine sign: using line normal directed towards course (positive = pre-start side, negative = over early OCS)
+    // Line vector RC -> Pin
+    // Normal facing upwind: cross product with line vector
+    const twd = (sessionData && sessionData.metrics && sessionData.metrics.twd && sessionData.metrics.twd[playbackIndex]) 
+        || (sessionData && sessionData.calibratedTwd) || 0;
+    
+    // Line bearing RC -> Pin
+    const lineBrg = calculateBearing(rc[0], rc[1], pin[0], pin[1]);
+    // Normal to line directed towards upwind
+    const perpBrg = (lineBrg - 90 + 360) % 360;
+    const boatBrg = calculateBearing(rc[0] + projY/latM, rc[1] + projX/lonM, boatLat, boatLon);
+    
+    const diffAngle = Math.abs(((boatBrg - perpBrg + 180) % 360) - 180);
+    const isPreStartSide = diffAngle > 90; // Behind line
+
+    return {
+        distMeters: Math.round(distMeters),
+        isOCS: !isPreStartSide && distMeters > 1.5,
+        projFactor: t, // 0 = RC end, 1 = Pin end
+        lineLengthMeters: Math.round(Math.sqrt(lineLenSq))
+    };
+};
+
+// Line bias calculation
+window.calculateStartLineBias = function() {
+    if (!raceMarks['rc'] || !raceMarks['pin']) return null;
+    const rc = raceMarks['rc'];
+    const pin = raceMarks['pin'];
+    const twd = (sessionData && sessionData.metrics && sessionData.metrics.twd && sessionData.metrics.twd[0]) 
+        || (sessionData && sessionData.calibratedTwd) || 0;
+
+    const lineBrg = calculateBearing(rc[0], rc[1], pin[0], pin[1]);
+    const perpBrg = (lineBrg + 90) % 360;
+    let biasAngle = twd - perpBrg;
+    while (biasAngle > 180) biasAngle -= 360;
+    while (biasAngle < -180) biasAngle += 360;
+
+    const lenM = Math.round(calculateDistanceNM(rc[0], rc[1], pin[0], pin[1]) * 1852);
+    let favoredEnd = 'EVEN';
+    if (biasAngle > 2) favoredEnd = `PIN +${Math.round(biasAngle)}°`;
+    else if (biasAngle < -2) favoredEnd = `RC +${Math.round(Math.abs(biasAngle))}°`;
+
+    return {
+        favoredEnd: favoredEnd,
+        biasDeg: Math.round(biasAngle),
+        lineLengthM: lenM,
+        lineBearing: Math.round(lineBrg)
+    };
+};
+
+// VMC to target (individual mark or gate midpoint/closest)
+window.computeVMCAtPoint = function(boatLat, boatLon, sog, cog, targetMode) {
+    let targetPos = null;
+    let targetLabel = '';
+
+    if (targetMode === 'upwind' || targetMode === 'windward') {
+        if (raceMarks['windward']) { targetPos = raceMarks['windward']; targetLabel = 'Windward (W)'; }
+        else if (raceMarks['windward1']) { targetPos = raceMarks['windward1']; targetLabel = 'Windward 1'; }
+        else if (raceMarks['windward2']) { targetPos = raceMarks['windward2']; targetLabel = 'Windward 2'; }
+    } else if (targetMode === 'downwind' || targetMode === 'leeward' || targetMode === 'gate') {
+        if (raceMarks['gate1'] && raceMarks['gate2']) {
+            // Midpoint of downwind gate
+            targetPos = [(raceMarks['gate1'][0] + raceMarks['gate2'][0]) / 2, (raceMarks['gate1'][1] + raceMarks['gate2'][1]) / 2];
+            targetLabel = 'Downwind Gate (G1/G2 Mid)';
+        } else if (raceMarks['leeward']) {
+            targetPos = raceMarks['leeward'];
+            targetLabel = 'Leeward (L)';
+        } else if (raceMarks['gate1']) {
+            targetPos = raceMarks['gate1'];
+            targetLabel = 'Gate 1 (P)';
+        } else if (raceMarks['gate2']) {
+            targetPos = raceMarks['gate2'];
+            targetLabel = 'Gate 2 (S)';
+        }
+    }
+
+    if (!targetPos) {
+        // Fallback to first available mark
+        const keys = Object.keys(raceMarks);
+        if (keys.length > 0) {
+            targetPos = raceMarks[keys[0]];
+            targetLabel = keys[0].toUpperCase();
+        } else {
+            return { vmc: sog, distMeters: 0, targetLabel: 'None' };
+        }
+    }
+
+    const brg = calculateBearing(boatLat, boatLon, targetPos[0], targetPos[1]);
+    const distNM = calculateDistanceNM(boatLat, boatLon, targetPos[0], targetPos[1]);
+    const vmc = sog * Math.cos((brg - cog) * Math.PI / 180);
+
+    return {
+        vmc: vmc,
+        distMeters: Math.round(distNM * 1852),
+        brg: Math.round(brg),
+        targetPos: targetPos,
+        targetLabel: targetLabel
+    };
+};
+
+// Canvas Map Generator with Color Mapping (Speed or VMC)
+window.renderColormappedMapCanvas = function(trackPoints, values, valName, colorMapType, width = 680, height = 300, marksToDraw = {}) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || !trackPoints || trackPoints.length < 2) return null;
+
+    // Dark sleek background matching telemetry UI
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    // Compute bounding box
+    let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+    trackPoints.forEach(p => {
+        if (p[0] < minLat) minLat = p[0];
+        if (p[0] > maxLat) maxLat = p[0];
+        if (p[1] < minLon) minLon = p[1];
+        if (p[1] > maxLon) maxLon = p[1];
+    });
+
+    // Also include marks in bounding box
+    Object.values(marksToDraw).forEach(pos => {
+        if (!pos) return;
+        if (pos[0] < minLat) minLat = pos[0];
+        if (pos[0] > maxLat) maxLat = pos[0];
+        if (pos[1] < minLon) minLon = pos[1];
+        if (pos[1] > maxLon) maxLon = pos[1];
+    });
+
+    const padLat = (maxLat - minLat) * 0.12 || 0.001;
+    const padLon = (maxLon - minLon) * 0.12 || 0.001;
+    minLat -= padLat; maxLat += padLat;
+    minLon -= padLon; maxLon += padLon;
+
+    const latSpan = maxLat - minLat;
+    const lonSpan = maxLon - minLon;
+    const cosLat = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+
+    const proj = (lat, lon) => {
+        const x = 30 + ((lon - minLon) / lonSpan) * (width - 60);
+        const y = height - 30 - ((lat - minLat) / latSpan) * (height - 60);
+        return [x, y];
+    };
+
+    // Value bounds for color mapping
+    let minVal = 0, maxVal = 20;
+    if (values && values.length > 0) {
+        minVal = Math.min(...values);
+        maxVal = Math.max(...values);
+        if (maxVal === minVal) maxVal = minVal + 5;
+    }
+
+    // Color gradient interpolation
+    const getColor = (v) => {
+        const norm = Math.max(0, Math.min(1, (v - minVal) / (maxVal - minVal || 1)));
+        if (colorMapType === 'speed') {
+            // Navy -> Cyan -> Green -> Yellow -> Red
+            if (norm < 0.25) return `rgb(${Math.round(20 + norm*4*10)}, ${Math.round(100 + norm*4*100)}, 255)`;
+            if (norm < 0.5) return `rgb(0, 240, ${Math.round(240 - (norm-0.25)*4*200)})`;
+            if (norm < 0.75) return `rgb(${Math.round((norm-0.5)*4*255)}, 235, 50)`;
+            return `rgb(255, ${Math.round(220 - (norm-0.75)*4*180)}, 30)`;
+        } else if (colorMapType === 'vmc') {
+            // Indigo -> Blue -> Teal -> Emerald -> Gold
+            if (norm < 0.3) return `rgb(99, 102, 241)`;
+            if (norm < 0.6) return `rgb(14, 165, 233)`;
+            if (norm < 0.85) return `rgb(16, 185, 129)`;
+            return `rgb(245, 158, 11)`;
+        } else {
+            // Pre-start or generic
+            return '#38bdf8';
+        }
+    };
+
+    // Grid lines (subtle nautical grid)
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 40; x < width; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 15); ctx.lineTo(x, height - 15); ctx.stroke();
+    }
+    for (let y = 30; y < height; y += 45) {
+        ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(width - 20, y); ctx.stroke();
+    }
+
+    // Draw Start line if marks present
+    if (marksToDraw['rc'] && marksToDraw['pin']) {
+        const pRC = proj(marksToDraw['rc'][0], marksToDraw['rc'][1]);
+        const pPin = proj(marksToDraw['pin'][0], marksToDraw['pin'][1]);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.moveTo(pRC[0], pRC[1]); ctx.lineTo(pPin[0], pPin[1]); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Draw Gate line if gate1 and gate2 present
+    if (marksToDraw['gate1'] && marksToDraw['gate2']) {
+        const pG1 = proj(marksToDraw['gate1'][0], marksToDraw['gate1'][1]);
+        const pG2 = proj(marksToDraw['gate2'][0], marksToDraw['gate2'][1]);
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(pG1[0], pG1[1]); ctx.lineTo(pG2[0], pG2[1]); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Draw track colored segments
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (let i = 0; i < trackPoints.length - 1; i++) {
+        const p1 = proj(trackPoints[i][0], trackPoints[i][1]);
+        const p2 = proj(trackPoints[i+1][0], trackPoints[i+1][1]);
+        const v = values && values[i] !== undefined ? values[i] : 10;
+        ctx.strokeStyle = getColor(v);
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p2[0], p2[1]);
+        ctx.stroke();
+    }
+
+    // Draw Marks
+    Object.entries(marksToDraw).forEach(([key, pos]) => {
+        if (!pos) return;
+        const p = proj(pos[0], pos[1]);
+        const cfg = window.RACE_MARK_CONFIG[key] || { label: key.toUpperCase(), color: '#f59e0b' };
+        
+        ctx.fillStyle = cfg.color;
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(cfg.label, p[0], p[1] - 10);
+    });
+
+    // Legend bar at top right
+    const legX = width - 150, legY = 12, legW = 130, legH = 10;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.fillRect(legX - 10, legY - 4, legW + 20, legH + 24);
+    ctx.strokeRect(legX - 10, legY - 4, legW + 20, legH + 24);
+
+    const grad = ctx.createLinearGradient(legX, 0, legX + legW, 0);
+    if (colorMapType === 'speed') {
+        grad.addColorStop(0, 'rgb(20, 100, 255)');
+        grad.addColorStop(0.35, 'rgb(0, 240, 240)');
+        grad.addColorStop(0.7, 'rgb(240, 235, 50)');
+        grad.addColorStop(1, 'rgb(255, 60, 30)');
+    } else {
+        grad.addColorStop(0, 'rgb(99, 102, 241)');
+        grad.addColorStop(0.5, 'rgb(14, 165, 233)');
+        grad.addColorStop(0.8, 'rgb(16, 185, 129)');
+        grad.addColorStop(1, 'rgb(245, 158, 11)');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(legX, legY, legW, legH);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '8px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${minVal.toFixed(1)} kn`, legX, legY + 18);
+    ctx.textAlign = 'right';
+    ctx.fillText(`${maxVal.toFixed(1)} kn`, legX + legW, legY + 18);
+    ctx.textAlign = 'center';
+    ctx.fillText(`${valName}`, legX + legW/2, legY + 18);
+
+    return canvas.toDataURL('image/png');
+};
+
+// Canvas Sparkline / Plot Generator for Pre-Start (SOG, DTL +- 1 min)
+window.renderPreStartSparklineCanvas = function(times, sogs, dtls, startIdx, width = 680, height = 150) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || !times || times.length < 2) return null;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    const padL = 45, padR = 45, padT = 20, padB = 25;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+
+    const minT = times[0];
+    const maxT = times[times.length - 1];
+    const maxSog = Math.max(12, Math.max(...sogs) * 1.15);
+    const maxDtl = Math.max(100, Math.max(...dtls) * 1.15);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let s = 0; s <= 4; s++) {
+        const y = padT + (plotH / 4) * s;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(width - padR, y); ctx.stroke();
+    }
+
+    // Gun / Start marker (t = 0 relative to start)
+    const tStartVal = times[startIdx] || (minT + maxT) / 2;
+    const xStart = padL + ((tStartVal - minT) / (maxT - minT || 1)) * plotW;
+
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(xStart, padT); ctx.lineTo(xStart, height - padB); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GUN / START', xStart, padT - 6);
+
+    // Plot DTL (Distance to Line) - dashed amber line
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    times.forEach((t, i) => {
+        const x = padL + ((t - minT) / (maxT - minT || 1)) * plotW;
+        const y = height - padB - (Math.max(0, dtls[i]) / maxDtl) * plotH;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Plot SOG (Boat Speed) - vibrant blue line
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    times.forEach((t, i) => {
+        const x = padL + ((t - minT) / (maxT - minT || 1)) * plotW;
+        const y = height - padB - (Math.max(0, sogs[i]) / maxSog) * plotH;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Axes labels
+    ctx.font = '8px Inter, sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${maxSog.toFixed(0)} kn`, padL - 6, padT + 10);
+    ctx.fillText(`0 kn`, padL - 6, height - padB);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${maxDtl.toFixed(0)} m`, width - padR + 6, padT + 10);
+    ctx.fillText(`0 m`, width - padR + 6, height - padB);
+
+    // Time markings
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('-1:00', padL, height - 8);
+    ctx.fillText('0:00 (Start)', xStart, height - 8);
+    ctx.fillText('+1:00', width - padR, height - 8);
+
+    // Legend
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#38bdf8'; ctx.fillText('— SOG (Speed)', padL + 10, padT + 14);
+    ctx.fillStyle = '#f59e0b'; ctx.fillText('— DTL (Dist to Line)', padL + 100, padT + 14);
+
+    return canvas.toDataURL('image/png');
+};
+
+
+// Hierarchical Race & Leg Extraction and Page Builder for Overleaf PDF Report
+
+window.extractRacesAndLegsForReport = function() {
+    if (!sessionData || !sessionData.track) return [];
+
+    const segments = (activeSegments && activeSegments.length > 0) ? activeSegments : [];
+    const races = [];
+    let currentRace = null;
+
+    // Helper to initialize a race
+    const startNewRace = (raceNum) => {
+        return {
+            raceNum: raceNum,
+            name: `Race ${raceNum}`,
+            preStart: null,
+            legs: [],
+            breakData: null,
+            startIdx: 0,
+            endIdx: 0
+        };
+    };
+
+    if (segments.length === 0 || (segments.length === 1 && segments[0].name === 'Full Session')) {
+        // Single session, treat entire session as Race 1
+        const r1 = startNewRace(1);
+        r1.startIdx = 0;
+        r1.endIdx = sessionData.track.length - 1;
+        races.push(r1);
+        return races;
+    }
+
+    let raceCounter = 1;
+    currentRace = startNewRace(raceCounter);
+
+    segments.forEach((seg, idx) => {
+        const segName = (seg.name || seg.label || '').toLowerCase();
+        const segType = (seg.type || '').toLowerCase();
+
+        if (segType === 'pre_start' || segName.includes('pre-start')) {
+            // If current race already has legs, this pre-start belongs to a new race!
+            if (currentRace.legs.length > 0) {
+                currentRace.endIdx = currentRace.legs[currentRace.legs.length - 1].endIdx;
+                races.push(currentRace);
+                raceCounter++;
+                currentRace = startNewRace(raceCounter);
+            }
+            currentRace.preStart = seg;
+            if (currentRace.legs.length === 0) currentRace.startIdx = seg.startIdx;
+        } else if (segType === 'break' || segName.includes('break') || segName.includes('pausa')) {
+            // Break segment between races
+            currentRace.breakData = seg;
+            if (currentRace.legs.length > 0) {
+                currentRace.endIdx = currentRace.legs[currentRace.legs.length - 1].endIdx;
+                races.push(currentRace);
+                raceCounter++;
+                currentRace = startNewRace(raceCounter);
+            }
+        } else {
+            // Competition Leg (Upwind, Downwind, Reach, etc.)
+            currentRace.legs.push(seg);
+            if (currentRace.legs.length === 1 && !currentRace.preStart) {
+                currentRace.startIdx = seg.startIdx;
+            }
+            currentRace.endIdx = seg.endIdx;
+        }
+    });
+
+    if (currentRace && currentRace.legs.length > 0 && !races.includes(currentRace)) {
+        races.push(currentRace);
+    }
+
+    if (races.length === 0) {
+        const fallback = startNewRace(1);
+        fallback.startIdx = 0;
+        fallback.endIdx = sessionData.track.length - 1;
+        races.push(fallback);
+    }
+
+    return races;
+};
+
+// Generates dedicated Report Section for Each Race
+window.generateRaceReportSectionsHtml = function(isEs, themeColor) {
+    if (!sessionData || !sessionData.track) return '';
+
+    const races = window.extractRacesAndLegsForReport();
+    if (!races || races.length === 0) return '';
+
+    const track = sessionData.track;
+    const m = sessionData.metrics || {};
+    const sogs = m.sog || [];
+    const cogs = m.cog || [];
+    const elapseds = sessionData.elapsed || [];
+
+    let sectionsHtml = '';
+
+    races.forEach((rc, rIdx) => {
+        const rTitle = isEs ? `Manga ${rc.raceNum} (Race ${rc.raceNum})` : `Race ${rc.raceNum}`;
+        const raceStartIdx = rc.startIdx;
+        const raceEndIdx = rc.endIdx;
+
+        // 1. Race Track Slice & Metrics
+        const raceTrack = track.slice(raceStartIdx, Math.min(track.length, raceEndIdx + 1));
+        const raceSogs = sogs.slice(raceStartIdx, Math.min(sogs.length, raceEndIdx + 1));
+        
+        const rAvgSog = raceSogs.length ? (raceSogs.reduce((a, b) => a + b, 0) / raceSogs.length) : 0;
+        const rMaxSog = raceSogs.length ? Math.max(...raceSogs) : 0;
+        const rDurationSec = raceTrack.length;
+        const rDurMin = Math.floor(rDurationSec / 60);
+        const rDurSec = rDurationSec % 60;
+
+        // Render Race 1 Overview Map (Colormapped by Speed)
+        const raceSpeedMapDataUrl = window.renderColormappedMapCanvas(
+            raceTrack,
+            raceSogs,
+            'SOG (Speed)',
+            'speed',
+            740,
+            280,
+            raceMarks
+        );
+
+        sectionsHtml += `
+            <div class="report-page" style="page-break-before: always; margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${themeColor}; padding-bottom: 6px; margin-bottom: 1rem;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.25rem; color: ${themeColor}; font-weight: 800; text-transform: uppercase;">
+                            🏁 ${rTitle} — ${isEs ? 'Análisis de Carrera' : 'Race Performance Analysis'}
+                        </h2>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                            ${isEs ? 'Duración:' : 'Duration:'} <strong>${rDurMin}m ${rDurSec}s</strong> • ${isEs ? 'Velocidad Media:' : 'Avg Speed:'} <strong>${rAvgSog.toFixed(1)} kn</strong> • ${isEs ? 'Pico:' : 'Max SOG:'} <strong>${rMaxSog.toFixed(1)} kn</strong>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #e0f2fe; border: 1px solid #38bdf8; padding: 2px 7px; border-radius: 4px;">RACE ${rc.raceNum}</span>
+                </div>
+
+                <!-- Race Overview Map (Speed Colormap) -->
+                <div style="margin-bottom: 1.5rem; background: #0f172a; border-radius: 6px; padding: 10px; border: 1px solid #334155;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #38bdf8;">🗺️ ${isEs ? 'Mapa de Carrera con Mapa de Color de Velocidad' : 'Race Track Map with Speed Colormap'}</span>
+                        <span style="font-size: 0.7rem; color: #94a3b8;">Full Race Route (${rDurMin}m ${rDurSec}s)</span>
+                    </div>
+                    ${raceSpeedMapDataUrl ? `<img src="${raceSpeedMapDataUrl}" style="width: 100%; border-radius: 4px; display: block;" alt="Race Map Speed Colormap">` : ''}
+                </div>
+        `;
+
+        // 2. Pre-Start Study Module (if Pre-Start exists or line configured)
+        if (rc.preStart || (raceMarks['rc'] && raceMarks['pin'])) {
+            const preStartSeg = rc.preStart;
+            const pStartIdx = preStartSeg ? preStartSeg.startIdx : Math.max(0, raceStartIdx - 300);
+            const pGunIdx = preStartSeg ? preStartSeg.endIdx : raceStartIdx;
+
+            const pTimes = [];
+            const pSogs = [];
+            const pDtls = [];
+
+            // Line bias info
+            const lineBias = window.calculateStartLineBias();
+            const biasStr = lineBias ? `${lineBias.favoredEnd} (${lineBias.lineLengthM}m Line)` : 'No Start Line Set';
+
+            // Gather pre-start metrics
+            for (let i = pStartIdx; i <= Math.min(track.length - 1, pGunIdx + 60); i++) {
+                pTimes.push(elapseds[i] || i);
+                pSogs.push(sogs[i] || 0);
+                const dtlObj = window.calculateDistanceToLine(track[i][0], track[i][1]);
+                pDtls.push(dtlObj ? dtlObj.distMeters : 0);
+            }
+
+            const sogAtGun = sogs[pGunIdx] ? sogs[pGunIdx].toFixed(1) : '--';
+            const dtlAtGunObj = window.calculateDistanceToLine(track[pGunIdx][0], track[pGunIdx][1]);
+            const dtlAtGun = dtlAtGunObj ? `${dtlAtGunObj.distMeters}m ${dtlAtGunObj.isOCS ? '(OCS ⚠️)' : '(Valid)'}` : '--';
+
+            // Pre-start 5 min map & 1 min map
+            const preTrack5m = track.slice(pStartIdx, pGunIdx + 1);
+            const preSog5m = sogs.slice(pStartIdx, pGunIdx + 1);
+            const preStartMap5mUrl = window.renderColormappedMapCanvas(preTrack5m, preSog5m, 'Pre-Start Speed', 'speed', 360, 200, { rc: raceMarks['rc'], pin: raceMarks['pin'] });
+
+            const idx1m = Math.max(pStartIdx, pGunIdx - 60);
+            const preTrack1m = track.slice(idx1m, pGunIdx + 1);
+            const preSog1m = sogs.slice(idx1m, pGunIdx + 1);
+            const preStartMap1mUrl = window.renderColormappedMapCanvas(preTrack1m, preSog1m, 'Final 60s Speed', 'speed', 360, 200, { rc: raceMarks['rc'], pin: raceMarks['pin'] });
+
+            // Sparkline +- 1 min after start
+            const sparkStartIdx = Math.max(pStartIdx, pGunIdx - 60);
+            const sparkEndIdx = Math.min(track.length - 1, pGunIdx + 60);
+            const sparkTimes = elapseds.slice(sparkStartIdx, sparkEndIdx + 1);
+            const sparkSogs = sogs.slice(sparkStartIdx, sparkEndIdx + 1);
+            const sparkDtls = [];
+            for (let k = sparkStartIdx; k <= sparkEndIdx; k++) {
+                const d = window.calculateDistanceToLine(track[k][0], track[k][1]);
+                sparkDtls.push(d ? d.distMeters : 0);
+            }
+            const sparklineUrl = window.renderPreStartSparklineCanvas(sparkTimes, sparkSogs, sparkDtls, pGunIdx - sparkStartIdx, 740, 140);
+
+            sectionsHtml += `
+                <div style="margin-bottom: 1.5rem; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 0.95rem; color: #0f172a; font-weight: 700;">
+                            ⏱️ ${isEs ? 'Estudio Detallado de Pre-Salida (Pre-Start Analysis)' : 'Detailed Pre-Start & Starting Line Study'}
+                        </h3>
+                        <span style="font-size: 0.72rem; color: #64748b;">Line Bias: <strong>${biasStr}</strong></span>
+                    </div>
+
+                    <!-- Pre-Start KPIs Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;">
+                            <span style="font-size: 0.65rem; color: #64748b; text-transform: uppercase;">SOG at Gun (t=0)</span>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: #0284c7;">${sogAtGun} kn</div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;">
+                            <span style="font-size: 0.65rem; color: #64748b; text-transform: uppercase;">DTL at Gun</span>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: #059669;">${dtlAtGun}</div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;">
+                            <span style="font-size: 0.65rem; color: #64748b; text-transform: uppercase;">Line Bias Angle</span>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: #d97706;">${lineBias ? lineBias.favoredEnd : '--'}</div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px;">
+                            <span style="font-size: 0.65rem; color: #64748b; text-transform: uppercase;">Pre-Start Duration</span>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: #7c3aed;">${preStartSeg ? Math.round((preStartSeg.endIdx - preStartSeg.startIdx)/60) : 5} min</div>
+                        </div>
+                    </div>
+
+                    <!-- Maps: 5-min pre-start vs 1-min pre-start -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div style="background: #0f172a; padding: 6px; border-radius: 4px;">
+                            <div style="font-size: 0.72rem; color: #38bdf8; font-weight: bold; margin-bottom: 4px;">📍 5-Min Pre-Start Trajectory</div>
+                            ${preStartMap5mUrl ? `<img src="${preStartMap5mUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="5 Min Pre-Start">` : ''}
+                        </div>
+                        <div style="background: #0f172a; padding: 6px; border-radius: 4px;">
+                            <div style="font-size: 0.72rem; color: #10b981; font-weight: bold; margin-bottom: 4px;">🎯 1-Min Final Approach (Line Ingress)</div>
+                            ${preStartMap1mUrl ? `<img src="${preStartMap1mUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="1 Min Pre-Start">` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Plot +- 1 min after start -->
+                    <div style="background: #0f172a; padding: 8px; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #f59e0b; font-weight: bold; margin-bottom: 4px;">
+                            <span>📈 Telemetry Timeline: ±1 Min Relative to Start Gun</span>
+                            <span style="color: #94a3b8; font-size: 0.68rem;">SOG (kn) vs DTL (m)</span>
+                        </div>
+                        ${sparklineUrl ? `<img src="${sparklineUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="Pre-Start Sparkline">` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Upwind & Downwind Individual Leg Analysis with VMC Colormaps
+        if (rc.legs && rc.legs.length > 0) {
+            sectionsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 0.95rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 0.8rem; font-weight: 700;">
+                        🚩 ${isEs ? 'Desglose de Tramos y Rendimiento VMC hacia Balizas / Puertas' : 'Legs Breakdown & VMC Analysis to Marks / Gates'}
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+            `;
+
+            rc.legs.forEach((leg, lIdx) => {
+                const legName = leg.name || leg.label || `Leg ${lIdx + 1}`;
+                const legType = (leg.type || '').toLowerCase();
+                const isUpwind = legType === 'upwind' || legName.toLowerCase().includes('upwind') || legName.toLowerCase().includes('uw');
+                const isDownwind = legType === 'downwind' || legName.toLowerCase().includes('downwind') || legName.toLowerCase().includes('dw');
+
+                const lStart = leg.startIdx;
+                const lEnd = leg.endIdx;
+                const lTrack = track.slice(lStart, Math.min(track.length, lEnd + 1));
+                const lSogs = sogs.slice(lStart, Math.min(sogs.length, lEnd + 1));
+                const lCogs = cogs.slice(lStart, Math.min(cogs.length, lEnd + 1));
+
+                // Compute VMC values along this leg towards relevant target
+                const targetMode = isUpwind ? 'upwind' : (isDownwind ? 'gate' : 'upwind');
+                const vmcValues = [];
+                let targetLabelUsed = '';
+
+                lTrack.forEach((pt, idx) => {
+                    const res = window.computeVMCAtPoint(pt[0], pt[1], lSogs[idx] || 0, lCogs[idx] || 0, targetMode);
+                    vmcValues.push(res.vmc);
+                    if (idx === 0) targetLabelUsed = res.targetLabel;
+                });
+
+                const lAvgSog = lSogs.length ? (lSogs.reduce((a, b) => a + b, 0) / lSogs.length) : 0;
+                const lAvgVmc = vmcValues.length ? (vmcValues.reduce((a, b) => a + b, 0) / vmcValues.length) : 0;
+                const lMaxSog = lSogs.length ? Math.max(...lSogs) : 0;
+                const lDuration = lTrack.length;
+                const lDurM = Math.floor(lDuration / 60);
+                const lDurS = lDuration % 60;
+
+                // Marks to draw on this leg's map
+                const legMarks = {};
+                if (isUpwind) {
+                    if (raceMarks['windward']) legMarks['windward'] = raceMarks['windward'];
+                    if (raceMarks['offset']) legMarks['offset'] = raceMarks['offset'];
+                } else if (isDownwind) {
+                    if (raceMarks['gate1']) legMarks['gate1'] = raceMarks['gate1'];
+                    if (raceMarks['gate2']) legMarks['gate2'] = raceMarks['gate2'];
+                    if (raceMarks['leeward']) legMarks['leeward'] = raceMarks['leeward'];
+                }
+
+                // Generate VMC Colormapped Map Canvas
+                const legVmcMapUrl = window.renderColormappedMapCanvas(
+                    lTrack,
+                    vmcValues,
+                    'VMC (Velocity Made to Course)',
+                    'vmc',
+                    720,
+                    220,
+                    legMarks
+                );
+
+                const icon = isUpwind ? '⛵' : (isDownwind ? '🚀' : '💨');
+                const badgeColor = isUpwind ? '#0284c7' : (isDownwind ? '#ec4899' : '#10b981');
+
+                sectionsHtml += `
+                    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 1rem;">${icon}</span>
+                                <strong style="font-size: 0.88rem; color: #0f172a;">${legName}</strong>
+                                <span style="font-size: 0.68rem; font-weight: bold; color: ${badgeColor}; background: rgba(2, 132, 199, 0.1); padding: 1px 6px; border-radius: 3px; border: 1px solid ${badgeColor};">
+                                    Target: ${targetLabelUsed || (isUpwind ? 'Windward Mark' : 'Downwind Gate')}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b;">
+                                Duration: <strong>${lDurM}m ${lDurS}s</strong> • Avg SOG: <strong>${lAvgSog.toFixed(1)} kn</strong> • Avg VMC: <strong style="color: #059669;">${lAvgVmc.toFixed(1)} kn</strong>
+                            </div>
+                        </div>
+
+                        <!-- VMC Map -->
+                        <div style="background: #0f172a; border-radius: 4px; padding: 6px; border: 1px solid #334155;">
+                            ${legVmcMapUrl ? `<img src="${legVmcMapUrl}" style="width: 100%; border-radius: 3px; display: block;" alt="VMC Colormap Map">` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            sectionsHtml += `
+                    </div>
+                </div>
+            `;
+        }
+
+        sectionsHtml += `
+                <div class="report-page-footer">
+                    <div>LS Data Lab Pro • Race Performance &amp; VMC Engine</div>
+                    <div>Race ${rc.raceNum} Analysis</div>
+                </div>
+            </div>
+        `;
+    });
+
+    return sectionsHtml;
+};
+
+
 window.buildReportPreview = function() {
     const sheet = document.getElementById('print-report-sheet');
     if (!sheet) return;
@@ -5707,7 +6485,9 @@ window.buildReportPreview = function() {
         </div>
     `;
 
-    sheet.innerHTML = p1Html + p2Html;
+    const incRaces = document.getElementById('rep-inc-races')?.checked ?? true;
+    const racesHtml = incRaces ? window.generateRaceReportSectionsHtml(isEs, themeColor) : '';
+    sheet.innerHTML = p1Html + racesHtml + p2Html;
     setReportZoom(0); // apply current zoom scale
 };
 

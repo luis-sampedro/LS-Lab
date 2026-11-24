@@ -953,16 +953,17 @@
                                     <!-- Controls for adding marks -->
                                     <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap;">
                                         <select id="raceMarkTypeSelect" style="flex: 1; min-width: 100px; background: #0f172a; color: white; border: 1px solid #475569; font-size: 0.68rem; padding: 2px 4px; border-radius: 4px;">
-                                            <option value="windward">Windward (W)</option>
-                                            <option value="offset">Offset</option>
-                                            <option value="offset2">Offset 2</option>
-                                            <option value="leeward">Leeward (L)</option>
-                                            <option value="gate1">Gate 1</option>
-                                            <option value="gate2">Gate 2</option>
-                                            <option value="pin">Pin</option>
-                                            <option value="finish1">Finish 1</option>
-                                            <option value="finish2">Finish 2</option>
-                                            <option value="rc">Race Committee (RC)</option>
+                                            <option value="windward">⛵ Windward Mark (W)</option>
+                                            <option value="windward1">⛵ Windward 1 (W1)</option>
+                                            <option value="windward2">⛵ Windward 2 (W2)</option>
+                                            <option value="offset">💨 Offset Mark (Off)</option>
+                                            <option value="leeward">🚀 Leeward Mark (L)</option>
+                                            <option value="gate1">🚪 Downwind Gate 1 (Port - G1)</option>
+                                            <option value="gate2">🚪 Downwind Gate 2 (Stbd - G2)</option>
+                                            <option value="rc">🏁 RC Boat (Start Line)</option>
+                                            <option value="pin">📍 Pin End (Start Line)</option>
+                                            <option value="finish1">🏁 Finish Pin (F1)</option>
+                                            <option value="finish2">🏁 Finish Boat (F2)</option>
                                         </select>
                                         <button onclick="placeMarkAtBoat()" title="Place selected mark at boat current position" style="background: #3b82f6; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">📍 At Boat</button>
                                         <button id="btnPickMarkMap" onclick="togglePickMarkMode()" title="Click on map to place mark" style="background: #475569; color: white; border: none; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🖱 Map</button>
@@ -1555,7 +1556,8 @@
                         <h4 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 700;">1. Included PDF Sections</h4>
                         <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: #cbd5e1; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-summary" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 1. Executive Summary &amp; Session KPIs</label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 2. Upwind/Downwind Leg Analysis</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-races" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 🏁 Race Maps (Speed Colormap) &amp; Pre-Start Study (SOG, DTL, Bias)</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-legs" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 2. Upwind/Downwind Leg VMC to Marks &amp; Downwind Gates</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-flight" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 3. Foiling Flight &amp; Attitude Stats</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-fleet" checked onchange="buildReportPreview()" style="accent-color: #f59e0b;"> <span style="color: #f59e0b;">👥</span> 4. Multi-Boat Fleet Benchmark Matrix</label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="rep-inc-maneuvers" checked onchange="buildReportPreview()" style="accent-color: #38bdf8;"> 5. Maneuvers Efficiency &amp; Loss Table</label>
